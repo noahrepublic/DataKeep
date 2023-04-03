@@ -1,0 +1,7 @@
+# Project place file
+/DataKeep.rbxlx
+
+# Roblox Studio lock files
+/*.rbxlx.lock
+/*.rbxl.lock
+game.rbxl
