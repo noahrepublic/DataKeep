@@ -63,11 +63,25 @@ local DefaultKeep: KeepStruct = {
 	LatestKeep = {},
 }
 
-function Keep.new(structure: KeepStruct): Keep
-	assert(structure.Data ~= nil, "Data must be provided") -- everything else is optional, because we have defaults available in scope.
+--> Private Functions
 
+local function DeepCopy(tbl: { [any]: any })
+	local copy = {}
+
+	for key, value in pairs(tbl) do
+		if type(value) == "table" then
+			copy[key] = DeepCopy(value)
+		else
+			copy[key] = value
+		end
+	end
+
+	return copy
+end
+
+function Keep.new(structure: KeepStruct, dataTemplate: {}): Keep
 	local self = setmetatable({
-		Data = structure.Data,
+		Data = structure.Data or DeepCopy(dataTemplate),
 		MetaData = structure.MetaData or DefaultKeep.MetaData, -- auto locks the session too if new keep
 
 		GlobalUpdates = structure.GlobalUpdates or DefaultKeep.GlobalUpdates,
@@ -83,6 +97,8 @@ function Keep.new(structure: KeepStruct): Keep
 
 		_load_time = os.clock(),
 		_store_info = { Name = "", Scope = "" },
+
+		_data_template = dataTemplate,
 	}, Keep)
 
 	return self
@@ -97,7 +113,7 @@ export type Keep = typeof(Keep.new({
 	UserIds = DefaultKeep.UserIds,
 
 	LatestKeep = DefaultKeep.LatestKeep,
-})) -- the actual Keep class type
+}, {})) -- the actual Keep class type
 
 --> Private Functions
 
@@ -188,6 +204,23 @@ local function transformUpdate(keep: Keep, newestData: KeepStruct, release: bool
 	return newestData, newestData.UserIds
 end
 
+function Keep:_Save(newestData: KeepStruct, release: boolean)
+	if not self:IsActive() then
+		return newestData
+	end
+
+	release = release
+		or if newestData
+				and newestData.MetaData
+				and newestData.MetaData.ForceLoad
+				and newestData.MetaData.ForceLoad.PlaceID ~= game.PlaceId
+				and newestData.MetaData.ForceLoad.JobID ~= game.JobId
+			then true
+			else false
+
+	return transformUpdate(self, newestData, release)
+end
+
 function Keep:IsActive()
 	return not isLocked(self.MetaData)
 end
@@ -219,23 +252,24 @@ function Keep:Release()
 	end)
 end
 
-function Keep:_Save(newestData: KeepStruct, release: boolean)
-	if not self:IsActive() then
-		return newestData
+function Keep:Reconcile() -- fills in blank stuff
+	local function reconcileData(data: any, template: any)
+		if type(data) ~= "table" then
+			return template
+		end
+
+		for key, value in pairs(template) do
+			if data[key] == nil then
+				data[key] = value
+			elseif type(data[key]) == "table" then
+				data[key] = reconcileData(data[key], value)
+			end
+		end
+
+		return data
 	end
 
-	release = release
-		or if newestData
-				and newestData.MetaData
-				and newestData.MetaData.ForceLoad
-				and newestData.MetaData.ForceLoad.PlaceID ~= game.PlaceId
-				and newestData.MetaData.ForceLoad.JobID ~= game.JobId
-			then true
-			else false
-
-	print(release)
-
-	return transformUpdate(self, newestData, release)
+	self.Data = reconcileData(self.Data, self._data_template)
 end
 
 return Keep
