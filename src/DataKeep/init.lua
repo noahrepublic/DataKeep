@@ -86,25 +86,24 @@ local function len(tbl: { [any]: any })
 	return count
 end
 
-local function DeepCopy(tbl: { [any]: any })
-	local copy = {}
-
-	for key, value in pairs(tbl) do
-		if type(value) == "table" then
-			copy[key] = DeepCopy(value)
-		else
-			copy[key] = value
-		end
-	end
-
-	return copy
-end
-
 local function canLoad(keep: Keep.KeepStruct)
 	return not keep.MetaData
 		or not keep.MetaData.ActiveSession -- no active session, so we can load (most likely a new Keep)
 		or keep.MetaData.ActiveSession.PlaceID == PlaceID and keep.MetaData.ActiveSession.JobID == JobID
 		or os.time() - keep.MetaData.LastUpdate < Store.assumeDeadLock
+end
+
+local function createMockStore(storeInfo: StoreInfo, dataTemplate) -- complete mirror of real stores, minus mock related data as we are in a mock store
+	return setmetatable({
+		_store_info = storeInfo,
+		_data_template = dataTemplate,
+
+		_store = MockStore.new(),
+
+		_mock = true,
+
+		_keeps = {},
+	}, Store)
 end
 
 local function releaseKeepInternally(keep: Keep.Keep)
@@ -121,7 +120,7 @@ local function saveKeep(keep: Keep.Keep) -- used to offset save times so not all
 			end
 
 			keep._store:UpdateAsync(keep._key, function(newestData)
-				return keep:_Save(newestData)
+				return keep:_Save(newestData, false)
 			end)
 		end
 
@@ -155,31 +154,11 @@ function Store.GetStore(storeInfo: StoreInfo | string, dataTemplate): Promise
 		_store_info = info,
 		_data_template = dataTemplate,
 
-		_store = nil,
-		_mock_store = MockStore.new(),
+		_store = if Store.mockStore then MockStore.new() else DataStoreService:GetDataStore(info.Name, info.Scope), -- this always returns even with datastores down, so only way of tracking is via failed requests
 
-		_mock = Promise.new(function(resolve, reject)
-			if Store.mockStore then
-				reject()
-			end
+		Mock = createMockStore(info, dataTemplate), -- revealed to api
 
-			local store = DataStoreService:GetDataStore(info.Name, info.Scope) -- this always returns even with datastores down, so only way of tracking is via failed requests
-
-			self._store = Promise.resolve(store)
-
-			if Store.mockStore then
-				reject()
-			end
-
-			resolve()
-		end)
-			:andThen(function()
-				return true
-			end)
-			:catch(function()
-				-- maybe now create a mock store? for now it will always be there
-				return false
-			end),
+		_mock = if Store.mockStore then true else false, -- studio only/datastores not available
 
 		_keeps = {},
 	}, Store)
@@ -192,7 +171,11 @@ function Store.GetStore(storeInfo: StoreInfo | string, dataTemplate): Promise
 end
 
 function Store:LoadKeep(key: string, unReleasedHandler: UnReleasedHandler): Promise
-	local store = not self._mock and self._store or self._mock_store
+	local store = self._store
+
+	if self._mock then
+		print("Using mock store!")
+	end
 
 	if unReleasedHandler == nil then
 		unReleasedHandler = function(_)
@@ -205,10 +188,7 @@ function Store:LoadKeep(key: string, unReleasedHandler: UnReleasedHandler): Prom
 	end
 
 	return Promise.new(function(resolve, reject)
-		local keep: Keep.KeepStruct = store:GetAsync(key)
-			or { -- support versions
-				Data = DeepCopy(self._data_template),
-			}
+		local keep: Keep.KeepStruct = store:GetAsync(key) or {} -- support versions
 
 		local success = canLoad(keep)
 
@@ -234,9 +214,9 @@ function Store:LoadKeep(key: string, unReleasedHandler: UnReleasedHandler): Prom
 			end
 		end
 
-		local keepClass = Keep.new(keep) -- why does typing break here? no idea.
+		local keepClass = Keep.new(keep, self._data_template) -- why does typing break here? no idea.
 
-		keepClass._store = store
+		keepClass._store = store -- mock store or real store
 		keepClass._key = key
 		keepClass._store_info.Name = self._store_info.Name
 		keepClass._store_info.Scope = self._store_info.Scope or ""
