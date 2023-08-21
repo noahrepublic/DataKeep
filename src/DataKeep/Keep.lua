@@ -35,14 +35,22 @@ type MetaData = {
 	LastUpdate: number,
 }
 
-type GlobalUpdates = {}
+type GlobalUpdate = {
+	ID: number,
+	Locked: boolean,
+	Data: {},
+}
+type GlobalUpdates = { -- unused right now, not sure about the type checking on this.
+	[number]: number, -- most recent update index
 
+	Updates: any,
+}
 export type ActiveSession = {
 	PlaceID: number,
 	JobID: number,
 }
 
---> Constructor
+export type Promise = typeof(Promise.new(function() end))
 
 local DefaultMetaData: MetaData = {
 	ActiveSession = { PlaceID = game.PlaceId, JobID = game.JobId }, -- we can change to number indexes for speed, but worse for types
@@ -50,7 +58,18 @@ local DefaultMetaData: MetaData = {
 	LastUpdate = 0,
 }
 
-local DefaultGlobalUpdates: GlobalUpdates = {}
+local DefaultGlobalUpdates = {
+	ID = 0, -- [recentUpdateId] newest global update id to process in order
+
+	--[[
+		{
+			updateId,
+			data,
+		}
+	]]
+
+	Updates = {},
+}
 
 local DefaultKeep: KeepStruct = {
 	Data = {},
@@ -62,8 +81,6 @@ local DefaultKeep: KeepStruct = {
 
 	LatestKeep = {},
 }
-
---> Private Functions
 
 local function DeepCopy(tbl: { [any]: any })
 	local copy = {}
@@ -79,12 +96,18 @@ local function DeepCopy(tbl: { [any]: any })
 	return copy
 end
 
+--> Constructor
+
 function Keep.new(structure: KeepStruct, dataTemplate: {}): Keep
 	local self = setmetatable({
 		Data = structure.Data or DeepCopy(dataTemplate),
 		MetaData = structure.MetaData or DefaultKeep.MetaData, -- auto locks the session too if new keep
 
 		GlobalUpdates = structure.GlobalUpdates or DefaultKeep.GlobalUpdates,
+
+		_pending_global_lock_removes = {},
+		_pending_global_locks = {},
+
 		UserIds = structure.UserIds or DefaultKeep.UserIds,
 
 		LatestKeep = structure.Data,
@@ -92,10 +115,17 @@ function Keep.new(structure: KeepStruct, dataTemplate: {}): Keep
 		OnRelease = Signal.new(),
 		_released = false,
 
+		_view_only = false,
+
+		OnGlobalUpdate = Signal.new(), -- fires on a new locked global update (ready to be progressed)
+		GlobalStateProcessor = function(_: GlobalUpdate, lock: () -> boolean, _: () -> boolean) -- by default just locks the global update (this is only ran if the keep is online)
+			lock()
+		end,
+
 		_store = nil,
 		_key = "", -- the scope of the keep, used for the store class to know where to save it
 
-		_load_time = os.clock(),
+		_last_save = os.clock(),
 		_store_info = { Name = "", Scope = "" },
 
 		_data_template = dataTemplate,
@@ -117,15 +147,13 @@ export type Keep = typeof(Keep.new({
 
 --> Private Functions
 
-local function isLocked(metaData: MetaData)
+local function isKeepLocked(metaData: MetaData)
 	return metaData.ActiveSession
 		and metaData.ActiveSession.PlaceID ~= game.PlaceId
 		and metaData.ActiveSession.JobID ~= game.JobId
 end
 
 local function transformUpdate(keep: Keep, newestData: KeepStruct, release: boolean)
-	-- TODO: this is where we would process globals
-
 	local empty = newestData == nil
 		or type(newestData) ~= "table"
 		or type(newestData.Data) ~= "table"
@@ -137,23 +165,99 @@ local function transformUpdate(keep: Keep, newestData: KeepStruct, release: bool
 		and (type(newestData) ~= "table" or type(newestData.Data) ~= "table" or type(newestData.MetaData) ~= "table")
 
 	if not corrupted and not empty then
-		if newestData.Data == nil and newestData.MetaData == nil and type(newestData.GlobalUpdates) == "table" then -- global updates, just no data
-			print("global updates")
-			-- support global updates
-		end
-
 		if
-			type(newestData.Data) == "table"
-			and typeof(newestData.MetaData) == "table"
-			and typeof(newestData.GlobalUpdates) -- full profile
+			type(newestData.Data) == "table" and typeof(newestData.MetaData) == "table"
+			-- full profile
 		then
-			if not isLocked(newestData.MetaData) then
+			if not isKeepLocked(newestData.MetaData) then
 				newestData.Data = keep.Data
 
 				newestData.UserIds = keep.UserIds
 			end
+		end
 
-			-- support global updates
+		if type(newestData.GlobalUpdates) == "table" then -- this handles full profiles and if there is just global updates but no data (globals posted with never loaded)
+			-- support globals
+
+			local currentGlobals = keep.GlobalUpdates -- "old" to other servers
+			local newGlobals = newestData.GlobalUpdates
+
+			local finalGlobals = {
+				ID = 0,
+				Updates = {},
+			} -- the final global updates to save
+
+			local id = 0 -- used to fix any missing ids
+
+			for _, newUpdate in newGlobals.Updates do
+				id += 1
+				finalGlobals.ID = id
+
+				-- lets check if it was active, and now locked.
+
+				local oldGlobal = nil
+
+				for _, oldUpdate in currentGlobals.Updates do
+					if oldUpdate.ID == newUpdate.ID then
+						oldGlobal = oldUpdate
+						break
+					end
+				end
+
+				local isNewGlobal = oldGlobal == nil or newUpdate.Locked ~= oldGlobal.Locked
+
+				if not isNewGlobal then
+					oldGlobal.ID = id
+					table.insert(finalGlobals.Updates, oldGlobal)
+					continue
+				end
+
+				newUpdate.ID = id
+
+				if not newUpdate.Locked then
+					-- lets check if it is unlocked, but is being locked
+
+					local isPendingLock = false
+
+					for _, pendingLock in ipairs(keep._pending_global_locks) do
+						if pendingLock == newUpdate.ID then
+							isPendingLock = true
+
+							break
+						end
+					end
+
+					if isPendingLock then
+						-- we are locking it, so lets add it to the final globals
+
+						newUpdate.Locked = true
+					end
+				end
+
+				-- ok it is locked, lets see if it is being removed
+
+				local isPendingRemoval = false
+
+				for _, pendingRemoval in ipairs(keep._pending_global_lock_removes) do
+					if pendingRemoval == newUpdate.ID then
+						isPendingRemoval = true
+						break
+					end
+				end
+
+				if isPendingRemoval then
+					-- we are removing it, so lets not add it to the final globals
+					continue
+				end
+
+				-- ok it is not being removed, lets add it to the final globals
+
+				keep.OnGlobalUpdate:Fire(newUpdate.Data, newUpdate.ID) -- fire the global update event
+
+				table.insert(finalGlobals.Updates, newUpdate)
+			end
+
+			newestData.GlobalUpdates = finalGlobals
 		end
 	end
 
@@ -181,7 +285,7 @@ local function transformUpdate(keep: Keep, newestData: KeepStruct, release: bool
 		}
 	end
 
-	if not isLocked(newestData.MetaData) then
+	if not isKeepLocked(newestData.MetaData) then
 		newestData.MetaData.ActiveSession = if release and newestData.MetaData.ForceLoad
 			then newestData.MetaData.ForceLoad
 			else DefaultMetaData.ActiveSession -- give the session to the new keep
@@ -195,17 +299,25 @@ local function transformUpdate(keep: Keep, newestData: KeepStruct, release: bool
 		keep.LatestKeep = newestData
 	end
 
-	if release and not isLocked(newestData.MetaData) then -- if it is locked, we never had the lock, so we can't release it
-		print("Released profile signal")
+	if release and not isKeepLocked(newestData.MetaData) then -- if it is locked, we never had the lock, so we can't release it
 		keep.OnRelease:Fire() -- unlocked, but not removed internally
 		keep._released = true -- will tell the store class to remove internally
 	end
 
+	keep._last_save = os.clock()
+
 	return newestData, newestData.UserIds
 end
 
-function Keep:_Save(newestData: KeepStruct, release: boolean)
+--> Public Methods
+
+function Keep:Save(newestData: KeepStruct, release: boolean)
 	if not self:IsActive() then
+		return newestData
+	end
+
+	if self._view_only then
+		error("Attempted to save a view only keep")
 		return newestData
 	end
 
@@ -218,11 +330,77 @@ function Keep:_Save(newestData: KeepStruct, release: boolean)
 			then true
 			else false
 
+	local latestGlobals = self.GlobalUpdates
+
+	local globalClears = self._pending_global_lock_removes
+
+	for _, updateId in ipairs(globalClears) do
+		for i = 1, #latestGlobals.Updates do
+			if latestGlobals.Updates[i].ID == updateId and latestGlobals.Updates[i].Locked then
+				table.remove(latestGlobals.Updates, i)
+				break
+			end
+		end
+	end
+
+	local globalUpdates = self.GlobalUpdates.Updates -- do we deep copy here..?
+
+	local function lockGlobalUpdate(index: number) -- we take index instead, why take updateid just to loop through? we aren't doing any removing, all removals are on locked globals and will be passed to _pending_global_lock_removes
+		return Promise.new(function(resolve, reject)
+			if not self:IsActive() then
+				return reject()
+			end
+
+			table.insert(self._pending_global_locks, globalUpdates[index].ID, index) -- locked queue
+
+			return resolve()
+		end)
+	end
+
+	local function removeLockedUpdate(index: number, updateId: number)
+		return Promise.new(function(resolve, reject)
+			if not self:IsActive() then
+				return reject()
+			end
+
+			if globalUpdates[index].ID ~= updateId then -- shouldn't happen, but
+				return reject()
+			end
+
+			if not globalUpdates[index].Locked and not self._pending_global_locks[index] then
+				error("Attempted to remove a global update that was not locked")
+				return reject()
+			end
+
+			table.insert(self._pending_global_lock_removes, updateId) -- locked removal queue
+			return resolve()
+		end)
+	end
+
+	local processors = {}
+	local processUpdates = {} -- we want to run them in batch, so half are saved and half aren't incase of specific needs
+
+	for i = 1, #globalUpdates do
+		if not globalUpdates[i].Locked then
+			local processor = self.GlobalStateProcessor(globalUpdates[i].Data, function()
+				table.insert(processUpdates, lockGlobalUpdate(i))
+			end, function()
+				table.insert(processUpdates, removeLockedUpdate(i, globalUpdates[i].ID))
+			end)
+
+			table.insert(processors, processor)
+		end
+	end
+
+	Promise.all(processors):andThen(function()
+		Promise.all(processUpdates):await() -- run in bulk
+	end)
+
 	return transformUpdate(self, newestData, release)
 end
 
 function Keep:IsActive()
-	return not isLocked(self.MetaData)
+	return not isKeepLocked(self.MetaData)
 end
 
 function Keep:Identify()
@@ -242,10 +420,8 @@ function Keep:Release()
 
 		self._released = true
 
-		print("Releasing")
-
 		self._store:UpdateAsync(self._key, function(newestData: KeepStruct)
-			return self:_Save(newestData, true)
+			return self:Save(newestData, true)
 		end)
 
 		resolve(self) -- this is called before internal release, but after session release, no edits can be made after this point

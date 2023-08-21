@@ -35,16 +35,19 @@ local Store = {
 
 	IssueSignal = Signal.new(), -- fires when we have an issue (issue logging)
 }
-
-local Keeps = {} -- queues to save
-
 Store.__index = Store
 
 Keep.assumeDeadLock = Store.assumeDeadLock
 
+local GlobalUpdates = {}
+GlobalUpdates.__index = GlobalUpdates
+
+--> Private Variables
+
+local Keeps = {} -- queues to save
+
 local JobID = game.JobId
 local PlaceID = game.PlaceId
-
 --> Types
 
 export type StoreInfo = {
@@ -67,6 +70,8 @@ export type Store = typeof(Store) & {
 
 	_keeps: { [string]: Keep.Keep },
 }
+
+export type GlobalUpdates = typeof(setmetatable({}, GlobalUpdates))
 
 export type UnReleasedHandler = (Keep.ActiveSession) -> string -- use a function for any purposes, logging, whitelist only certain places, etc
 
@@ -107,11 +112,10 @@ local function createMockStore(storeInfo: StoreInfo, dataTemplate) -- complete m
 end
 
 local function releaseKeepInternally(keep: Keep.Keep)
-	print("Released internally")
 	Keeps[keep:Identify()] = nil
 end
 
-local function saveKeep(keep: Keep.Keep) -- used to offset save times so not all at once
+local function saveKeep(keep: Keep.Keep, release: boolean): Promise
 	return Promise.new(function(resolve)
 		if keep._store then -- 100% of the time
 			if keep._released then -- already was saved
@@ -120,18 +124,17 @@ local function saveKeep(keep: Keep.Keep) -- used to offset save times so not all
 			end
 
 			keep._store:UpdateAsync(keep._key, function(newestData)
-				return keep:_Save(newestData, false)
+				return keep:Save(newestData, release or false)
 			end)
 		end
 
+		keep._last_save = os.clock()
+
 		print(`Saved Keep: {keep:Identify()}`)
-		print(keep)
 
 		resolve()
 	end)
 end
-
---> UnReleasedHandler Methods
 
 --> Public Functions
 
@@ -229,17 +232,174 @@ function Store:LoadKeep(key: string, unReleasedHandler: UnReleasedHandler): Prom
 	end)
 end
 
+function Store:ViewKeep(key: string): Keep.Keep | nil
+	return Promise.new(function(resolve)
+		local id = string.format(
+			"%s/%s%s",
+			self._store_info.Name,
+			string.format("%s%s", self._store_info.Scope or "", if self._store_info.Scope ~= nil then "/" else ""),
+			key
+		)
+
+		local keep = Keeps[id]
+
+		if not keep then
+			local data = self._store:GetAsync(key) or {}
+
+			local keepObject = Keep.new(data, self._data_template)
+
+			keepObject._view_only = true
+			keepObject._released = true -- incase they call :release and it tries to save
+
+			keep = keepObject
+		end
+
+		resolve(keep)
+	end)
+end
+
+function Store:PostGlobalUpdate(key: string, updateHandler: (GlobalUpdates) -> nil) -- gets passed add, lock & change functions
+	local id = string.format(
+		"%s/%s%s",
+		self._store_info.Name,
+		string.format("%s%s", self._store_info.Scope or "", if self._store_info.Scope ~= nil then "/" else ""),
+		key
+	)
+
+	local keep = Keeps[id]
+
+	if not keep then
+		keep = self:LoadKeep(key):awaitValue()
+	end
+
+	local globalUpdateObject = {
+		_updates = keep.GlobalUpdates,
+		_pending_removal = keep._pending_global_lock_removes,
+	}
+
+	setmetatable(globalUpdateObject, GlobalUpdates)
+
+	updateHandler(globalUpdateObject)
+end
+
+--> Global Updates
+
+function GlobalUpdates:AddGlobalUpdate(globalData: {})
+	return Promise.new(function(resolve, reject)
+		if Store.ServiceDone then
+			return reject()
+		end
+
+		local globalUpdates = self._updates
+
+		local updateId: number = globalUpdates.ID
+		updateId += 1
+
+		globalUpdates.ID = updateId
+
+		table.insert(globalUpdates.Updates, {
+			ID = updateId,
+			Locked = false,
+			Data = globalData,
+		})
+
+		resolve(updateId)
+	end)
+end
+
+function GlobalUpdates:RemoveActiveUpdate(updateId: number)
+	return Promise.new(function(resolve, reject)
+		if Store.ServiceDone then
+			return reject()
+		end
+
+		local globalUpdates = self._updates
+
+		if globalUpdates.ID < updateId then
+			return reject()
+		end
+
+		local globalUpdateIndex = nil
+
+		for i = 1, #globalUpdates.Updates do
+			if globalUpdates.Updates[i].ID == updateId and not globalUpdates.Updates[i].ID then
+				globalUpdateIndex = i
+				break
+			end
+		end
+
+		if globalUpdateIndex == nil then
+			return reject()
+		end
+
+		if globalUpdates.Updates[globalUpdateIndex].Locked then
+			error("Can't RemoveActiveUpdate on a locked update")
+			return reject()
+		end
+
+		table.remove(globalUpdates.Updates, globalUpdateIndex) -- instantly removes internally, unlike locked updates. this is because locked updates can still be deleted mid-processing
+		resolve()
+	end)
+end
+
+function GlobalUpdates:ChangeActiveUpdate(updateId: number, globalData: {})
+	return Promise.new(function(resolve, reject)
+		if Store.ServiceDone then
+			return reject()
+		end
+
+		local globalUpdates = self._updates
+
+		if globalUpdates.ID < updateId then
+			return reject()
+		end
+
+		for _, update in ipairs(globalUpdates.Updates) do
+			if update.ID == updateId and not update.Locked then
+				update.Data = globalData
+
+				break
+			end
+		end
+
+		resolve()
+	end)
+end
+
+local saveLoop
+
 game:BindToClose(function()
 	Store.ServiceDone = true
 	Keep.ServiceDone = true
 
+	saveLoop:Disconnect()
+
 	-- loop through and release (release saves too)
+
+	local saveSize = len(Keeps)
+
+	if saveSize > 0 then
+		print("Saving close")
+		local keeps = {}
+
+		for _, keep in Keeps do
+			table.insert(keeps, saveKeep(keep, true))
+
+			releaseKeepInternally(keep)
+		end
+
+		Promise.all(keeps):await()
+	end
 end)
 
-RunService.Heartbeat:Connect(function(dt)
+saveLoop = RunService.Heartbeat:Connect(function(dt)
 	saveCycle += dt
 
 	if saveCycle < Store._saveInterval then
+		return
+	end
+
+	if Store.ServiceDone then
 		return
 	end
 
@@ -255,7 +415,7 @@ RunService.Heartbeat:Connect(function(dt)
 		local keeps = {}
 
 		for _, keep in Keeps do
-			if clock - keep._load_time < Store._saveInterval then
+			if clock - keep._last_save < Store._saveInterval then
 				continue
 			end
 
@@ -263,8 +423,8 @@ RunService.Heartbeat:Connect(function(dt)
 		end
 
 		Promise.each(keeps, function(keep, _)
-			return Promise.delay(saveSpeed):andThen(function()
-				saveKeep(keep)
+			return Promise.delay(saveSpeed):andThen(function() -- used to offset save times so not all at once
+				saveKeep(keep, false)
 			end)
 		end)
 	end
