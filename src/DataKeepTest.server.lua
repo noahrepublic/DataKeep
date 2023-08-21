@@ -32,24 +32,36 @@ Players.PlayerAdded:Connect(function(player)
 
 		print(keep.GlobalUpdates)
 
-		keepStore:PostGlobalUpdate("Player_" .. player.UserId, function(globalUpdates)
-			local updateId = globalUpdates
-				:AddGlobalUpdate({
+		keepStore
+			:PostGlobalUpdate("Player_" .. 1, function(globalUpdates)
+				local updateId = globalUpdates
+					:AddGlobalUpdate({
+						Hello = "World!",
+					})
+					:awaitValue()
+
+				print("Added global update", updateId)
+
+				print(keep.GlobalUpdates)
+
+				print("Changing global update")
+
+				globalUpdates:ChangeActiveUpdate(updateId, {
 					Hello = "World!",
+					Hello2 = "World!",
 				})
-				:awaitValue()
+			end)
+			:andThen(function()
+				print("Global update posted")
 
-			print("Added global update", updateId)
+				task.delay(15, function()
+					keepStore:ViewKeep("Player_" .. 1):andThen(function(keep2)
+						print("Viewing keep")
 
-			print(keep.GlobalUpdates)
-
-			print("Changing global update")
-
-			globalUpdates:ChangeActiveUpdate(updateId, {
-				Hello = "World!",
-				Hello2 = "World!",
-			})
-		end)
+						print(keep2.GlobalUpdates)
+					end)
+				end)
+			end)
 	end)
 end)
 

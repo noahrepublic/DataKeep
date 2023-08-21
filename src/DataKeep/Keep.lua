@@ -23,8 +23,6 @@ export type KeepStruct = {
 	GlobalUpdates: GlobalUpdates,
 
 	UserIds: { [number]: number },
-
-	LatestKeep: any,
 }
 
 type MetaData = {
@@ -78,8 +76,6 @@ local DefaultKeep: KeepStruct = {
 	GlobalUpdates = DefaultGlobalUpdates, -- really like how profile service supports these, so adding to this module as I use them lots.
 
 	UserIds = {},
-
-	LatestKeep = {},
 }
 
 local function DeepCopy(tbl: { [any]: any })
@@ -110,7 +106,14 @@ function Keep.new(structure: KeepStruct, dataTemplate: {}): Keep
 
 		UserIds = structure.UserIds or DefaultKeep.UserIds,
 
-		LatestKeep = structure.Data,
+		LatestKeep = {
+			Data = DeepCopy(structure.Data or dataTemplate),
+			GlobalUpdates = DeepCopy(structure.GlobalUpdates or DefaultKeep.GlobalUpdates),
+
+			MetaData = DeepCopy(structure.MetaData or DefaultKeep.MetaData),
+
+			UserIds = DeepCopy(structure.UserIds or DefaultKeep.UserIds),
+		},
 
 		OnRelease = Signal.new(),
 		_released = false,
@@ -141,8 +144,6 @@ export type Keep = typeof(Keep.new({
 	GlobalUpdates = DefaultGlobalUpdates,
 
 	UserIds = DefaultKeep.UserIds,
-
-	LatestKeep = DefaultKeep.LatestKeep,
 }, {})) -- the actual Keep class type
 
 --> Private Functions
@@ -164,7 +165,7 @@ local function transformUpdate(keep: Keep, newestData: KeepStruct, release: bool
 	local corrupted = newestData ~= nil
 		and (type(newestData) ~= "table" or type(newestData.Data) ~= "table" or type(newestData.MetaData) ~= "table")
 
-	if not corrupted and not empty then
+	if type(newestData) == "table" then
 		if
 			type(newestData.Data) == "table" and typeof(newestData.MetaData) == "table"
 			-- full profile
@@ -179,7 +180,9 @@ local function transformUpdate(keep: Keep, newestData: KeepStruct, release: bool
 		if type(newestData.GlobalUpdates) == "table" then -- this handles full profiles and if there is just global updates but no data (globals posted with never loaded)
 			-- support globals
 
-			local currentGlobals = keep.GlobalUpdates -- "old" to other servers
+			local latestKeep = keep.LatestKeep -- "old" to other servers
+
+			local currentGlobals = latestKeep.GlobalUpdates
 			local newGlobals = newestData.GlobalUpdates
 
 			local finalGlobals = {
@@ -197,7 +200,9 @@ local function transformUpdate(keep: Keep, newestData: KeepStruct, release: bool
 
 				local oldGlobal = nil
 
-				for _, oldUpdate in currentGlobals.Updates do
+				local updates: { [number]: GlobalUpdate } = currentGlobals.Updates
+
+				for _: number, oldUpdate: GlobalUpdate in updates do
 					if oldUpdate.ID == newUpdate.ID then
 						oldGlobal = oldUpdate
 						break
@@ -261,20 +266,6 @@ local function transformUpdate(keep: Keep, newestData: KeepStruct, release: bool
 		end
 	end
 
-	if corrupted then
-		local replaceData = {
-			Data = newestData.Data,
-			MetaData = newestData.MetaData or DefaultKeep.MetaData, -- auto locks the session too if new keep
-
-			GlobalUpdates = newestData.GlobalUpdates or DefaultKeep.GlobalUpdates,
-			UserIds = newestData.UserIds or DefaultKeep.UserIds,
-
-			LatestKeep = newestData.Data,
-		}
-
-		newestData = replaceData
-	end
-
 	if empty then
 		newestData = {
 			Data = keep.Data,
@@ -283,6 +274,18 @@ local function transformUpdate(keep: Keep, newestData: KeepStruct, release: bool
 			GlobalUpdates = keep.GlobalUpdates,
 			UserIds = keep.UserIds,
 		}
+	end
+
+	if corrupted then
+		local replaceData = {
+			Data = newestData.Data,
+			MetaData = newestData.MetaData or DefaultKeep.MetaData, -- auto locks the session too if new keep
+
+			GlobalUpdates = newestData.GlobalUpdates or DefaultKeep.GlobalUpdates,
+			UserIds = newestData.UserIds or DefaultKeep.UserIds,
+		}
+
+		newestData = replaceData
 	end
 
 	if not isKeepLocked(newestData.MetaData) then
@@ -296,7 +299,9 @@ local function transformUpdate(keep: Keep, newestData: KeepStruct, release: bool
 
 		newestData.MetaData.LastUpdate = os.time()
 
-		keep.LatestKeep = newestData
+		if not empty then
+			keep.LatestKeep = DeepCopy(newestData)
+		end
 	end
 
 	if release and not isKeepLocked(newestData.MetaData) then -- if it is locked, we never had the lock, so we can't release it
@@ -315,6 +320,8 @@ function Keep:Save(newestData: KeepStruct, release: boolean)
 	if not self:IsActive() then
 		return newestData
 	end
+
+	print("Saving Keep")
 
 	if self._view_only then
 		error("Attempted to save a view only keep")
@@ -446,6 +453,47 @@ function Keep:Reconcile() -- fills in blank stuff
 	end
 
 	self.Data = reconcileData(self.Data, self._data_template)
+end
+
+--> Global Updates
+
+function Keep:GetReadyGlobalUpdates()
+	local lockedUpdates = {}
+
+	for _, update in ipairs(self.GlobalUpdates.Updates) do
+		if update.Locked then
+			table.insert(lockedUpdates, { update.Data, update.ID })
+		end
+	end
+
+	return lockedUpdates
+end
+
+function Keep:ClearLockedUpdate(id: number): Promise
+	return Promise.new(function(resolve, reject)
+		if not self:IsActive() then
+			return reject()
+		end
+		local globalUpdates = self.GlobalUpdates
+
+		if id > globalUpdates.ID then
+			return reject()
+		end
+
+		for i = 1, #globalUpdates.Updates do
+			if globalUpdates.Updates[i].ID == id and globalUpdates.Updates[i].Locked then
+				table.insert(self._pending_global_lock_removes, id) -- locked removal queue
+				return resolve()
+			end
+		end
+
+		if table.find(self._pending_global_locks, id) then
+			table.insert(self._pending_global_lock_removes, id)
+			return resolve()
+		end
+
+		error("Can't :ClearLockedUpdate on an active update")
+	end)
 end
 
 return Keep

@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 
 --> Services
 
@@ -20,7 +20,7 @@ local Keep = require(script.Keep)
 local Store = {
 	mockStore = false, -- Enabled when DataStoreService is not available (Studio)
 
-	_saveInterval = 5, --30,
+	_saveInterval = 30,
 
 	_storeQueue = {}, -- Stores that are currently loaded in the save cycle
 
@@ -259,27 +259,35 @@ function Store:ViewKeep(key: string): Keep.Keep | nil
 end
 
 function Store:PostGlobalUpdate(key: string, updateHandler: (GlobalUpdates) -> nil) -- gets passed add, lock & change functions
-	local id = string.format(
-		"%s/%s%s",
-		self._store_info.Name,
-		string.format("%s%s", self._store_info.Scope or "", if self._store_info.Scope ~= nil then "/" else ""),
-		key
-	)
+	return Promise.new(function(resolve)
+		if Store.ServiceDone then
+			error("Game is closing, can't post global update")
+		end
 
-	local keep = Keeps[id]
+		local id = string.format(
+			"%s/%s%s",
+			self._store_info.Name,
+			string.format("%s%s", self._store_info.Scope or "", if self._store_info.Scope ~= nil then "/" else ""),
+			key
+		)
 
-	if not keep then
-		keep = self:LoadKeep(key):awaitValue()
-	end
+		local keep = Keeps[id]
 
-	local globalUpdateObject = {
-		_updates = keep.GlobalUpdates,
-		_pending_removal = keep._pending_global_lock_removes,
-	}
+		if not keep then
+			keep = self:LoadKeep(key):awaitValue()
+		end
 
-	setmetatable(globalUpdateObject, GlobalUpdates)
+		local globalUpdateObject = {
+			_updates = keep.GlobalUpdates,
+			_pending_removal = keep._pending_global_lock_removes,
+		}
 
-	updateHandler(globalUpdateObject)
+		setmetatable(globalUpdateObject, GlobalUpdates)
+
+		updateHandler(globalUpdateObject)
+
+		return resolve()
+	end)
 end
 
 --> Global Updates
@@ -303,7 +311,7 @@ function GlobalUpdates:AddGlobalUpdate(globalData: {})
 			Data = globalData,
 		})
 
-		resolve(updateId)
+		return resolve(updateId)
 	end)
 end
 
@@ -338,7 +346,7 @@ function GlobalUpdates:RemoveActiveUpdate(updateId: number)
 		end
 
 		table.remove(globalUpdates.Updates, globalUpdateIndex) -- instantly removes internally, unlike locked updates. this is because locked updates can still be deleted mid-processing
-		resolve()
+		return resolve()
 	end)
 end
 
@@ -362,7 +370,7 @@ function GlobalUpdates:ChangeActiveUpdate(updateId: number, globalData: {})
 			end
 		end
 
-		resolve()
+		return resolve()
 	end)
 end
 
@@ -426,7 +434,7 @@ saveLoop = RunService.Heartbeat:Connect(function(dt)
 			return Promise.delay(saveSpeed):andThen(function() -- used to offset save times so not all at once
 				saveKeep(keep, false)
 			end)
-		end)
+		end):andThen(function() end)
 	end
 end)
 
