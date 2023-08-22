@@ -8,7 +8,7 @@ Coming soon
 
 ## Wally
 
-Download the module through Wally by adding [this](https://wally.run/package/noahrepublic/components) package!
+Download the module through Wally by adding [this](https://wally.run/package/noahrepublic/datakeep) package!
 
 ## Git Submodule
 
