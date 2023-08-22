@@ -24,7 +24,7 @@ local Store = {
 
 	_storeQueue = {}, -- Stores that are currently loaded in the save cycle
 
-	assumeDeadLock = 5 * 60, -- how long without updates to assume the session is dead
+	assumeDeadLock = 10 * 60, -- how long without updates to assume the session is dead
 	-- according to clv2, os.time is synced roblox responded in a bug report. I don't see why it would in the first place anyways
 
 	ServiceDone = false, -- is shutting down?
@@ -315,6 +315,24 @@ function GlobalUpdates:AddGlobalUpdate(globalData: {})
 	end)
 end
 
+function GlobalUpdates:GetActiveUpdates()
+	if Store.ServiceDone then
+		warn("Game is closing, can't get active updates") -- maybe shouldn't error incase they don't :catch?
+	end
+
+	local globalUpdates = self._updates
+
+	local updates = {}
+
+	for _, update in ipairs(globalUpdates.Updates) do
+		if not update.Locked then
+			table.insert(updates, update)
+		end
+	end
+
+	return updates
+end
+
 function GlobalUpdates:RemoveActiveUpdate(updateId: number)
 	return Promise.new(function(resolve, reject)
 		if Store.ServiceDone then
@@ -358,7 +376,10 @@ function GlobalUpdates:ChangeActiveUpdate(updateId: number, globalData: {})
 
 		local globalUpdates = self._updates
 
+		print(globalUpdates)
+
 		if globalUpdates.ID < updateId then
+			print("rejected :/")
 			return reject()
 		end
 
@@ -366,11 +387,11 @@ function GlobalUpdates:ChangeActiveUpdate(updateId: number, globalData: {})
 			if update.ID == updateId and not update.Locked then
 				update.Data = globalData
 
-				break
+				return resolve()
 			end
 		end
 
-		return resolve()
+		return reject()
 	end)
 end
 
