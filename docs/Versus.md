@@ -1,3 +1,7 @@
+---
+sidebar_position: 4
+---
+
 # DataKeep vs ProfileService
 
 ProfileService the number one datastore module by loleris is a great module. However, not flawless in my opinion which is why DataKeep was born.
