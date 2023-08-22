@@ -1,0 +1,21 @@
+name: Wally
+
+on:
+  push:
+    branches:
+    - main
+  
+jobs:
+  build:
+    name: Upload Release Asset
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Install Aftman
+        uses: ok-nick/setup-aftman@v0
+      - name: Publish release to Wally
+        shell: bash
+        run: |
+            wally login --token "${{ secrets.WALLY_AUTH }}"
+            wally publish
