@@ -95,7 +95,7 @@ end
 --> Constructor
 
 function Keep.new(structure: KeepStruct, dataTemplate: {}): Keep
-	local self = setmetatable({
+	return setmetatable({
 		Data = structure.Data or DeepCopy(dataTemplate),
 		MetaData = structure.MetaData or DefaultKeep.MetaData, -- auto locks the session too if new keep
 
@@ -133,8 +133,6 @@ function Keep.new(structure: KeepStruct, dataTemplate: {}): Keep
 
 		_data_template = dataTemplate,
 	}, Keep)
-
-	return self
 end
 
 export type Keep = typeof(Keep.new({
@@ -457,12 +455,24 @@ end
 
 --> Global Updates
 
-function Keep:GetReadyGlobalUpdates()
+function Keep:GetActiveGlobalUpdates()
+	local activeUpdates = {}
+
+	for _, update in ipairs(self.GlobalUpdates.Updates) do
+		if not update.Locked then
+			table.insert(activeUpdates, { Data = update.Data, ID = update.ID })
+		end
+	end
+
+	return activeUpdates
+end
+
+function Keep:GetLockedGlobalUpdates()
 	local lockedUpdates = {}
 
 	for _, update in ipairs(self.GlobalUpdates.Updates) do
 		if update.Locked then
-			table.insert(lockedUpdates, { update.Data, update.ID })
+			table.insert(lockedUpdates, { Data = update.Data, ID = update.ID })
 		end
 	end
 
