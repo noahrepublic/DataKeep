@@ -2,6 +2,13 @@
 
 --> Structure
 
+--[=[
+	@class Keep
+	@server
+
+	Keep class holds the data for a specific key in a store, and methods to manipulate data
+]=]
+
 local Keep = {
 	assumeDeadLock = 0,
 
@@ -25,6 +32,16 @@ export type KeepStruct = {
 	UserIds: { [number]: number },
 }
 
+--[=[
+	@type ActiveSession {PlaceID: number, JobID: number}
+	@within Keep
+]=]
+
+--[=[
+	@type MetaData {ActiveSession: ActiveSession | nil, ForceLoad: ActiveSession | nil, LastUpdate: number}
+	@within Keep
+]=]
+
 type MetaData = {
 	ActiveSession: ActiveSession | nil,
 
@@ -38,11 +55,18 @@ type GlobalUpdate = {
 	Locked: boolean,
 	Data: {},
 }
+
+--[=[
+	@type GlobalUpdates {ID: number, Updates: { [number]: GlobalUpdate }}
+	@within Keep
+]=]
+
 type GlobalUpdates = { -- unused right now, not sure about the type checking on this.
 	[number]: number, -- most recent update index
 
 	Updates: any,
 }
+
 export type ActiveSession = {
 	PlaceID: number,
 	JobID: number,
@@ -94,6 +118,41 @@ end
 
 --> Constructor
 
+--[=[
+	@prop GlobalStateProcessor (updateData: GlobalUpdate, lock: () -> boolean, remove: () -> boolean) -> void
+	@within Keep
+
+	Define how to process global updates, by default just locks the global update (this is only ran if the keep is online)
+
+	The function is revealed the lock and remove global update function
+
+	:::caution
+	Updates *must* be locked eventually in order for OnGlobalUpdate to get fired
+	:::caution
+
+	:::warning
+	The lock and remove function revealed here are **NOT** the same as the ones in the Keep class, they are only for this function.
+	:::warning
+]=]
+
+--[=[
+	@prop OnGlobalUpdate Signal<(updateData: {}, updateId: number)>
+	@within Keep
+
+	Fired when a new global update is locked and ready to be processed
+
+	:::caution
+	ONLY locked globals are fired
+	:::caution
+]=]
+
+--[=[
+	@prop OnRelease Signal<()>
+	@within Keep
+
+	Fired when the keep is released (fires before internally released, but after session release)
+]=]
+
 function Keep.new(structure: KeepStruct, dataTemplate: {}): Keep
 	return setmetatable({
 		Data = structure.Data or DeepCopy(dataTemplate),
@@ -134,6 +193,11 @@ function Keep.new(structure: KeepStruct, dataTemplate: {}): Keep
 		_data_template = dataTemplate,
 	}, Keep)
 end
+
+--[=[
+	@type Keep { Data: {}, MetaData: MetaData, GlobalUpdates: GlobalUpdates, UserIds: {}, OnGlobalUpdate: Signal<GlobalUpdate & number>, GlobalStateProcessor: (update: GlobalUpdate, lock: () -> boolean, remove: () -> boolean) -> void, OnRelease: Signal}
+	@within Keep
+]=]
 
 export type Keep = typeof(Keep.new({
 	Data = DefaultKeep.Data,
@@ -314,6 +378,29 @@ end
 
 --> Public Methods
 
+--[=[
+	@method Save
+	@within Keep
+
+	@param newestData {KeepStruct} The newest data to save
+	@param release {boolean} Whether to release the keep after saving
+
+	@return {KeepStruct} The newest data to save
+
+	:::caution
+	Automatically called by the save cycle. If you want to manually save to progress GlobalUpdates faster, wrap in a UpdateAsync call and pass the newestData to the callback.
+
+	As of right now it is messy to manually save, but it is possible. I will be adding a better way to do this in the future.
+
+	```
+	keep._store:UpdateAsync(keep._key, function(newestData)
+		return keep:Save(newestData, false)
+	end)
+
+	**RESETS AUTO SAVE TIMER ON THIS KEEP**
+	:::caution
+]=]
+
 function Keep:Save(newestData: KeepStruct, release: boolean)
 	if not self:IsActive() then
 		return newestData
@@ -404,9 +491,27 @@ function Keep:Save(newestData: KeepStruct, release: boolean)
 	return transformUpdate(self, newestData, release)
 end
 
+--[=[
+	@method IsActive
+	@within Keep
+
+	@return {boolean} 
+
+	Returns if the Keep is active in the session (not locked by another server)
+]=]
+
 function Keep:IsActive()
 	return not isKeepLocked(self.MetaData)
 end
+
+--[=[
+	@method Identify
+	@within Keep
+
+	@return string
+
+	Returns the string identifier for the Keep
+]=]
 
 function Keep:Identify()
 	return string.format(
@@ -416,6 +521,17 @@ function Keep:Identify()
 		self._key
 	)
 end
+
+--[=[
+	@method Release
+	@within Keep
+
+	@return Promise<Keep>
+
+	:::warning
+	This is called before internal release, but after session release, no edits can be made after this point
+	:::warning
+]=]
 
 function Keep:Release()
 	return Promise.new(function(resolve)
@@ -432,6 +548,15 @@ function Keep:Release()
 		resolve(self) -- this is called before internal release, but after session release, no edits can be made after this point
 	end)
 end
+
+--[=[
+	@method Reconcile
+	@within Keep
+
+	@return void
+
+	Fills in any missing data in the Keep, using the data template
+]=]
 
 function Keep:Reconcile() -- fills in blank stuff
 	local function reconcileData(data: any, template: any)
@@ -455,6 +580,15 @@ end
 
 --> Global Updates
 
+--[=[
+	@method GetActiveGlobalUpdates
+	@within Keep
+
+	@return {Array<{ Data: {}, ID: number }>}
+
+	Returns an array of active global updates (not locked/processed)
+]=]
+
 function Keep:GetActiveGlobalUpdates()
 	local activeUpdates = {}
 
@@ -467,6 +601,19 @@ function Keep:GetActiveGlobalUpdates()
 	return activeUpdates
 end
 
+--[=[
+	@method GetLockedGlobalUpdates
+	@within Keep
+
+	@return {Array<{ Data: {}, ID: number }>}
+
+	Returns an array of locked global updates (processed)
+
+	:::caution
+	Lock updates can **not** be changed, only cleared after done being used.
+	:::caution
+]=]
+
 function Keep:GetLockedGlobalUpdates()
 	local lockedUpdates = {}
 
@@ -478,6 +625,21 @@ function Keep:GetLockedGlobalUpdates()
 
 	return lockedUpdates
 end
+
+--[=[
+	@method ClearLockedUpdate
+	@within Keep
+
+	@param id {number}
+
+	@return Promise<void>
+
+	Clears a locked global update after being used
+
+	:::warning
+	Passing an **active** global update id will throw an error & reject the Promise. 
+	:::warning
+]=]
 
 function Keep:ClearLockedUpdate(id: number): Promise
 	return Promise.new(function(resolve, reject)

@@ -1,22 +1,22 @@
 --> @https://github.com/RBLXUtils/FastSignal/tree/main
 
---[=[
+--[[
 	A class which holds data and methods for ScriptSignals.
 
 	@class ScriptSignal
-]=]
+]]
 local ScriptSignal = {}
 ScriptSignal.__index = ScriptSignal
 
---[=[
+--[[
 	A class which holds data and methods for ScriptConnections.
 
 	@class ScriptConnection
-]=]
+]]
 local ScriptConnection = {}
 ScriptConnection.__index = ScriptConnection
 
---[=[
+--[[
 	A boolean which determines if a ScriptConnection is active or not.
 
 	@prop Connected boolean
@@ -24,7 +24,7 @@ ScriptConnection.__index = ScriptConnection
 
 	@readonly
 	@ignore
-]=]
+]]
 
 export type Class = typeof(setmetatable({
 	_active = true,
@@ -64,12 +64,12 @@ local function CreateFreeThread()
 	end
 end
 
---[=[
+--[[
 	Creates a ScriptSignal object.
 
 	@return ScriptSignal
 	@ignore
-]=]
+]]
 function ScriptSignal.new(): Class
 	return setmetatable({
 		_active = true,
@@ -77,7 +77,7 @@ function ScriptSignal.new(): Class
 	}, ScriptSignal)
 end
 
---[=[
+--[[
 	Returns a boolean determining if the object is a ScriptSignal.
 
 	```lua
@@ -91,12 +91,12 @@ end
 	@param object any
 	@return boolean
 	@ignore
-]=]
+]]
 function ScriptSignal.Is(object): boolean
 	return typeof(object) == "table" and getmetatable(object) == ScriptSignal
 end
 
---[=[
+--[[
 	Returns a boolean determing if a ScriptSignal object is active.
 
 	```lua
@@ -107,12 +107,12 @@ end
 
 	@return boolean
 	@ignore
-]=]
+]]
 function ScriptSignal:IsActive(): boolean
 	return self._active == true
 end
 
---[=[
+--[[
 	Connects a handler to a ScriptSignal object.
 
 	```lua
@@ -129,7 +129,7 @@ end
 	@param handler (...: any) -> ()
 	@return ScriptConnection
 	@ignore
-]=]
+]]
 function ScriptSignal:Connect(handler: (...any) -> ()): ScriptConnection
 	assert(typeof(handler) == "function", "Must be function")
 
@@ -167,7 +167,7 @@ function ScriptSignal:Connect(handler: (...any) -> ()): ScriptConnection
 	return connection :: ScriptConnection
 end
 
---[=[
+--[[
 	Connects a handler to a ScriptSignal object, but only allows that
 	connection to run once. Any `:Fire` calls called afterwards won't trigger anything.
 
@@ -185,7 +185,7 @@ end
 	@param handler (...: any) -> ()
 	@return ScriptConnection
 	@ignore
-]=]
+]]
 function ScriptSignal:Once(handler: (...any) -> ()): ScriptConnection
 	assert(typeof(handler) == "function", "Must be function")
 
@@ -199,7 +199,7 @@ function ScriptSignal:Once(handler: (...any) -> ()): ScriptConnection
 end
 ScriptSignal.ConnectOnce = ScriptSignal.Once
 
---[=[
+--[[
 	Yields the thread until a `:Fire` call occurs, returns what the signal was fired with.
 
 	```lua
@@ -216,7 +216,7 @@ ScriptSignal.ConnectOnce = ScriptSignal.Once
 	@yields
 	@return ...any
 	@ignore
-]=]
+]]
 function ScriptSignal:Wait(): ...any
 	local thread
 	do
@@ -232,7 +232,7 @@ function ScriptSignal:Wait(): ...any
 	return coroutine.yield()
 end
 
---[=[
+--[[
 	Fires a ScriptSignal object with the arguments passed.
 
 	```lua
@@ -247,7 +247,7 @@ end
 
 	@param ... any
 	@ignore
-]=]
+]]
 function ScriptSignal:Fire(...: any)
 	local node: ScriptConnectionNode? = self._head
 	while node ~= nil do
@@ -263,7 +263,7 @@ function ScriptSignal:Fire(...: any)
 	end
 end
 
---[=[
+--[[
 	Disconnects all connections from a ScriptSignal object without making it unusable.
 
 	```lua
@@ -275,7 +275,7 @@ end
 	```
 
 	@ignore
-]=]
+]]
 function ScriptSignal:DisconnectAll()
 	local node: ScriptConnectionNode? = self._head
 	while node ~= nil do
@@ -293,7 +293,7 @@ function ScriptSignal:DisconnectAll()
 	self._head = nil
 end
 
---[=[
+--[[
 	Destroys a ScriptSignal object, disconnecting all connections and making it unusable.
 
 	```lua
@@ -304,7 +304,7 @@ end
 	```
 
 	@ignore
-]=]
+]]
 function ScriptSignal:Destroy()
 	if self._active ~= true then
 		return
@@ -314,7 +314,7 @@ function ScriptSignal:Destroy()
 	self._active = false
 end
 
---[=[
+--[[
 	Disconnects a connection, any `:Fire` calls from now on will not
 	invoke this connection's handler.
 
@@ -327,7 +327,7 @@ end
 	```
 
 	@ignore
-]=]
+]]
 function ScriptConnection:Disconnect()
 	if self.Connected ~= true then
 		return

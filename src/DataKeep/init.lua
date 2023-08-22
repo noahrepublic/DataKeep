@@ -17,6 +17,12 @@ local Keep = require(script.Keep)
 
 --> Structure
 
+--[=[
+	@class Store
+	@server
+	A store is a class that holds inner savable objects, Keep(s), from a datastore (DataStoreService:GetDataStore())
+]=]
+
 local Store = {
 	mockStore = false, -- Enabled when DataStoreService is not available (Studio)
 
@@ -50,6 +56,14 @@ local JobID = game.JobId
 local PlaceID = game.PlaceId
 --> Types
 
+--[=[
+	@type StoreInfo {Name: string, Scope: string?}
+
+	@within Store
+
+	Table format for a store's info in :GetStore()
+]=]
+
 export type StoreInfo = {
 	Name: string,
 	Scope: string | nil,
@@ -58,6 +72,14 @@ export type StoreInfo = {
 type MockStore = MockStore.MockStore
 
 export type Promise = typeof(Promise.new(function() end))
+
+--[=[
+	@type Store {Mock: MockStore, LoadKeep: (string, UnReleasedHandler?) -> Promise<Keep>, ViewKeep: (string) -> Keep, PostGlobalUpdate: (string, (GlobalUpdates) -> nil) -> Promise<void>}
+
+	@within Store
+
+	Stores are used to load and save Keeps from a DataStoreService:GetDataStore()
+]=]
 
 export type Store = typeof(Store) & {
 	_store_info: StoreInfo,
@@ -73,6 +95,21 @@ export type Store = typeof(Store) & {
 
 export type GlobalUpdates = typeof(setmetatable({}, GlobalUpdates))
 
+--[=[
+	@type UnReleasedHandler (Keep.ActiveSession) -> string
+
+	@within Store
+
+	Used to determine how to handle an session locked Keep
+
+	### Default: "Ignore"
+	
+	Ignores the locked Keep and steals the lock
+
+	### "Cancel"
+	
+	Cancels the load of the Keep
+]=]
 export type UnReleasedHandler = (Keep.ActiveSession) -> string -- use a function for any purposes, logging, whitelist only certain places, etc
 
 --> Private Variables
@@ -142,6 +179,24 @@ if RunService:IsStudio() then
 	Store.mockStore = true
 end
 
+--[=[
+	@function GetStore
+	@within Store
+
+	@param storeInfo StoreInfo | string
+	@param dataTemplate any
+
+	@return Promise<Store>
+
+	Loads a store from a DataStoreService:GetDataStore() and returns a Store object
+
+	```lua
+	local keepStore = DataKeep.GetStore("TestStore", {
+		Test = "Hello World!",
+	}):awaitValue()
+	```
+]=]
+
 function Store.GetStore(storeInfo: StoreInfo | string, dataTemplate): Promise
 	local info: StoreInfo
 
@@ -172,6 +227,24 @@ function Store.GetStore(storeInfo: StoreInfo | string, dataTemplate): Promise
 
 	return Promise.resolve(self)
 end
+
+--[=[
+	@method LoadKeep
+	@within Store
+
+	@param key string
+	@param unReleasedHandler UnReleasedHandler?
+
+	@return Promise<Keep>
+
+	Loads a Keep from the store and returns a Keep object
+
+	```lua
+	keepStore:LoadKeep("Player_" .. player.UserId, function() return "Ignore" end)):andThen(function(keep)
+		print("Loaded Keep!")
+	end)
+	```
+]=]
 
 function Store:LoadKeep(key: string, unReleasedHandler: UnReleasedHandler): Promise
 	local store = self._store
@@ -232,7 +305,26 @@ function Store:LoadKeep(key: string, unReleasedHandler: UnReleasedHandler): Prom
 	end)
 end
 
-function Store:ViewKeep(key: string): Keep.Keep | nil
+--[=[
+	@method ViewKeep
+	@within Store
+
+	@param key string
+
+	@return Promise<Keep?>
+
+	Loads a Keep from the store and returns a Keep object, but doesn't save it
+
+	View only Keeps have the same functions as normal Keeps, but can not operate on data
+
+	```lua
+	keepStore:ViewKeep("Player_" .. player.UserId):andThen(function(viewOnlyKeep)
+		print(`Viewing {viewOnlyKeep:Identify()}`)
+	end)
+	```
+]=]
+
+function Store:ViewKeep(key: string): Promise
 	return Promise.new(function(resolve)
 		local id = string.format(
 			"%s/%s%s",
@@ -257,6 +349,30 @@ function Store:ViewKeep(key: string): Keep.Keep | nil
 		resolve(keep)
 	end)
 end
+
+--[=[
+	@method PostGlobalUpdate
+	@within Store
+
+	@param key string
+	@param updateHandler (GlobalUpdates) -> nil
+
+	@return Promise<void>
+
+	Posts a global update to a Keep
+
+	```updateHandler``` reveals globalUpdates to the API
+
+	```lua
+	keepStore:PostGlobalUpdate("Player_" .. player.UserId, function(globalUpdates)
+		globalUpdates:AddGlobalUpdate({
+			Hello = "World!",
+		}):andThen(function(updateId)
+			print("Added Global Update!")
+		end)
+	end)
+	```
+]=]
 
 function Store:PostGlobalUpdate(key: string, updateHandler: (GlobalUpdates) -> nil) -- gets passed add, lock & change functions
 	return Promise.new(function(resolve)
@@ -292,6 +408,42 @@ end
 
 --> Global Updates
 
+--[=[
+	@class GlobalUpdates
+	@server
+	
+	Used to add, lock and change global updates
+
+	Revealed through ```PostGlobalUpdate```
+]=]
+
+--[=[
+	@type GlobalID number
+
+	@within GlobalUpdates
+
+	Used to identify a global update
+]=]
+
+--[=[
+	@method AddGlobalUpdate
+	@within GlobalUpdates
+
+	@param globalData {}
+
+	@return Promise<GlobalID>
+
+	Adds a global update to the Keep
+
+	```lua
+	globalUpdates:AddGlobalUpdate({
+		Hello = "World!",
+	}):andThen(function(updateId)
+		print("Added Global Update!")
+	end)
+	```
+]=]
+
 function GlobalUpdates:AddGlobalUpdate(globalData: {})
 	return Promise.new(function(resolve, reject)
 		if Store.ServiceDone then
@@ -315,6 +467,23 @@ function GlobalUpdates:AddGlobalUpdate(globalData: {})
 	end)
 end
 
+--[=[
+	@method GetActiveUpdates
+	@within GlobalUpdates
+
+	@return {GlobalUpdate}
+
+	Returns all **active** global updates
+
+	```lua
+	local updates = globalUpdates:GetActiveUpdates()
+
+	for _, update in ipairs(updates) do
+		print(update.Data)
+	end
+	```
+]=]
+
 function GlobalUpdates:GetActiveUpdates()
 	if Store.ServiceDone then
 		warn("Game is closing, can't get active updates") -- maybe shouldn't error incase they don't :catch?
@@ -332,6 +501,27 @@ function GlobalUpdates:GetActiveUpdates()
 
 	return updates
 end
+
+--[=[
+	@method RemoveActiveUpdate
+	@within GlobalUpdates
+
+	@param updateId GlobalID
+
+	@return Promise<void>
+
+	Removes an active global update
+
+	```lua
+	local updates = globalUpdates:GetActiveUpdates()
+
+	for _, update in ipairs(updates) do
+		globalUpdates:RemoveActiveUpdate(update.ID):andThen(function()
+			print("Removed Global Update!")
+		end)
+	end
+	```
+]=]
 
 function GlobalUpdates:RemoveActiveUpdate(updateId: number)
 	return Promise.new(function(resolve, reject)
@@ -368,7 +558,21 @@ function GlobalUpdates:RemoveActiveUpdate(updateId: number)
 	end)
 end
 
-function GlobalUpdates:ChangeActiveUpdate(updateId: number, globalData: {})
+--[=[
+	@method ChangeActiveUpdate
+	@within GlobalUpdates
+
+	@param updateId GlobalID
+	@param globalData {}
+
+	@return Promise<void>
+
+	Change an **active** global update's data to the new data. 
+
+	Useful for stacking updates to save space for Keeps that maybe recieving lots of globals. Ex. A YouTuber recieving gifts
+]=]
+
+function GlobalUpdates:ChangeActiveUpdate(updateId: number, globalData: {}): Promise
 	return Promise.new(function(resolve, reject)
 		if Store.ServiceDone then
 			return reject()
@@ -458,12 +662,5 @@ saveLoop = RunService.Heartbeat:Connect(function(dt)
 		end):andThen(function() end)
 	end
 end)
-
---[[ Saves
-	keep:Save()
-
-	if stealing or released then release from queue
-
-]]
 
 return Store
