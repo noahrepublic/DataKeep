@@ -19,50 +19,35 @@ Players.PlayerAdded:Connect(function(player)
 	keepStore:LoadKeep("Player_" .. player.UserId):andThen(function(keep)
 		Keeps[player] = keep
 
-		keep.OnGlobalUpdate:Connect(function(id, globalUpdate)
-			print("Global update received", id)
-			print(globalUpdate)
+		keep.OnGlobalUpdate:Connect(function(_, id)
+			print(player.UserId .. " received global update", id)
+
+			keep:ClearLockedUpdate(id)
 		end)
 	end)
 
-	task.delay(5, function()
-		print("Creating a global update")
+	for i = 1, 2 do
+		local message = if i == 1 then "Hello" else "Goodbye"
 
-		local keep = Keeps[player]
+		keepStore:PostGlobalUpdate("Player" .. player.UserId, function(globalUpdates)
+			print(globalUpdates:GetActiveUpdates())
+			for _, globalUpdate in ipairs(globalUpdates:GetActiveUpdates()) do
+				print("Changing global update", globalUpdate.ID)
 
-		print(keep.GlobalUpdates)
-
-		keepStore
-			:PostGlobalUpdate("Player_" .. 1, function(globalUpdates)
-				local updateId = globalUpdates
-					:AddGlobalUpdate({
-						Hello = "World!",
-					})
-					:awaitValue()
-
-				print("Added global update", updateId)
-
-				print(keep.GlobalUpdates)
-
-				print("Changing global update")
-
-				globalUpdates:ChangeActiveUpdate(updateId, {
-					Hello = "World!",
-					Hello2 = "World!",
+				globalUpdates:ChangeActiveUpdate(globalUpdate.ID, {
+					Message = globalUpdate.Data.Message .. message,
 				})
-			end)
-			:andThen(function()
-				print("Global update posted")
 
-				task.delay(15, function()
-					keepStore:ViewKeep("Player_" .. 1):andThen(function(keep2)
-						print("Viewing keep")
+				return
+			end
 
-						print(keep2.GlobalUpdates)
-					end)
-				end)
-			end)
-	end)
+			print("Posted global update")
+
+			globalUpdates:AddGlobalUpdate({
+				Message = message,
+			})
+		end)
+	end
 end)
 
 Players.PlayerRemoving:Connect(function(player)
