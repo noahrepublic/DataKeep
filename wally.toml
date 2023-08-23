@@ -1,11 +1,11 @@
 [package]
 name = "noahrepublic/datakeep"
 description = "The final data saving solution you need"
-version = "1.0.1"
+version = "1.0.2"
 license = "MIT"
 authors = ["noahrepublic"]
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "server"
 
-exclude = ["*.toml", "docs", ".moonwave", "sourcemap.json", "README.md"]
+exclude = ["*.toml", "docs", ".moonwave", "sourcemap.json", "README.md", "src/DataKeepTest.server.lua", "game.rbxlx"]
 include = ["src/DataKeep", "wally.toml"]
