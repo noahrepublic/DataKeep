@@ -1,10 +1,6 @@
 {
-  "name": "DataKeep",
-  "tree": {
-    "$className": "DataModel",
-
-    "ServerScriptService": {
-        "$path": "src"
-    }
-  }
+	"name": "DataKeep",
+	"tree": {
+		"$path": "src/DataKeep"
+	}
 }

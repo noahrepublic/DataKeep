@@ -1,0 +1,10 @@
+{
+  "name": "DataKeep",
+  "tree": {
+    "$className": "DataModel",
+
+    "ServerScriptService": {
+        "$path": "src"
+    }
+  }
+}
