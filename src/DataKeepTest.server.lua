@@ -24,6 +24,12 @@ Players.PlayerAdded:Connect(function(player)
 
 			keep:ClearLockedUpdate(id)
 		end)
+
+		print("Lets try loading AGAIN")
+
+		keepStore:LoadKeep("Player_" .. player.UserId):andThen(function()
+			print("Loaded cached keep again")
+		end)
 	end)
 
 	for i = 1, 2 do

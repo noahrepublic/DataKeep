@@ -207,6 +207,12 @@ function Store.GetStore(storeInfo: StoreInfo | string, dataTemplate): Promise
 		}
 	end
 
+	local identifier = info.Name .. (info.Scope and info.Scope or "")
+
+	if Store._storeQueue[identifier] then
+		return Promise.resolve(Store._storeQueue[identifier])
+	end
+
 	local self
 	self = setmetatable({
 		_store_info = info,
@@ -220,8 +226,6 @@ function Store.GetStore(storeInfo: StoreInfo | string, dataTemplate): Promise
 
 		_keeps = {},
 	}, Store)
-
-	local identifier = info.Name .. (info.Scope and info.Scope or "")
 
 	Store._storeQueue[identifier] = self._store
 
@@ -244,6 +248,10 @@ end
 		print("Loaded Keep!")
 	end)
 	```
+
+	:::info
+	Stores can be loaded multiple times as they are cached, that way you can call :LoadKeep() and get the same cached Keeps
+	:::info
 ]=]
 
 function Store:LoadKeep(key: string, unReleasedHandler: UnReleasedHandler): Promise
@@ -261,6 +269,17 @@ function Store:LoadKeep(key: string, unReleasedHandler: UnReleasedHandler): Prom
 
 	if type(unReleasedHandler) ~= "function" then
 		error("UnReleasedHandler must be a function")
+	end
+
+	local identifier = string.format(
+		"%s/%s%s",
+		self._store_info.Name,
+		if self._store_info.Scope ~= nil then self._store_info.Scope .. "/" else "",
+		key
+	)
+
+	if self._keeps[identifier] then
+		return Promise.resolve(self._keeps[identifier])
 	end
 
 	return Promise.new(function(resolve, reject)
