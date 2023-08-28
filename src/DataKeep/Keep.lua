@@ -387,7 +387,7 @@ end
 
 	@return {KeepStruct} The newest data to save
 
-	:::caution
+	:::info
 	Automatically called by the save cycle. If you want to manually save to progress GlobalUpdates faster, wrap in a UpdateAsync call and pass the newestData to the callback.
 
 	As of right now it is messy to manually save, but it is possible. I will be adding a better way to do this in the future.
@@ -396,8 +396,10 @@ end
 	keep._store:UpdateAsync(keep._key, function(newestData)
 		return keep:Save(newestData, false)
 	end)
+	:::info
 
-	**RESETS AUTO SAVE TIMER ON THIS KEEP**
+	:::caution
+	RESETS AUTO SAVE TIMER ON THIS KEEP
 	:::caution
 ]=]
 
