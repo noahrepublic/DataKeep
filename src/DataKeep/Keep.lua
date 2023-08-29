@@ -472,10 +472,14 @@ end
 	@method Save
 	@within Keep
 
-	@return {KeepStruct} Data returned from UpdateAsync()
+	@return KeepStruct
+
+	Manually Saves a keep and returns the data from UpdateAsync()
+
+	Commonly useful for speeding up global updates
 
 	:::caution
-	RESETS AUTO SAVE TIMER ON THIS KEEP
+	RESETS AUTO SAVE TIMER ON THE KEEP
 	:::caution
 ]=]
 
