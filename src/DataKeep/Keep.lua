@@ -124,7 +124,9 @@ end
 
 	Define how to process global updates, by default just locks the global update (this is only ran if the keep is online)
 
-	The function is revealed the lock and remove global update function
+	The function reveals the lock and remove global update function through the parameters.
+
+
 
 	:::caution
 	Updates *must* be locked eventually in order for OnGlobalUpdate to get fired
@@ -376,14 +378,10 @@ local function transformUpdate(keep: Keep, newestData: KeepStruct, release: bool
 	return newestData, newestData.UserIds
 end
 
---> Public Methods
-
-function Keep:_save(newestData: KeepStruct, release: boolean) -- used to internally save, so we can have :Save()
+function Keep:_save(newestData: KeepStruct, release: boolean) -- used to internally save, so we can better reveal have :Save()
 	if not self:IsActive() then
 		return newestData
 	end
-
-	print("Saving Keep")
 
 	if self._view_only then
 		error("Attempted to save a view only keep")
@@ -467,6 +465,7 @@ function Keep:_save(newestData: KeepStruct, release: boolean) -- used to interna
 
 	return transformUpdate(self, newestData, release)
 end
+--> Public Methods
 
 --[=[
 	@method Save

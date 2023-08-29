@@ -167,8 +167,6 @@ local function saveKeep(keep: Keep.Keep, release: boolean): Promise
 
 		keep._last_save = os.clock()
 
-		print(`Saved Keep: {keep:Identify()}`)
-
 		resolve()
 	end)
 end
