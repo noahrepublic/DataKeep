@@ -378,32 +378,7 @@ end
 
 --> Public Methods
 
---[=[
-	@method Save
-	@within Keep
-
-	@param newestData {KeepStruct} The newest data to save
-	@param release {boolean} Whether to release the keep after saving
-
-	@return {KeepStruct} The newest data to save
-
-	:::info
-	Automatically called by the save cycle. If you want to manually save to progress GlobalUpdates faster, wrap in a UpdateAsync call and pass the newestData to the callback.
-
-	As of right now it is messy to manually save, but it is possible. I will be adding a better way to do this in the future.
-
-	```
-	keep._store:UpdateAsync(keep._key, function(newestData)
-		return keep:Save(newestData, false)
-	end)
-	:::info
-
-	:::caution
-	RESETS AUTO SAVE TIMER ON THIS KEEP
-	:::caution
-]=]
-
-function Keep:Save(newestData: KeepStruct, release: boolean)
+function Keep:_save(newestData: KeepStruct, release: boolean) -- used to internally save, so we can have :Save()
 	if not self:IsActive() then
 		return newestData
 	end
@@ -494,6 +469,27 @@ function Keep:Save(newestData: KeepStruct, release: boolean)
 end
 
 --[=[
+	@method Save
+	@within Keep
+
+	@return {KeepStruct} Data returned from UpdateAsync()
+
+	:::caution
+	RESETS AUTO SAVE TIMER ON THIS KEEP
+	:::caution
+]=]
+
+function Keep:Save()
+	return Promise.new(function(resolve)
+		local data = self._store:UpdateAsync(self._key, function(newestData)
+			return self:_save(newestData, false)
+		end)
+
+		resolve(data)
+	end)
+end
+
+--[=[
 	@method IsActive
 	@within Keep
 
@@ -578,6 +574,40 @@ function Keep:Reconcile() -- fills in blank stuff
 	end
 
 	self.Data = reconcileData(self.Data, self._data_template)
+end
+
+--[=[
+	@method AddUserId
+	@within Keep
+
+	@param userId number
+
+	Associates a userId to a datastore to assist with GDPR requests (The right to erasure)
+]=]
+
+function Keep:AddUserId(userId: number)
+	if not self:IsActive() then
+		return
+	end
+
+	table.insert(self.UserIds, userId)
+end
+
+--[=[
+	@method AddUserId
+	@within Keep
+
+	@param userId number
+
+	Unassociates a userId to a datastore
+]=]
+
+function Keep:RemoveUserId(userId: number)
+	local index = table.find(self.UserIds, userId)
+
+	if index then
+		table.remove(self.UserIds, index)
+	end
 end
 
 --> Global Updates

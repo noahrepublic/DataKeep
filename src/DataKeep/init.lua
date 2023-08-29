@@ -161,7 +161,7 @@ local function saveKeep(keep: Keep.Keep, release: boolean): Promise
 			end
 
 			keep._store:UpdateAsync(keep._key, function(newestData)
-				return keep:Save(newestData, release or false)
+				return keep:_save(newestData, release or false)
 			end)
 		end
 
