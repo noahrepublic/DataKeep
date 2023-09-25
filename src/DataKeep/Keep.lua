@@ -612,7 +612,7 @@ function Keep:AddUserId(userId: number)
 end
 
 --[=[
-	@method AddUserId
+	@method RemoveUserId
 	@within Keep
 
 	@param userId number
