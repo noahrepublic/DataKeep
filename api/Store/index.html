@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v2.3.1">
 <title data-rh="true">Store | DataKeep</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://noahrepublic.github.io/DataKeep/api/Store"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docusaurus_tag" content="default"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docsearch:docusaurus_tag" content="default"><meta data-rh="true" property="og:title" content="Store | DataKeep"><meta data-rh="true" name="description" content="A store is a class that holds inner savable objects, Keep(s), from a datastore (DataStoreService:GetDataStore())"><meta data-rh="true" property="og:description" content="A store is a class that holds inner savable objects, Keep(s), from a datastore (DataStoreService:GetDataStore())"><link data-rh="true" rel="canonical" href="https://noahrepublic.github.io/DataKeep/api/Store"><link data-rh="true" rel="alternate" href="https://noahrepublic.github.io/DataKeep/api/Store" hreflang="en"><link data-rh="true" rel="alternate" href="https://noahrepublic.github.io/DataKeep/api/Store" hreflang="x-default"><link rel="stylesheet" href="/DataKeep/assets/css/styles.e1adec2f.css">
-<link rel="preload" href="/DataKeep/assets/js/runtime~main.59ed6a2b.js" as="script">
-<link rel="preload" href="/DataKeep/assets/js/main.a7a09791.js" as="script">
+<link rel="preload" href="/DataKeep/assets/js/runtime~main.2f091e57.js" as="script">
+<link rel="preload" href="/DataKeep/assets/js/main.82d9a5b2.js" as="script">
 </head>
 <body class="navigation-with-keyboard">
 <script>!function(){function e(e){document.documentElement.setAttribute("data-theme",e)}var t=function(){var e=null;try{e=localStorage.getItem("theme")}catch(e){}return e}();null!==t?e(t):window.matchMedia("(prefers-color-scheme: dark)").matches?e("dark"):(window.matchMedia("(prefers-color-scheme: light)").matches,e("light"))}()</script><div id="__docusaurus">
@@ -21,13 +21,13 @@
 <p>Ignores the locked Keep and steals the lock</p>
 <h3>"Cancel"</h3>
 <p>Cancels the load of the Keep</p>
-</div><h2 class="anchor anchorWithStickyNavbar_LWe7" id="functions">Functions<a href="#functions" class="hash-link" aria-label="Direct link to Functions" title="Direct link to Functions">​</a></h2><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="GetStore"><code style="text-decoration:none">GetStore</code><a href="#GetStore" class="hash-link" aria-label="Direct link to GetStore" title="Direct link to GetStore">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/DataKeep/init.lua#L197"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Store<!-- -->.</code><code class="green_DgR4">GetStore</code><code>(</code><div class="inset_uKQm"><div><code>storeInfo<!-- -->: </code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/DataKeep/api/Store#StoreInfo">StoreInfo</a></code><code class="op_lSLc"> | </code><code class="blue_P4bS">string</code><code>,</code></div><div><code>dataTemplate<!-- -->: </code><code class="blue_P4bS">any</code></div></div><code>) → </code><code class="blue_P4bS">Promise</code><code class="op_lSLc">&lt;</code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/DataKeep/api/Store#Store">Store</a></code><code class="op_lSLc">&gt;</code></div><div>
+</div><h2 class="anchor anchorWithStickyNavbar_LWe7" id="functions">Functions<a href="#functions" class="hash-link" aria-label="Direct link to Functions" title="Direct link to Functions">​</a></h2><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="GetStore"><code style="text-decoration:none">GetStore</code><a href="#GetStore" class="hash-link" aria-label="Direct link to GetStore" title="Direct link to GetStore">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/DataKeep/init.lua#L216"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Store<!-- -->.</code><code class="green_DgR4">GetStore</code><code>(</code><div class="inset_uKQm"><div><code>storeInfo<!-- -->: </code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/DataKeep/api/Store#StoreInfo">StoreInfo</a></code><code class="op_lSLc"> | </code><code class="blue_P4bS">string</code><code>,</code></div><div><code>dataTemplate<!-- -->: </code><code class="blue_P4bS">any</code></div></div><code>) → </code><code class="blue_P4bS">Promise</code><code class="op_lSLc">&lt;</code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/DataKeep/api/Store#Store">Store</a></code><code class="op_lSLc">&gt;</code></div><div>
 <p>Loads a store from a DataStoreService:GetDataStore() and returns a Store object</p>
 <pre class="language-lua"><code class="language-lua"><span class="token keyword">local</span> keepStore <span class="token operator">=</span> DataKeep<span class="token punctuation">.</span><span class="token function">GetStore</span><span class="token punctuation">(</span><span class="token string">"TestStore"</span><span class="token punctuation">,</span> <span class="token punctuation">{</span>
 	Test <span class="token operator">=</span> <span class="token string">"Hello World!"</span><span class="token punctuation">,</span>
 <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">:</span><span class="token function">awaitValue</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 </code></pre>
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="LoadKeep"><code style="text-decoration:none">LoadKeep</code><a href="#LoadKeep" class="hash-link" aria-label="Direct link to LoadKeep" title="Direct link to LoadKeep">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/DataKeep/init.lua#L254"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Store<!-- -->:</code><code class="green_DgR4">LoadKeep</code><code>(</code><div class="inset_uKQm"><div><code>key<!-- -->: </code><code class="blue_P4bS">string</code><code>,</code></div><div><code>unReleasedHandler<!-- -->: </code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/DataKeep/api/Store#UnReleasedHandler">UnReleasedHandler?</a></code></div></div><code>) → </code><code class="blue_P4bS">Promise</code><code class="op_lSLc">&lt;</code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/DataKeep/api/Keep#Keep">Keep</a></code><code class="op_lSLc">&gt;</code></div><div>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="LoadKeep"><code style="text-decoration:none">LoadKeep</code><a href="#LoadKeep" class="hash-link" aria-label="Direct link to LoadKeep" title="Direct link to LoadKeep">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/DataKeep/init.lua#L273"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Store<!-- -->:</code><code class="green_DgR4">LoadKeep</code><code>(</code><div class="inset_uKQm"><div><code>key<!-- -->: </code><code class="blue_P4bS">string</code><code>,</code></div><div><code>unReleasedHandler<!-- -->: </code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/DataKeep/api/Store#UnReleasedHandler">UnReleasedHandler?</a></code></div></div><code>) → </code><code class="blue_P4bS">Promise</code><code class="op_lSLc">&lt;</code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/DataKeep/api/Keep#Keep">Keep</a></code><code class="op_lSLc">&gt;</code></div><div>
 <p>Loads a Keep from the store and returns a Keep object</p>
 <pre class="language-lua"><code class="language-lua">keepStore<span class="token punctuation">:</span><span class="token function">LoadKeep</span><span class="token punctuation">(</span><span class="token string">"Player_"</span> <span class="token operator">..</span> player<span class="token punctuation">.</span>UserId<span class="token punctuation">,</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">return</span> <span class="token string">"Ignore"</span> <span class="token keyword">end</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">:</span><span class="token function">andThen</span><span class="token punctuation">(</span><span class="token keyword">function</span><span class="token punctuation">(</span>keep<span class="token punctuation">)</span>
 	<span class="token function">print</span><span class="token punctuation">(</span><span class="token string">"Loaded Keep!"</span><span class="token punctuation">)</span>
@@ -43,14 +43,14 @@
     <p>Stores can be loaded multiple times as they are cached, that way you can call :LoadKeep() and get the same cached Keeps</p>
   </div>
 </div>
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="ViewKeep"><code style="text-decoration:none">ViewKeep</code><a href="#ViewKeep" class="hash-link" aria-label="Direct link to ViewKeep" title="Direct link to ViewKeep">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/DataKeep/init.lua#L343"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Store<!-- -->:</code><code class="green_DgR4">ViewKeep</code><code>(</code><code>key<!-- -->: </code><code class="blue_P4bS">string</code><code>) → </code><code class="blue_P4bS">Promise</code><code class="op_lSLc">&lt;</code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/DataKeep/api/Keep#Keep">Keep?</a></code><code class="op_lSLc">&gt;</code></div><div>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="ViewKeep"><code style="text-decoration:none">ViewKeep</code><a href="#ViewKeep" class="hash-link" aria-label="Direct link to ViewKeep" title="Direct link to ViewKeep">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/DataKeep/init.lua#L363"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Store<!-- -->:</code><code class="green_DgR4">ViewKeep</code><code>(</code><div class="inset_uKQm"><div><code>key<!-- -->: </code><code class="blue_P4bS">string</code><code>,</code></div><div><code>version<!-- -->: </code><code class="blue_P4bS">string?</code></div></div><code>) → </code><code class="blue_P4bS">Promise</code><code class="op_lSLc">&lt;</code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/DataKeep/api/Keep#Keep">Keep?</a></code><code class="op_lSLc">&gt;</code></div><div>
 <p>Loads a Keep from the store and returns a Keep object, but doesn't save it</p>
 <p>View only Keeps have the same functions as normal Keeps, but can not operate on data</p>
 <pre class="language-lua"><code class="language-lua">keepStore<span class="token punctuation">:</span><span class="token function">ViewKeep</span><span class="token punctuation">(</span><span class="token string">"Player_"</span> <span class="token operator">..</span> player<span class="token punctuation">.</span>UserId<span class="token punctuation">)</span><span class="token punctuation">:</span><span class="token function">andThen</span><span class="token punctuation">(</span><span class="token keyword">function</span><span class="token punctuation">(</span>viewOnlyKeep<span class="token punctuation">)</span>
 	<span class="token function">print</span><span class="token punctuation">(</span>`<span class="token function">Viewing</span> <span class="token punctuation">{</span>viewOnlyKeep<span class="token punctuation">:</span><span class="token function">Identify</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">}</span>`<span class="token punctuation">)</span>
 <span class="token keyword">end</span><span class="token punctuation">)</span>
 </code></pre>
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="PostGlobalUpdate"><code style="text-decoration:none">PostGlobalUpdate</code><a href="#PostGlobalUpdate" class="hash-link" aria-label="Direct link to PostGlobalUpdate" title="Direct link to PostGlobalUpdate">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/DataKeep/init.lua#L393"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Store<!-- -->:</code><code class="green_DgR4">PostGlobalUpdate</code><code>(</code><div class="inset_uKQm"><div><code>key<!-- -->: </code><code class="blue_P4bS">string</code><code>,</code></div><div><code>updateHandler<!-- -->: </code><code class="purple_ieR2">(</code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/DataKeep/api/Keep#GlobalUpdates">GlobalUpdates</a></code><code class="purple_ieR2">)</code><code class="purple_ieR2"> → </code><code class="blue_P4bS">nil</code></div></div><code>) → </code><code class="blue_P4bS">Promise</code><code class="op_lSLc">&lt;</code><code class="blue_P4bS">void</code><code class="op_lSLc">&gt;</code></div><div>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="PostGlobalUpdate"><code style="text-decoration:none">PostGlobalUpdate</code><a href="#PostGlobalUpdate" class="hash-link" aria-label="Direct link to PostGlobalUpdate" title="Direct link to PostGlobalUpdate">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/DataKeep/init.lua#L413"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Store<!-- -->:</code><code class="green_DgR4">PostGlobalUpdate</code><code>(</code><div class="inset_uKQm"><div><code>key<!-- -->: </code><code class="blue_P4bS">string</code><code>,</code></div><div><code>updateHandler<!-- -->: </code><code class="purple_ieR2">(</code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/DataKeep/api/Keep#GlobalUpdates">GlobalUpdates</a></code><code class="purple_ieR2">)</code><code class="purple_ieR2"> → </code><code class="blue_P4bS">nil</code></div></div><code>) → </code><code class="blue_P4bS">Promise</code><code class="op_lSLc">&lt;</code><code class="blue_P4bS">void</code><code class="op_lSLc">&gt;</code></div><div>
 <p>Posts a global update to a Keep</p>
 <p><code>updateHandler</code> reveals globalUpdates to the API</p>
 <pre class="language-lua"><code class="language-lua">keepStore<span class="token punctuation">:</span><span class="token function">PostGlobalUpdate</span><span class="token punctuation">(</span><span class="token string">"Player_"</span> <span class="token operator">..</span> player<span class="token punctuation">.</span>UserId<span class="token punctuation">,</span> <span class="token keyword">function</span><span class="token punctuation">(</span>globalUpdates<span class="token punctuation">)</span>
@@ -86,7 +86,7 @@
             ],
             &quot;function_type&quot;: &quot;static&quot;,
             &quot;source&quot;: {
-                &quot;line&quot;: 197,
+                &quot;line&quot;: 216,
                 &quot;path&quot;: &quot;src/DataKeep/init.lua&quot;
             }
         },
@@ -113,7 +113,7 @@
             ],
             &quot;function_type&quot;: &quot;method&quot;,
             &quot;source&quot;: {
-                &quot;line&quot;: 254,
+                &quot;line&quot;: 273,
                 &quot;path&quot;: &quot;src/DataKeep/init.lua&quot;
             }
         },
@@ -125,6 +125,11 @@
                     &quot;name&quot;: &quot;key&quot;,
                     &quot;desc&quot;: &quot;&quot;,
                     &quot;lua_type&quot;: &quot;string&quot;
+                },
+                {
+                    &quot;name&quot;: &quot;version&quot;,
+                    &quot;desc&quot;: &quot;&quot;,
+                    &quot;lua_type&quot;: &quot;string?&quot;
                 }
             ],
             &quot;returns&quot;: [
@@ -135,7 +140,7 @@
             ],
             &quot;function_type&quot;: &quot;method&quot;,
             &quot;source&quot;: {
-                &quot;line&quot;: 343,
+                &quot;line&quot;: 363,
                 &quot;path&quot;: &quot;src/DataKeep/init.lua&quot;
             }
         },
@@ -162,7 +167,7 @@
             ],
             &quot;function_type&quot;: &quot;method&quot;,
             &quot;source&quot;: {
-                &quot;line&quot;: 393,
+                &quot;line&quot;: 413,
                 &quot;path&quot;: &quot;src/DataKeep/init.lua&quot;
             }
         }
@@ -207,7 +212,7 @@
         &quot;path&quot;: &quot;src/DataKeep/init.lua&quot;
     }
 }</pre></details></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#types" class="table-of-contents__link toc-highlight">Types</a><ul><li><a href="#Store" class="table-of-contents__link toc-highlight">Store</a></li><li><a href="#StoreInfo" class="table-of-contents__link toc-highlight">StoreInfo</a></li><li><a href="#UnReleasedHandler" class="table-of-contents__link toc-highlight">UnReleasedHandler</a></li></ul></li><li><a href="#properties" class="table-of-contents__link toc-highlight">Properties</a></li><li><a href="#functions" class="table-of-contents__link toc-highlight">Functions</a><ul><li><a href="#LoadKeep" class="table-of-contents__link toc-highlight">:LoadKeep</a></li><li><a href="#PostGlobalUpdate" class="table-of-contents__link toc-highlight">:PostGlobalUpdate</a></li><li><a href="#ViewKeep" class="table-of-contents__link toc-highlight">:ViewKeep</a></li><li><a href="#GetStore" class="table-of-contents__link toc-highlight">.GetStore</a></li></ul></li></ul></div></div></div></div></main></div></div><footer class="footer footer--dark"><div class="container container-fluid"><div class="footer__bottom text--center"><div class="footer__copyright">Copyright © 2023 noahrepublic. Built with Moonwave and Docusaurus.</div></div></div></footer></div>
-<script src="/DataKeep/assets/js/runtime~main.59ed6a2b.js"></script>
-<script src="/DataKeep/assets/js/main.a7a09791.js"></script>
+<script src="/DataKeep/assets/js/runtime~main.2f091e57.js"></script>
+<script src="/DataKeep/assets/js/main.82d9a5b2.js"></script>
 </body>
 </html>
