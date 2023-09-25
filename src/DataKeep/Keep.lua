@@ -186,6 +186,8 @@ function Keep.new(structure: KeepStruct, dataTemplate: {}): Keep
 			lock()
 		end,
 
+		_keyInfo = {},
+
 		_store = nil,
 		_key = "", -- the scope of the keep, used for the store class to know where to save it
 
@@ -484,11 +486,11 @@ end
 
 function Keep:Save()
 	return Promise.new(function(resolve)
-		local data = self._store:UpdateAsync(self._key, function(newestData)
+		local dataKeyInfo: DataStoreKeyInfo = self._store:UpdateAsync(self._key, function(newestData)
 			return self:_save(newestData, false)
 		end)
 
-		resolve(data)
+		resolve(dataKeyInfo)
 	end)
 end
 
@@ -521,6 +523,19 @@ function Keep:Identify()
 		string.format("%s%s", self._store_info.Scope, if self._store_info.Scope ~= "" then "/" else ""),
 		self._key
 	)
+end
+
+--[=[
+	@method GetKeyInfo
+	@within Keep
+
+	@return DataStoreKeyInfo
+
+	Returns the DataStoreKeyInfo for the Keep
+]=]
+
+function Keep:GetKeyInfo(): DataStoreKeyInfo
+	return self._keyInfo
 end
 
 --[=[
@@ -611,6 +626,70 @@ function Keep:RemoveUserId(userId: number)
 	if index then
 		table.remove(self.UserIds, index)
 	end
+end
+
+--> Version API
+
+--[[ Design for public version API
+	While ProfileService provides a very nice query API that automatically changes the version and saves on :OverwriteAsync 
+	I think it is better to have a more manual approach, as it is more flexible and allows for more control over the versioning + migration process exists to handle any data changes
+]]
+
+--[=[
+	@method SetVersion
+	@within Keep
+
+	@param version string
+	@param migrateProcessor? (versionKeep: Keep) -> Keep
+
+	@return Promise<Keep>
+
+	Allows for a manual versioning process, where the version is set and the data is migrated to the new version using the optional migrateProcessor function
+
+	DataKeep does not provide a version list iterator, requiring the developer to do or not do this themselves allowing for more flexibility
+
+	Returns a Promise that resolves to the old keep (before the migration) This is the **last** time the old keep's GlobalUpdates will be accessible before **permanently** being removed
+
+	:::warning
+	Will not save until the next loop unless otherwise called using :Save or :Overwrite for ViewOnly Keeps
+	:::warning
+
+	:::caution
+	Any global updates not taken care of in migrateProcessor will be lost
+	:::caution
+]=]
+
+function Keep:SetVersion(version: string, migrateProcessor: (versionKeep: Keep) -> Keep): Promise
+	if migrateProcessor == nil then
+		migrateProcessor = function(versionKeep: Keep)
+			return versionKeep
+		end
+	end
+
+	return Promise.new(function(resolve)
+		local oldKeep = {
+			Data = DeepCopy(self.Data),
+			MetaData = DeepCopy(self.MetaData),
+			GlobalUpdates = DeepCopy(self.GlobalUpdates),
+			UserIds = DeepCopy(self.UserIds),
+		} -- was going to just return self.LatestKeep but worried on the timing of the save
+
+		local versionKeep = self._store
+			:ViewKeep(self._key, version)
+			:catch(function(err)
+				error(err)
+			end)
+			:awaitValue()
+
+		versionKeep = migrateProcessor(versionKeep) -- Global updates are still able to be edited here, after this they are gone if not processed.
+
+		self.Data = versionKeep.Data
+		self.MetaData = versionKeep.MetaData
+		self.GlobalUpdates = versionKeep.GlobalUpdates
+		self.UserIds = versionKeep.UserIds
+
+		resolve(oldKeep)
+	end)
 end
 
 --> Global Updates

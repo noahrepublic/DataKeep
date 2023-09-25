@@ -154,22 +154,41 @@ end
 
 local function saveKeep(keep: Keep.Keep, release: boolean): Promise
 	return Promise.new(function(resolve)
-		if keep._store then -- 100% of the time
+		local recentKeyInfo: DataStoreKeyInfo
+
+		if keep._store then
 			if keep._released then -- already was saved
 				releaseKeepInternally(keep)
 				resolve()
 			end
 
-			keep._store:UpdateAsync(keep._key, function(newestData)
+			recentKeyInfo = keep._store:UpdateAsync(keep._key, function(newestData)
 				return keep:_save(newestData, release or false)
 			end)
+		else
+			releaseKeepInternally(keep)
+			error("Keep invalid, internally released | Create a GitHub issue if issue persists")
 		end
 
 		keep._last_save = os.clock()
 
-		resolve()
+		keep._keyInfo = { -- have to map the tuple to a table for type checking (even though tuples are arrays in lua)
+			CreatedTime = recentKeyInfo.CreatedTime,
+			UpdatedTime = recentKeyInfo.UpdatedTime,
+			Version = recentKeyInfo.Version,
+		}
+
+		resolve(recentKeyInfo or {})
 	end)
 end
+
+--[[
+	Future idea: I doubt it is needed so it may just throttle speed.
+
+	local function getRequestBudget(keep) 
+		return keep._store:GetRequestBudgetForRequestType(Enum.DataStoreRequestType.UpdateAsync)
+	end
+]]
 
 --> Public Functions
 
@@ -327,6 +346,7 @@ end
 	@within Store
 
 	@param key string
+	@param version string?
 
 	@return Promise<Keep?>
 
@@ -341,7 +361,7 @@ end
 	```
 ]=]
 
-function Store:ViewKeep(key: string): Promise
+function Store:ViewKeep(key: string, version: string?): Promise
 	return Promise.new(function(resolve)
 		local id = string.format(
 			"%s/%s%s",
@@ -353,7 +373,7 @@ function Store:ViewKeep(key: string): Promise
 		local keep = Keeps[id]
 
 		if not keep then
-			local data = self._store:GetAsync(key) or {}
+			local data = self._store:GetAsync(key, version) or {}
 
 			local keepObject = Keep.new(data, self._data_template)
 
@@ -629,7 +649,6 @@ game:BindToClose(function()
 	local saveSize = len(Keeps)
 
 	if saveSize > 0 then
-		print("Saving close")
 		local keeps = {}
 
 		for _, keep in Keeps do
