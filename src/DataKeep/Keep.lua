@@ -655,7 +655,7 @@ end
 
 	"I lost my progress! Last time I had 200 gems!"
 
-	```
+	```lua
 		keep:GetVersions():andThen(function(iterator)
 			local version = iterator.Current()
 
