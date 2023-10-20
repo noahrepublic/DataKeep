@@ -30,6 +30,22 @@ Players.PlayerAdded:Connect(function(player)
 		keepStore:LoadKeep("Player_" .. player.UserId):andThen(function()
 			print("Loaded cached keep again")
 		end)
+
+		keep:Save()
+
+		keep.Data.Test = "Hello World! 2"
+		keep:Save()
+
+		local versions = keep:GetVersions()
+
+		versions:andThen(function(iterator)
+			print(keep.Data)
+			local versionToRoll = iterator.Next()
+
+			keep:SetVersion(versionToRoll.Version)
+
+			print(keep.Data)
+		end)
 	end)
 
 	for i = 1, 2 do

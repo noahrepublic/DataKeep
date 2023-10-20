@@ -121,7 +121,7 @@ local saveCycle = 0 -- total heartbeat dt
 local function len(tbl: { [any]: any })
 	local count = 0
 
-	for _ in pairs(tbl) do
+	for _ in tbl do
 		count += 1
 	end
 
@@ -332,6 +332,8 @@ function Store:LoadKeep(key: string, unReleasedHandler: UnReleasedHandler): Prom
 		keepClass._key = key
 		keepClass._store_info.Name = self._store_info.Name
 		keepClass._store_info.Scope = self._store_info.Scope or ""
+
+		keepClass._keep_store = self
 
 		self._storeQueue[key] = keepClass
 
@@ -617,10 +619,7 @@ function GlobalUpdates:ChangeActiveUpdate(updateId: number, globalData: {}): Pro
 
 		local globalUpdates = self._updates
 
-		print(globalUpdates)
-
 		if globalUpdates.ID < updateId then
-			print("rejected :/")
 			return reject()
 		end
 
@@ -695,7 +694,7 @@ saveLoop = RunService.Heartbeat:Connect(function(dt)
 			return Promise.delay(saveSpeed):andThen(function() -- used to offset save times so not all at once
 				saveKeep(keep, false)
 			end)
-		end):andThen(function() end)
+		end):await()
 	end
 end)
 
