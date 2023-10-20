@@ -191,6 +191,8 @@ function Keep.new(structure: KeepStruct, dataTemplate: {}): Keep
 		_store = nil,
 		_key = "", -- the scope of the keep, used for the store class to know where to save it
 
+		_keep_store = nil, -- the store class that created the keep
+
 		_last_save = os.clock(),
 		_store_info = { Name = "", Scope = "" },
 
@@ -558,7 +560,7 @@ function Keep:Release()
 		self._released = true
 
 		self._store:UpdateAsync(self._key, function(newestData: KeepStruct)
-			return self:Save(newestData, true)
+			return self:_save(newestData, true)
 		end)
 
 		resolve(self) -- this is called before internal release, but after session release, no edits can be made after this point
@@ -636,6 +638,137 @@ end
 ]]
 
 --[=[
+	@type Iterator {Current: () -> version?, Next: () -> version?, Previous: () -> version?, PageUp: () -> void, PageDown: () -> void, SkipEnd: () -> void, SkipStart: () -> void}
+	@within Keep
+]=]
+
+--[=[
+	@method GetVersions
+	@within Keep
+
+	@param minDate? number
+	@param maxDate? number
+
+	@return Promise<Iterator>
+
+	Grabs past versions of the Keep and returns an iterator to customize how to handle the versions
+]=]
+
+function Keep:GetVersions(minDate: number | nil, maxDate: number | nil): Promise
+	return Promise.new(function(resolve)
+		local versions = self._store:ListVersionsAsync(self._key, Enum.SortDirection.Ascending, minDate, maxDate) -- we don't have to worry about order, the iterator will handle that
+
+		local versionMap = {}
+
+		table.insert(versionMap, versions:GetCurrentPage())
+		while not versions.IsFinished do
+			versions:AdvanceToNextPageAsync()
+
+			table.insert(versionMap, versions:GetCurrentPage())
+		end
+
+		local iteratorIndex = 1
+		local iteratorPage = 1
+
+		local iterator = {
+			Current = function()
+				return versionMap[iteratorPage][iteratorIndex]
+			end,
+
+			Next = function()
+				if #versionMap == 0 or #versionMap[iteratorPage] == 0 then
+					return
+				end
+
+				if iteratorIndex >= #versionMap[iteratorPage] then
+					iteratorPage += 1
+					iteratorIndex = 0
+				end
+
+				iteratorIndex += 1
+
+				local page = versionMap[iteratorPage]
+
+				if page == nil then
+					return nil
+				end
+
+				local version = page[iteratorIndex]
+
+				return version
+			end,
+
+			PageUp = function()
+				if #versionMap == 0 or #versionMap[iteratorPage] == 0 then
+					return
+				end
+
+				if iteratorPage > #versionMap then
+					iteratorPage = 0 -- wraps around
+				end
+
+				iteratorPage += 1
+				iteratorIndex = 1
+			end,
+
+			PageDown = function()
+				if #versionMap == 0 or #versionMap[iteratorPage] == 0 then
+					return
+				end
+
+				if iteratorPage == 0 then
+					iteratorPage = #versionMap -- wraps around
+				end
+
+				iteratorPage -= 1
+				iteratorIndex = 1
+			end,
+
+			SkipEnd = function()
+				iteratorPage = #versionMap
+				iteratorIndex = #versionMap[iteratorPage]
+			end,
+
+			SkipStart = function()
+				iteratorPage = 1
+				iteratorIndex = 1
+			end,
+
+			Previous = function()
+				if #versionMap == 0 or #versionMap[iteratorPage] == 0 then
+					print("no versions")
+					return
+				end
+
+				if iteratorIndex == 1 then
+					iteratorPage -= 1
+
+					if iteratorPage == 0 then
+						return
+					end
+
+					iteratorIndex = #versionMap[iteratorPage] + 1
+				end
+
+				iteratorIndex -= 1
+
+				local page = versionMap[iteratorPage]
+
+				if page == nil then
+					return
+				end
+
+				local version = page[iteratorIndex]
+
+				return version
+			end,
+		}
+
+		return resolve(iterator)
+	end)
+end
+
+--[=[
 	@method SetVersion
 	@within Keep
 
@@ -666,7 +799,11 @@ function Keep:SetVersion(version: string, migrateProcessor: (versionKeep: Keep) 
 		end
 	end
 
-	return Promise.new(function(resolve)
+	return Promise.new(function(resolve, reject)
+		if not self:IsActive() then
+			return reject()
+		end
+
 		local oldKeep = {
 			Data = DeepCopy(self.Data),
 			MetaData = DeepCopy(self.MetaData),
@@ -674,7 +811,7 @@ function Keep:SetVersion(version: string, migrateProcessor: (versionKeep: Keep) 
 			UserIds = DeepCopy(self.UserIds),
 		} -- was going to just return self.LatestKeep but worried on the timing of the save
 
-		local versionKeep = self._store
+		local versionKeep = self._keep_store
 			:ViewKeep(self._key, version)
 			:catch(function(err)
 				error(err)
