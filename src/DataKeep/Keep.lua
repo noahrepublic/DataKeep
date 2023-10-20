@@ -652,6 +652,25 @@ end
 	@return Promise<Iterator>
 
 	Grabs past versions of the Keep and returns an iterator to customize how to handle the versions
+
+	"I lost my progress! Last time I had 200 gems!"
+
+	```
+		keep:GetVersions():andThen(function(iterator)
+			local version = iterator.Current()
+
+			while version do
+				local data = keepStore:ViewKeep(player.UserId, version.Version).Data
+
+				if data.Gems >= 200 then
+					print("Found the version with 200 gems!")
+					break
+				end
+
+				version = iterator.Next()
+			end
+		end)
+	```
 ]=]
 
 function Keep:GetVersions(minDate: number | nil, maxDate: number | nil): Promise
