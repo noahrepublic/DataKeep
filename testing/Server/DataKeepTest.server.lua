@@ -5,7 +5,9 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 --> Variables
 
-local DataKeep = require(ServerScriptService.DataKeep)
+local ServerPackages = ServerScriptService:FindFirstChild("ServerPackages")
+
+local DataKeep = require(ServerPackages:FindFirstChild("datakeep"))
 
 local keepStore = DataKeep.GetStore("TestStore", {
 	Test = "Hello World!",

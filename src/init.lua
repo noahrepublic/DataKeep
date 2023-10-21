@@ -8,8 +8,8 @@ local RunService = game:GetService("RunService")
 
 --> Includes
 
-local Promise = require(script.Promise)
-local Signal = require(script.Signal)
+local Promise = require(script.Parent.Promise)
+local Signal = require(script.Parent.Signal)
 
 local MockStore = require(script.MockStore)
 

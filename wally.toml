@@ -1,11 +1,16 @@
 [package]
 name = "noahrepublic/datakeep"
 description = "The final data saving solution you need"
-version = "1.1.0"
+version = "1.1.1"
 license = "MIT"
 authors = ["noahrepublic"]
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "server"
 
-exclude = ["*.toml", "docs", ".moonwave", "sourcemap.json", "README.md", "src/DataKeepTest.server.lua", "game.rbxlx"]
+exclude = ["*.toml", "docs", ".moonwave", "sourcemap.json", "README.md", "testing", "game.rbxlx", "*.lock", "test-place.project.json"]
 include = ["src/DataKeep", "wally.toml"]
+
+[dependencies]
+
+Signal = "lucasmzreal/fastsignal@10.2.1"
+Promise = "evaera/promise@4.0.0"

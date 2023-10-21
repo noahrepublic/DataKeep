@@ -18,8 +18,8 @@ Keep.__index = Keep
 
 --> Includes
 
-local Promise = require(script.Parent.Promise)
-local Signal = require(script.Parent.Signal)
+local Promise = require(script.Parent.Parent.Promise)
+local Signal = require(script.Parent.Parent.Signal)
 
 --> Types
 
