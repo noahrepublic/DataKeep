@@ -1,6 +1,6 @@
 {
-	"name": "DataKeep",
+	"name": "datakeep",
 	"tree": {
-		"$path": "src/DataKeep"
+		"$path": "src"
 	}
 }
