@@ -798,7 +798,7 @@ end
 
 	Allows for a manual versioning process, where the version is set and the data is migrated to the new version using the optional migrateProcessor function
 
-	DataKeep does not provide a version list iterator, requiring the developer to do or not do this themselves allowing for more flexibility
+	DataKeep provides a version list iterator. See *GetVersions*
 
 	Returns a Promise that resolves to the old keep (before the migration) This is the **last** time the old keep's GlobalUpdates will be accessible before **permanently** being removed
 
