@@ -2,9 +2,9 @@
 sidebar_position: 2
 ---
 
-## Roblox Plugin
+## Manual installation
 
-Coming soon
+Install through the rbxm file in the [releases](https://github.com/noahrepublic/DataKeep/releases) tab.
 
 ## Wally
 
