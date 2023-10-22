@@ -129,10 +129,28 @@ local function len(tbl: { [any]: any })
 end
 
 local function canLoad(keep: Keep.KeepStruct)
-	return not keep.MetaData
-		or not keep.MetaData.ActiveSession -- no active session, so we can load (most likely a new Keep)
-		or keep.MetaData.ActiveSession.PlaceID == PlaceID and keep.MetaData.ActiveSession.JobID == JobID
-		or os.time() - keep.MetaData.LastUpdate < Store.assumeDeadLock
+	-- return not keep.MetaData
+	-- 	or not keep.MetaData.ActiveSession -- no active session, so we can load (most likely a new Keep)
+	-- 	or keep.MetaData.ActiveSession.PlaceID == PlaceID and keep.MetaData.ActiveSession.JobID == JobID
+	-- 	or os.time() - keep.MetaData.LastUpdate < Store.assumeDeadLock
+
+	if not keep.MetaData then
+		return true
+	end
+
+	if not keep.MetaData.ActiveSession then
+		return true
+	end
+
+	if keep.MetaData.ActiveSession.PlaceID == PlaceID and keep.MetaData.ActiveSession.JobID == JobID then
+		return true
+	end
+
+	if os.time() - keep.MetaData.LastUpdate > Store.assumeDeadLock then
+		return true
+	end
+
+	return false
 end
 
 local function createMockStore(storeInfo: StoreInfo, dataTemplate) -- complete mirror of real stores, minus mock related data as we are in a mock store
@@ -193,7 +211,36 @@ end
 --> Public Functions
 
 if RunService:IsStudio() then
-	Store.mockStore = true
+	local isLive = false
+
+	Promise.new(function(resolve)
+		if game.GameId == 0 then
+			isLive = true
+
+			print("[DataKeep] Local file, using mock store")
+			return resolve()
+		end
+
+		local ok, message = pcall(function()
+			DataStoreService:GetDataStore("__LiveCheck"):SetAsync("__LiveCheck", os.time())
+		end)
+
+		isLive = ok
+
+		if message:find("ConnectFail", 1, true) then
+			warn("[DataKeep] No internet connection, using mock store")
+		end
+
+		if message:find("403", 1, true) ~= nil or message:find("must publish", 1, true) ~= nil then
+			print("[DataKeep] Datastores are not available, using mock store")
+		else
+			print("[DataKeep] Datastores are available, using real store")
+		end
+
+		return resolve()
+	end):andThen(function()
+		Store.mockStore = isLive
+	end)
 end
 
 --[=[
@@ -304,6 +351,8 @@ function Store:LoadKeep(key: string, unReleasedHandler: UnReleasedHandler): Prom
 
 		local success = canLoad(keep)
 
+		local forceload = nil
+
 		if not success and keep.MetaData.ActiveSession then
 			local loadMethod = unReleasedHandler(keep.MetaData.ActiveSession)
 
@@ -319,7 +368,7 @@ function Store:LoadKeep(key: string, unReleasedHandler: UnReleasedHandler): Prom
 			end
 
 			if loadMethod == "Ignore" then
-				keep.MetaData.ForceLoad = {
+				forceload = {
 					PlaceID = PlaceID,
 					JobID = JobID,
 				}
@@ -335,7 +384,11 @@ function Store:LoadKeep(key: string, unReleasedHandler: UnReleasedHandler): Prom
 
 		keepClass._keep_store = self
 
+		keepClass.MetaData.ForceLoad = forceload
+
 		self._storeQueue[key] = keepClass
+
+		saveKeep(keepClass, false)
 
 		Keeps[keepClass:Identify()] = keepClass
 

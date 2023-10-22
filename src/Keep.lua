@@ -38,7 +38,7 @@ export type KeepStruct = {
 ]=]
 
 --[=[
-	@type MetaData {ActiveSession: ActiveSession | nil, ForceLoad: ActiveSession | nil, LastUpdate: number}
+	@type MetaData {ActiveSession: ActiveSession | nil, ForceLoad: ActiveSession | nil, LastUpdate: number, Created: number}
 	@within Keep
 ]=]
 
@@ -48,6 +48,7 @@ type MetaData = {
 	ForceLoad: ActiveSession | nil, -- the session stealing the session lock, if any
 
 	LastUpdate: number,
+	Created: number,
 }
 
 type GlobalUpdate = {
@@ -78,6 +79,8 @@ local DefaultMetaData: MetaData = {
 	ActiveSession = { PlaceID = game.PlaceId, JobID = game.JobId }, -- we can change to number indexes for speed, but worse for types
 
 	LastUpdate = 0,
+
+	Created = 0,
 }
 
 local DefaultGlobalUpdates = {
@@ -217,9 +220,15 @@ export type Keep = typeof(Keep.new({
 --> Private Functions
 
 local function isKeepLocked(metaData: MetaData)
-	return metaData.ActiveSession
-		and metaData.ActiveSession.PlaceID ~= game.PlaceId
-		and metaData.ActiveSession.JobID ~= game.JobId
+	if metaData.ActiveSession == nil then
+		return false
+	end
+
+	if metaData.ActiveSession.PlaceID ~= game.PlaceId or metaData.ActiveSession.JobID ~= game.JobId then
+		return true
+	end
+
+	return false
 end
 
 local function transformUpdate(keep: Keep, newestData: KeepStruct, release: boolean)
@@ -335,6 +344,8 @@ local function transformUpdate(keep: Keep, newestData: KeepStruct, release: bool
 	end
 
 	if empty then
+		keep.MetaData.Created = os.time()
+
 		newestData = {
 			Data = keep.Data,
 			MetaData = keep.MetaData,
@@ -362,7 +373,11 @@ local function transformUpdate(keep: Keep, newestData: KeepStruct, release: bool
 			else DefaultMetaData.ActiveSession -- give the session to the new keep
 
 		if release then
-			newestData.MetaData.ForceLoad = nil -- remove the force load, if any
+			if newestData.MetaData.ActiveSession == DefaultMetaData.ActiveSession then
+				newestData.MetaData.ActiveSession = nil
+			end
+
+			keep.MetaData.ForceLoad = nil -- remove the force load, if any
 		end
 
 		newestData.MetaData.LastUpdate = os.time()
@@ -370,20 +385,27 @@ local function transformUpdate(keep: Keep, newestData: KeepStruct, release: bool
 		if not empty then
 			keep.LatestKeep = DeepCopy(newestData)
 		end
-	end
 
-	if release and not isKeepLocked(newestData.MetaData) then -- if it is locked, we never had the lock, so we can't release it
-		keep.OnRelease:Fire() -- unlocked, but not removed internally
-		keep._released = true -- will tell the store class to remove internally
+		if release then
+			keep.OnRelease:Fire() -- unlocked, but not removed internally
+			keep._released = true -- will tell the store class to remove internally
+		end
 	end
 
 	keep._last_save = os.clock()
+	newestData.MetaData.ForceLoad = keep.MetaData.ForceLoad
 
 	return newestData, newestData.UserIds
 end
 
 function Keep:_save(newestData: KeepStruct, release: boolean) -- used to internally save, so we can better reveal have :Save()
 	if not self:IsActive() then
+		if self.MetaData.ForceLoad == nil then
+			return newestData
+		end
+	end
+
+	if self._released then
 		return newestData
 	end
 
@@ -392,14 +414,18 @@ function Keep:_save(newestData: KeepStruct, release: boolean) -- used to interna
 		return newestData
 	end
 
-	release = release
-		or if newestData
-				and newestData.MetaData
-				and newestData.MetaData.ForceLoad
-				and newestData.MetaData.ForceLoad.PlaceID ~= game.PlaceId
-				and newestData.MetaData.ForceLoad.JobID ~= game.JobId
-			then true
-			else false
+	local waitingForceLoad = false
+
+	if
+		newestData
+		and newestData.MetaData
+		and newestData.MetaData.ForceLoad
+		and (newestData.MetaData.ForceLoad.PlaceID ~= game.PlaceId or newestData.MetaData.ForceLoad.JobID ~= game.JobId)
+	then
+		waitingForceLoad = true
+	end
+
+	release = release or waitingForceLoad
 
 	local latestGlobals = self.GlobalUpdates
 
@@ -755,7 +781,6 @@ function Keep:GetVersions(minDate: number | nil, maxDate: number | nil): Promise
 
 			Previous = function()
 				if #versionMap == 0 or #versionMap[iteratorPage] == 0 then
-					print("no versions")
 					return
 				end
 
