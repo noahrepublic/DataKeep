@@ -1,3 +1,6 @@
+
+changelog = true
+
 classOrder = ["Store", "Keep", "GlobalUpdates"]
 
 
