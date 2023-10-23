@@ -49,6 +49,7 @@ type MetaData = {
 
 	LastUpdate: number,
 	Created: number,
+	LoadCount: number,
 }
 
 type GlobalUpdate = {
@@ -81,6 +82,7 @@ local DefaultMetaData: MetaData = {
 	LastUpdate = 0,
 
 	Created = 0,
+	LoadCount = 0,
 }
 
 local DefaultGlobalUpdates = {
@@ -403,10 +405,6 @@ function Keep:_save(newestData: KeepStruct, release: boolean) -- used to interna
 		if self.MetaData.ForceLoad == nil then
 			return newestData
 		end
-	end
-
-	if self._released then
-		return newestData
 	end
 
 	if self._view_only then

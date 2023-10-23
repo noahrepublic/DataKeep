@@ -227,14 +227,16 @@ if RunService:IsStudio() then
 
 		isLive = ok
 
-		if message:find("ConnectFail", 1, true) then
-			warn("[DataKeep] No internet connection, using mock store")
-		end
+		if message then
+			if message:find("ConnectFail", 1, true) then
+				warn("[DataKeep] No internet connection, using mock store")
+			end
 
-		if message:find("403", 1, true) ~= nil or message:find("must publish", 1, true) ~= nil then
-			print("[DataKeep] Datastores are not available, using mock store")
-		else
-			print("[DataKeep] Datastores are available, using real store")
+			if message:find("403", 1, true) ~= nil or message:find("must publish", 1, true) ~= nil then
+				print("[DataKeep] Datastores are not available, using mock store")
+			else
+				print("[DataKeep] Datastores are available, using real store")
+			end
 		end
 
 		return resolve()
@@ -385,6 +387,8 @@ function Store:LoadKeep(key: string, unReleasedHandler: UnReleasedHandler): Prom
 		keepClass._keep_store = self
 
 		keepClass.MetaData.ForceLoad = forceload
+
+		keepClass.MetaData.LoadCount += 1
 
 		self._storeQueue[key] = keepClass
 
