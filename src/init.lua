@@ -694,28 +694,31 @@ end
 
 local saveLoop
 
-game:BindToClose(function()
-	Store.ServiceDone = true
-	Keep.ServiceDone = true
+if RunService:IsStudio() == false then
+	game:BindToClose(function()
+		Store.ServiceDone = true
+		Keep.ServiceDone = true
 
-	saveLoop:Disconnect()
+		saveLoop:Disconnect()
 
-	-- loop through and release (release saves too)
+		-- loop through and release (release saves too)
 
-	local saveSize = len(Keeps)
+		local saveSize = len(Keeps)
 
-	if saveSize > 0 then
-		local keeps = {}
+		if saveSize > 0 then
+			local keeps = {}
 
-		for _, keep in Keeps do
-			table.insert(keeps, saveKeep(keep, true))
+			for _, keep in Keeps do
+				table.insert(keeps, saveKeep(keep, true))
 
-			releaseKeepInternally(keep)
+				releaseKeepInternally(keep)
+			end
+
+			Promise.all(keeps):Await()
 		end
+	end)
+end
 
-		Promise.all(keeps):await()
-	end
-end)
 
 saveLoop = RunService.Heartbeat:Connect(function(dt)
 	saveCycle += dt
