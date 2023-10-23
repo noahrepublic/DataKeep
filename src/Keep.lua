@@ -634,6 +634,10 @@ function Keep:AddUserId(userId: number)
 		return
 	end
 
+	if table.find(self.UserIds, userId) then
+		return
+	end
+
 	table.insert(self.UserIds, userId)
 end
 

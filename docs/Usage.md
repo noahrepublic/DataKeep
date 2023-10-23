@@ -28,6 +28,7 @@ local function onPlayerJoin(player)
         end
 
         keep:Reconcile()
+        keep:AddUserId(player.UserId) -- help with GDPR requests
 
         keep.OnRelease:Connect(function() -- don't have to clean up, it cleans up internally.
             player:Kick("Session Release")
