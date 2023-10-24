@@ -345,10 +345,11 @@ function Store:LoadKeep(key: string, unReleasedHandler: UnReleasedHandler): Prom
 	)
 
 	if self._keeps[identifier] then
-		return Promise.resolve(self._keeps[identifier])
+		return self._keeps[identifier]
 	end
 
-	return Promise.new(function(resolve, reject)
+	local promise
+	promise = Promise.new(function(resolve, reject)
 		local keep: Keep.KeepStruct = store:GetAsync(key) or {} -- support versions
 
 		local success = canLoad(keep)
@@ -394,10 +395,12 @@ function Store:LoadKeep(key: string, unReleasedHandler: UnReleasedHandler): Prom
 
 		saveKeep(keepClass, false)
 
-		Keeps[keepClass:Identify()] = keepClass
+		Keeps[keepClass:Identify()] = promise
 
 		resolve(keepClass)
 	end)
+
+	return promise
 end
 
 --[=[
@@ -694,28 +697,30 @@ end
 
 local saveLoop
 
-game:BindToClose(function()
-	Store.ServiceDone = true
-	Keep.ServiceDone = true
+if RunService:IsStudio() then
+	game:BindToClose(function()
+		Store.ServiceDone = true
+		Keep.ServiceDone = true
 
-	saveLoop:Disconnect()
+		saveLoop:Disconnect()
 
-	-- loop through and release (release saves too)
+		-- loop through and release (release saves too)
 
-	local saveSize = len(Keeps)
+		local saveSize = len(Keeps)
 
-	if saveSize > 0 then
-		local keeps = {}
+		if saveSize > 0 then
+			local keeps = {}
 
-		for _, keep in Keeps do
-			table.insert(keeps, saveKeep(keep, true))
+			for _, keep in Keeps do
+				table.insert(keeps, saveKeep(keep, true))
 
-			releaseKeepInternally(keep)
+				releaseKeepInternally(keep)
+			end
+
+			Promise.all(keeps):await()
 		end
-
-		Promise.all(keeps):await()
-	end
-end)
+	end)
+end
 
 saveLoop = RunService.Heartbeat:Connect(function(dt)
 	saveCycle += dt
