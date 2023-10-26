@@ -111,8 +111,9 @@ export type GlobalUpdates = typeof(setmetatable({}, GlobalUpdates))
 
 	### Default: "Ignore"
 	
-	Ignores the locked Keep and steals the lock, releasing the previous session
+	Ignores the locked Keep and steals the lock, releasing the previous session 
 
+	
 	### "Cancel"
 	
 	Cancels the load of the Keep
