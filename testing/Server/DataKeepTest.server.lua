@@ -29,8 +29,9 @@ Players.PlayerAdded:Connect(function(player)
 
 		print("Lets try loading AGAIN")
 
-		keepStore:LoadKeep("Player_" .. player.UserId):andThen(function()
+		keepStore:LoadKeep("Player_" .. player.UserId):andThen(function(keep2)
 			print("Loaded cached keep again")
+			print(keep2, keep)
 		end)
 
 		keep:Save()
@@ -53,7 +54,7 @@ Players.PlayerAdded:Connect(function(player)
 	for i = 1, 2 do
 		local message = if i == 1 then "Hello" else "Goodbye"
 
-		keepStore:PostGlobalUpdate("Player" .. player.UserId, function(globalUpdates)
+		keepStore:PostGlobalUpdate("Player_" .. player.UserId, function(globalUpdates)
 			print(globalUpdates:GetActiveUpdates())
 			for _, globalUpdate in ipairs(globalUpdates:GetActiveUpdates()) do
 				print("Changing global update", globalUpdate.ID)
@@ -61,6 +62,8 @@ Players.PlayerAdded:Connect(function(player)
 				globalUpdates:ChangeActiveUpdate(globalUpdate.ID, {
 					Message = globalUpdate.Data.Message .. message,
 				})
+
+				print(globalUpdates:GetActiveUpdates())
 
 				return
 			end
