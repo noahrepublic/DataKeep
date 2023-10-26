@@ -38,7 +38,7 @@ export type KeepStruct = {
 ]=]
 
 --[=[
-	@type MetaData {ActiveSession: ActiveSession | nil, ForceLoad: ActiveSession | nil, LastUpdate: number, Created: number}
+	@type MetaData {ActiveSession: ActiveSession | nil, ForceLoad: ActiveSession | nil, LastUpdate: number, Created: number, LoadCount: number}
 	@within Keep
 ]=]
 

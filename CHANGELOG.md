@@ -13,7 +13,7 @@
 - Some API documentation
 - Saving loop on shutdown
 
-(not version skip, just a bad build)
+(version skip, just was a bad build)
 
 ## [version 1.1.5](https://github.com/noahrepublic/DataKeep/releases/tag/v1.1.5): 10/22/2023
 
