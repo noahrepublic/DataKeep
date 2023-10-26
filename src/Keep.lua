@@ -636,6 +636,7 @@ function Keep:Reconcile() -- fills in blank stuff
 	end
 
 	self.Data = reconcileData(self.Data, self._data_template)
+	self.MetaData = reconcileData(self.MetaData, DefaultKeep.MetaData)
 end
 
 --[=[

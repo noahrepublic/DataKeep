@@ -21,6 +21,14 @@ Players.PlayerAdded:Connect(function(player)
 	keepStore:LoadKeep("Player_" .. player.UserId):andThen(function(keep)
 		Keeps[player] = keep
 
+		keep.Data.Test = nil
+
+		print(keep.Data)
+
+		keep:Reconcile()
+
+		print(keep.Data)
+
 		keep.OnGlobalUpdate:Connect(function(_, id)
 			print(player.UserId .. " received global update", id)
 
