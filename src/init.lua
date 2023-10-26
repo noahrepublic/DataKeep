@@ -36,10 +36,12 @@ local Store = {
 	ServiceDone = false, -- is shutting down?
 
 	CriticalState = false, -- closet thing to tracking if they are down, will be set to true after many failed requests
-	CriticalStateThreshold = 5, -- how many failed requests before we assume they are down
+	_criticalStateThreshold = 5, -- how many failed requests before we assume they are down
 	CriticalStateSignal = Signal.new(), -- fires when we enter critical state
 
 	IssueSignal = Signal.new(), -- fires when we have an issue (issue logging)
+	_issueQueue = {}, -- queue of issues to keep track of if CriticalState should activate
+	_maxIssueTime = 60, -- how long to keep issues 'valid' in the queue
 }
 Store.__index = Store
 
@@ -96,7 +98,12 @@ export type Store = typeof(Store) & {
 export type GlobalUpdates = typeof(setmetatable({}, GlobalUpdates))
 
 --[=[
-	@type UnReleasedHandler (Keep.ActiveSession) -> string
+	@type UnReleasedActions {Ignore: string, Cancel: string}
+	@within Store
+]=]
+
+--[=[
+	@type UnReleasedHandler (Keep.ActiveSession) -> UnReleasedActions
 
 	@within Store
 
@@ -104,7 +111,7 @@ export type GlobalUpdates = typeof(setmetatable({}, GlobalUpdates))
 
 	### Default: "Ignore"
 	
-	Ignores the locked Keep and steals the lock
+	Ignores the locked Keep and steals the lock, releasing the previous session
 
 	### "Cancel"
 	
@@ -168,6 +175,10 @@ end
 
 local function releaseKeepInternally(keep: Keep.Keep)
 	Keeps[keep:Identify()] = nil
+
+	local keepStore = keep._keep_store
+
+	keepStore._cachedKeepPromises[keep:Identify()] = nil
 end
 
 local function saveKeep(keep: Keep.Keep, release: boolean): Promise
@@ -290,7 +301,7 @@ function Store.GetStore(storeInfo: StoreInfo | string, dataTemplate): Promise
 
 		_mock = if Store.mockStore then true else false, -- studio only/datastores not available
 
-		_keeps = {},
+		_cachedKeepPromises = {},
 	}, Store)
 
 	Store._storeQueue[identifier] = self._store
@@ -344,8 +355,14 @@ function Store:LoadKeep(key: string, unReleasedHandler: UnReleasedHandler): Prom
 		key
 	)
 
-	if self._keeps[identifier] then
-		return self._keeps[identifier]
+	if Keeps[identifier] then -- TODO: check if got rejected before returning cache
+		return Promise.resolve(Keeps[identifier])
+	elseif
+		self._cachedKeepPromises[identifier]
+		and self._cachedKeepPromises[identifier].Status ~= Promise.Status.Rejected
+		and self._cachedKeepPromises[identifier].Status ~= Promise.Status.Cancelled
+	then
+		return self._cachedKeepPromises[identifier]
 	end
 
 	local promise
@@ -395,10 +412,14 @@ function Store:LoadKeep(key: string, unReleasedHandler: UnReleasedHandler): Prom
 
 		saveKeep(keepClass, false)
 
-		Keeps[keepClass:Identify()] = promise
+		Keeps[keepClass:Identify()] = keepClass
+
+		self._cachedKeepPromises[identifier] = nil
 
 		resolve(keepClass)
 	end)
+
+	self._cachedKeepPromises[identifier] = promise
 
 	return promise
 end
@@ -432,20 +453,26 @@ function Store:ViewKeep(key: string, version: string?): Promise
 			key
 		)
 
-		local keep = Keeps[id]
-
-		if not keep then
-			local data = self._store:GetAsync(key, version) or {}
-
-			local keepObject = Keep.new(data, self._data_template)
-
-			keepObject._view_only = true
-			keepObject._released = true -- incase they call :release and it tries to save
-
-			keep = keepObject
+		if Keeps[id] then -- TODO: check if got rejected before returning cache
+			return Promise.resolve(Keeps[id])
+		elseif
+			self._cachedKeepPromises[id]
+			and self._cachedKeepPromises[id].Status ~= Promise.Status.Rejected
+			and self._cachedKeepPromises[id].Status ~= Promise.Status.Cancelled
+		then
+			return self._cachedKeepPromises[id]
 		end
 
-		resolve(keep)
+		local data = self._store:GetAsync(key, version) or {}
+
+		local keepObject = Keep.new(data, self._data_template)
+
+		self._cachedKeepPromises[id] = nil
+
+		keepObject._view_only = true
+		keepObject._released = true -- incase they call :release and it tries to save
+
+		return resolve(keepObject)
 	end)
 end
 
@@ -489,17 +516,23 @@ function Store:PostGlobalUpdate(key: string, updateHandler: (GlobalUpdates) -> n
 		local keep = Keeps[id]
 
 		if not keep then
-			keep = self:LoadKeep(key):awaitValue()
+			keep = self:ViewKeep(key):awaitValue()
+
+			keep._global_updates_only = true
 		end
 
 		local globalUpdateObject = {
 			_updates = keep.GlobalUpdates,
 			_pending_removal = keep._pending_global_lock_removes,
+			_view_only = keep._view_only,
+			_global_updates_only = keep._global_updates_only,
 		}
 
 		setmetatable(globalUpdateObject, GlobalUpdates)
 
 		updateHandler(globalUpdateObject)
+
+		keep:Release()
 
 		return resolve()
 	end)
@@ -549,6 +582,11 @@ function GlobalUpdates:AddGlobalUpdate(globalData: {})
 			return reject()
 		end
 
+		if self._view_only and not self._global_updates_only then -- shouldn't happen, fail safe for anyone trying to break the API
+			error("Can't add global update to a view only Keep")
+			return reject()
+		end
+
 		local globalUpdates = self._updates
 
 		local updateId: number = globalUpdates.ID
@@ -586,6 +624,11 @@ end
 function GlobalUpdates:GetActiveUpdates()
 	if Store.ServiceDone then
 		warn("Game is closing, can't get active updates") -- maybe shouldn't error incase they don't :catch?
+	end
+
+	if self._view_only and not self._global_updates_only then
+		error("Can't get active updates from a view only Keep")
+		return {}
 	end
 
 	local globalUpdates = self._updates
@@ -626,6 +669,11 @@ function GlobalUpdates:RemoveActiveUpdate(updateId: number)
 	return Promise.new(function(resolve, reject)
 		if Store.ServiceDone then
 			return reject()
+		end
+
+		if self._view_only and not self._global_updates_only then
+			error("Can't remove active update from a view only Keep")
+			return {}
 		end
 
 		local globalUpdates = self._updates
@@ -677,6 +725,11 @@ function GlobalUpdates:ChangeActiveUpdate(updateId: number, globalData: {}): Pro
 			return reject()
 		end
 
+		if self._view_only and not self._global_updates_only then
+			error("Can't change active update from a view only Keep")
+			return {}
+		end
+
 		local globalUpdates = self._updates
 
 		if globalUpdates.ID < updateId then
@@ -717,7 +770,7 @@ if RunService:IsStudio() then
 				releaseKeepInternally(keep)
 			end
 
-			Promise.all(keeps):await()
+			Promise.allSettled(keeps):await()
 		end
 	end)
 end
@@ -740,6 +793,8 @@ saveLoop = RunService.Heartbeat:Connect(function(dt)
 	if saveSize > 0 then
 		local saveSpeed = Store._saveInterval / saveSize
 
+		saveSpeed = 1
+
 		local clock = os.clock() -- offset the saves so not all at once
 
 		local keeps = {}
@@ -749,14 +804,38 @@ saveLoop = RunService.Heartbeat:Connect(function(dt)
 				continue
 			end
 
-			table.insert(keeps, keep)
+			table.insert(
+				keeps,
+				Promise.delay(saveSpeed)
+					:andThen(function()
+						saveKeep(keep, false)
+					end)
+					:catch(function(err)
+						Store.IssueSignal:Fire(err)
+
+						table.insert(Store._issueQueue, clock)
+
+						if Store._issueQueue[Store._criticalStateThreshold + 1] then
+							table.remove(Store._issueQueue, Store._criticalStateThreshold + 1)
+						end
+
+						local issueCount = 0
+
+						for _, issueTime in ipairs(Store._issueQueue) do
+							if clock - issueTime < Store._maxIssueTime then
+								issueCount += 1
+							end
+						end
+
+						if issueCount >= Store._criticalStateThreshold then
+							Store.CriticalState = true
+							Store.CriticalStateSignal:Fire()
+						end
+					end)
+			)
 		end
 
-		Promise.each(keeps, function(keep, _)
-			return Promise.delay(saveSpeed):andThen(function() -- used to offset save times so not all at once
-				saveKeep(keep, false)
-			end)
-		end):await()
+		Promise.allSettled(keeps):awaitValue()
 	end
 end)
 
