@@ -185,6 +185,7 @@ function Keep.new(structure: KeepStruct, dataTemplate: {}): Keep
 		_released = false,
 
 		_view_only = false,
+		_global_updates_only = false, -- if true, can access global updates but nothing else (used for global updates)
 
 		OnGlobalUpdate = Signal.new(), -- fires on a new locked global update (ready to be progressed)
 		GlobalStateProcessor = function(_: GlobalUpdate, lock: () -> boolean, _: () -> boolean) -- by default just locks the global update (this is only ran if the keep is online)
@@ -517,6 +518,17 @@ function Keep:Save()
 		end)
 
 		resolve(dataKeyInfo)
+	end):catch(function(err)
+		local keepStore = self._keep_store
+		keepStore.IssueSignal:Fire(err)
+
+		table.insert(keepStore._issueQueue, os.time())
+
+		local maxIssues: number = keepStore._criticalStateThreshold
+
+		if keepStore._issueQueue[maxIssues + 1] then
+			table.remove(keepStore._issueQueue, maxIssues + 1)
+		end
 	end)
 end
 
@@ -570,12 +582,18 @@ end
 
 	@return Promise<Keep>
 
+	Releases the session lock to allow other servers to access the Keep 
+
 	:::warning
 	This is called before internal release, but after session release, no edits can be made after this point
 	:::warning
 ]=]
 
 function Keep:Release()
+	if self.ServiceDone then
+		return Promise.resolve(self)
+	end
+
 	return Promise.new(function(resolve)
 		if self._released then
 			return resolve(self)
@@ -689,7 +707,7 @@ end
 
 			while version do
 				local data = keepStore:ViewKeep(player.UserId, version.Version).Data
-
+ 
 				if data.Gems >= 200 then
 					print("Found the version with 200 gems!")
 					break
