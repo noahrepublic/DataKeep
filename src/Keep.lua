@@ -107,6 +107,8 @@ local DefaultKeep: KeepStruct = {
 	UserIds = {},
 }
 
+local releaseCache = {} -- used to cache promises, saves dead coroutine
+
 local function DeepCopy(tbl: { [any]: any })
 	local copy = {}
 
@@ -388,15 +390,15 @@ local function transformUpdate(keep: Keep, newestData: KeepStruct, release: bool
 		if not empty then
 			keep.LatestKeep = DeepCopy(newestData)
 		end
-
-		if release then
-			keep.OnRelease:Fire() -- unlocked, but not removed internally
-			keep._released = true -- will tell the store class to remove internally
-		end
 	end
 
 	keep._last_save = os.clock()
 	newestData.MetaData.ForceLoad = keep.MetaData.ForceLoad
+
+	if release and not keep._released then
+		keep.OnRelease:Fire() -- unlocked, but not removed internally
+		keep._released = true -- will tell the store class to remove internally
+	end
 
 	return newestData, newestData.UserIds
 end
@@ -594,7 +596,11 @@ function Keep:Release()
 		return Promise.resolve(self)
 	end
 
-	return Promise.new(function(resolve)
+	if releaseCache[self:Identify()] then
+		return releaseCache[self:Identify()]
+	end
+
+	releaseCache[self:Identify()] = Promise.new(function(resolve)
 		if self._released then
 			return resolve(self)
 		end
@@ -607,6 +613,8 @@ function Keep:Release()
 
 		resolve(self) -- this is called before internal release, but after session release, no edits can be made after this point
 	end)
+
+	return releaseCache[self:Identify()]
 end
 
 --[=[

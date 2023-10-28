@@ -1,5 +1,20 @@
 # DataKeep
 
+## [version 1.1.8](https://github.com/noahrepublic/DataKeep/releases/tag/v1.1.8): 10/27/2023
+
+### Added
+
+- MetaData reconciles
+
+### Improved
+
+- Quicker shutdown saves/releases
+- Promise caching on release
+
+### Fixed
+
+- Coroutine dead? 
+
 ## [version 1.1.7](https://github.com/noahrepublic/DataKeep/releases/tag/v1.1.7): 10/25/2023
 
 ### Implemented

@@ -179,6 +179,7 @@ local function releaseKeepInternally(keep: Keep.Keep)
 
 	local keepStore = keep._keep_store
 
+	print("Releasing Keep", keep:Identify())
 	keepStore._cachedKeepPromises[keep:Identify()] = nil
 end
 
@@ -207,6 +208,13 @@ local function saveKeep(keep: Keep.Keep, release: boolean): Promise
 			UpdatedTime = recentKeyInfo.UpdatedTime,
 			Version = recentKeyInfo.Version,
 		}
+
+		if release then
+			keep._released = true
+			keep.OnRelease:Fire()
+
+			releaseKeepInternally(keep)
+		end
 
 		resolve(recentKeyInfo or {})
 	end)
@@ -407,7 +415,7 @@ function Store:LoadKeep(key: string, unReleasedHandler: UnReleasedHandler): Prom
 
 		keepClass.MetaData.ForceLoad = forceload
 
-		keepClass.MetaData.LoadCount += 1
+		keepClass.MetaData.LoadCount = (keepClass.MetaData.LoadCount or 0) + 1
 
 		self._storeQueue[key] = keepClass
 
@@ -533,7 +541,9 @@ function Store:PostGlobalUpdate(key: string, updateHandler: (GlobalUpdates) -> n
 
 		updateHandler(globalUpdateObject)
 
-		keep:Release()
+		if not keep:IsActive() then
+			keep:Release()
+		end
 
 		return resolve()
 	end)
@@ -751,30 +761,26 @@ end
 
 local saveLoop
 
-if RunService:IsStudio() then
-	game:BindToClose(function()
-		Store.ServiceDone = true
-		Keep.ServiceDone = true
+game:BindToClose(function()
+	Store.ServiceDone = true
+	Keep.ServiceDone = true
 
-		saveLoop:Disconnect()
+	saveLoop:Disconnect()
 
-		-- loop through and release (release saves too)
+	-- loop through and release (release saves too)
 
-		local saveSize = len(Keeps)
+	local saveSize = len(Keeps)
 
-		if saveSize > 0 then
-			local keeps = {}
+	if saveSize > 0 then
+		local keeps = {}
 
-			for _, keep in Keeps do
-				table.insert(keeps, saveKeep(keep, true))
-
-				releaseKeepInternally(keep)
-			end
-
-			Promise.allSettled(keeps):await()
+		for _, keep in Keeps do
+			table.insert(keeps, saveKeep(keep, true))
 		end
-	end)
-end
+
+		Promise.allSettled(keeps):await()
+	end
+end)
 
 saveLoop = RunService.Heartbeat:Connect(function(dt)
 	saveCycle += dt
