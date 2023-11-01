@@ -1,5 +1,11 @@
 # DataKeep
 
+## [version 1.1.9](https://github.com/noahrepublic/DataKeep/releases/tag/v1.1.9): 11/1/2023
+
+### Fixed
+
+- Critcal bug where passing a store info would be ignored
+
 ## [version 1.1.8](https://github.com/noahrepublic/DataKeep/releases/tag/v1.1.8): 10/27/2023
 
 ### Added

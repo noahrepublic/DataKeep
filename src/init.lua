@@ -284,6 +284,8 @@ function Store.GetStore(storeInfo: StoreInfo | string, dataTemplate): Promise
 			Name = storeInfo,
 			Scope = nil,
 		}
+	else
+		info = storeInfo
 	end
 
 	local identifier = info.Name .. (info.Scope and info.Scope or "")
