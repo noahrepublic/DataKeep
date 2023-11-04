@@ -184,13 +184,15 @@ local function releaseKeepInternally(keep: Keep.Keep)
 end
 
 local function saveKeep(keep: Keep.Keep, release: boolean): Promise
-	return Promise.new(function(resolve)
+	local keepResolved = Promise.resolve()
+
+	return keepResolved:andThen(function()
 		local recentKeyInfo: DataStoreKeyInfo
 
 		if keep._store then
 			if keep._released then -- already was saved
 				releaseKeepInternally(keep)
-				resolve()
+				return Promise.resolve()
 			end
 
 			recentKeyInfo = keep._store:UpdateAsync(keep._key, function(newestData)
@@ -209,7 +211,14 @@ local function saveKeep(keep: Keep.Keep, release: boolean): Promise
 			Version = recentKeyInfo.Version,
 		}
 
-		resolve(recentKeyInfo or {})
+		if release then
+			keep._released = true
+			keep.OnRelease:Fire()
+
+			releaseKeepInternally(keep)
+		end
+
+		return Promise.resolve(recentKeyInfo or {})
 	end)
 end
 
