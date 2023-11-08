@@ -1,5 +1,20 @@
 # DataKeep
 
+## [version 1.2.0](https://github.com/noahrepublic/DataKeep/releases/tag/v1.2.0): 11/07/2023
+
+### Added
+
+- WriteLib functionality
+- Default WriteLib
+
+### Fixed
+
+- OnRelease fire bug
+
+### Improved
+
+- Cleanups
+
 ## [version 1.1.9](https://github.com/noahrepublic/DataKeep/releases/tag/v1.1.9): 11/1/2023
 
 ### Fixed
