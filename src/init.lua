@@ -42,6 +42,8 @@ local Store = {
 	IssueSignal = Signal.new(), -- fires when we have an issue (issue logging)
 	_issueQueue = {}, -- queue of issues to keep track of if CriticalState should activate
 	_maxIssueTime = 60, -- how long to keep issues 'valid' in the queue
+
+	Wrapper = require(script.Wrapper),
 }
 Store.__index = Store
 
@@ -81,6 +83,17 @@ export type Promise = typeof(Promise.new(function() end))
 	@within Store
 
 	Stores are used to load and save Keeps from a DataStoreService:GetDataStore()
+]=]
+
+--[=[
+	@prop Wrapper {}
+	@within Store
+
+	Wrapper functions that are inheritted by Keeps when they are loaded
+
+	:::info
+	Any wrapper changes post .GetStore will not apply to that store but the next one.
+	:::info
 ]=]
 
 export type Store = typeof(Store) & {
@@ -181,6 +194,8 @@ local function releaseKeepInternally(keep: Keep.Keep)
 
 	print("Releasing Keep", keep:Identify())
 	keepStore._cachedKeepPromises[keep:Identify()] = nil
+
+	keep.OnRelease:Destroy()
 end
 
 local function saveKeep(keep: Keep.Keep, release: boolean): Promise
@@ -188,7 +203,7 @@ local function saveKeep(keep: Keep.Keep, release: boolean): Promise
 		local recentKeyInfo: DataStoreKeyInfo
 
 		if keep._store then
-			if keep._released then -- already was saved
+			if keep._released then -- already was saved & released
 				releaseKeepInternally(keep)
 				resolve()
 			end
@@ -419,6 +434,12 @@ function Store:LoadKeep(key: string, unReleasedHandler: UnReleasedHandler): Prom
 		Keeps[keepClass:Identify()] = keepClass
 
 		self._cachedKeepPromises[identifier] = nil
+
+		for functionName, func in Store.Wrapper do
+			keepClass[functionName] = function(...)
+				return func(...)
+			end
+		end
 
 		resolve(keepClass)
 	end)

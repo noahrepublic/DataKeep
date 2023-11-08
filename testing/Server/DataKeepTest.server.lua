@@ -11,6 +11,10 @@ local DataKeep = require(ServerPackages:FindFirstChild("datakeep"))
 
 local keepStore = DataKeep.GetStore("TestStore", {
 	Test = "Hello World!",
+
+	Inventory = {
+		Sword = "Iron Sword",
+	},
 }):awaitValue()
 
 local Keeps = {}
@@ -21,7 +25,15 @@ Players.PlayerAdded:Connect(function(player)
 	keepStore:LoadKeep("Player_" .. player.UserId):andThen(function(keep)
 		Keeps[player] = keep
 
-		keep.Data.Test = nil
+		keep:onDataChange("Inventory.Sword", function(newValue)
+			print("Sword changed to", newValue)
+		end)
+
+		keep:Mutate("Inventory.Sword", function()
+			return "Hello World! 2"
+		end)
+
+		--keep.Data.Test = nil
 
 		print(keep.Data)
 

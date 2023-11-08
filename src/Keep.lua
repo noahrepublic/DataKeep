@@ -605,14 +605,16 @@ function Keep:Release()
 			return resolve(self)
 		end
 
-		self._released = true
-
 		self._store:UpdateAsync(self._key, function(newestData: KeepStruct)
 			return self:_save(newestData, true)
 		end)
 
+		self._released = true
+
 		resolve(self) -- this is called before internal release, but after session release, no edits can be made after this point
 	end)
+
+	self.OnGlobalUpdate:Destroy()
 
 	return releaseCache[self:Identify()]
 end
@@ -693,8 +695,17 @@ end
 ]]
 
 --[=[
-	@type Iterator {Current: () -> version?, Next: () -> version?, Previous: () -> version?, PageUp: () -> void, PageDown: () -> void, SkipEnd: () -> void, SkipStart: () -> void}
+	@interface Iterator
+	
 	@within Keep
+
+	.Current () -> version? -- Returns the current version, nil if none
+	.Next () -> version? -- Returns the next version, nil if none
+	.Previous () -> version? -- Returns the previous version, nil if none
+	.PageUp () -> void -- Goes to the next page of versions
+	.PageDown () -> void -- Goes to the previous page of versions
+	.SkipEnd () -> void -- Goes to the last page of versions
+	.SkipStart () -> void -- Goes to the first page of versions
 ]=]
 
 --[=[
