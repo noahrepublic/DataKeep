@@ -5,9 +5,7 @@ local function getOrCreateListener(self, dataPath)
 		self._listeners = {}
 
 		self.OnRelease:Connect(function()
-			print("Cleaning up listeners")
 			for index, signal in pairs(self._listeners) do
-				print(`Cleaning {index}`)
 				signal:Destroy()
 			end
 		end)

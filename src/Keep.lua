@@ -410,7 +410,6 @@ end
 
 function Keep:_save(newestData: KeepStruct, release: boolean) -- used to internally save, so we can better reveal have :Save()
 	if not self:IsActive() then
-		print("not active")
 		if self.MetaData.ForceLoad == nil then
 			return newestData
 		end

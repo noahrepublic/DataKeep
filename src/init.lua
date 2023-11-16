@@ -192,7 +192,6 @@ local function releaseKeepInternally(keep: Keep.Keep)
 
 	local keepStore = keep._keep_store
 
-	print("Releasing Keep", keep:Identify())
 	keepStore._cachedKeepPromises[keep:Identify()] = nil
 
 	keep.OnRelease:Destroy()
@@ -835,7 +834,6 @@ saveLoop = RunService.Heartbeat:Connect(function(dt)
 		Promise.each(keeps, function(keep)
 			return Promise.delay(saveSpeed)
 				:andThen(function()
-					print("save cycle")
 					saveKeep(keep, false)
 				end)
 				:timeout(Store._saveInterval)
