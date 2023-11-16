@@ -9,7 +9,7 @@ DataKeep will lift everything, the only thing you need to do is load data. DataK
 The following is a very basic Keep loader implementation.
 
 ```lua
-local Players = game:GetService("Player")
+local Players = game:GetService("Players")
 
 local DataKeep = require(path_to_datakeep)
 
@@ -40,7 +40,9 @@ local function onPlayerJoin(player)
         end
 
         print(`Loaded {player.Name}'s Keep!`)
-            
+        
+        loadedKeeps[player] = keep
+        
         local leaderstats = Instance.new("Folder")
         leaderstats.Name = "leaderstats"
 
