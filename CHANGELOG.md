@@ -1,6 +1,6 @@
 # DataKeep
 
-## [version 1.2.1](https://github.com/noahrepublic/DataKeep/releases/tag/v1.2.0): 11/07/2023
+## [version 1.2.1](https://github.com/noahrepublic/DataKeep/releases/tag/v1.2.0): 11/16/2023
 
 ### Fixed
 
