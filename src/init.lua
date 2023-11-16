@@ -225,7 +225,7 @@ local function saveKeep(keep: Keep.Keep, release: boolean): Promise
 		}
 
 		resolve(recentKeyInfo or {})
-	end)
+	end):catch(function() end)
 end
 
 --[[
@@ -795,7 +795,7 @@ if not RunService:IsStudio() then
 				table.insert(keeps, saveKeep(keep, true))
 			end
 
-			Promise.allSettled(keeps):await()
+			Promise.all(keeps):await()
 		end
 	end)
 end
@@ -829,38 +829,39 @@ saveLoop = RunService.Heartbeat:Connect(function(dt)
 				continue
 			end
 
-			table.insert(
-				keeps,
-				Promise.delay(saveSpeed)
-					:andThen(function()
-						saveKeep(keep, false)
-					end)
-					:catch(function(err)
-						Store.IssueSignal:Fire(err)
-
-						table.insert(Store._issueQueue, clock)
-
-						if Store._issueQueue[Store._criticalStateThreshold + 1] then
-							table.remove(Store._issueQueue, Store._criticalStateThreshold + 1)
-						end
-
-						local issueCount = 0
-
-						for _, issueTime in ipairs(Store._issueQueue) do
-							if clock - issueTime < Store._maxIssueTime then
-								issueCount += 1
-							end
-						end
-
-						if issueCount >= Store._criticalStateThreshold then
-							Store.CriticalState = true
-							Store.CriticalStateSignal:Fire()
-						end
-					end)
-			)
+			table.insert(keeps, keep)
 		end
 
-		Promise.allSettled(keeps):awaitValue()
+		Promise.each(keeps, function(keep)
+			return Promise.delay(saveSpeed)
+				:andThen(function()
+					print("save cycle")
+					saveKeep(keep, false)
+				end)
+				:timeout(Store._saveInterval)
+				:catch(function(err)
+					Store.IssueSignal:Fire(err)
+
+					table.insert(Store._issueQueue, clock)
+
+					if Store._issueQueue[Store._criticalStateThreshold + 1] then
+						table.remove(Store._issueQueue, Store._criticalStateThreshold + 1)
+					end
+
+					local issueCount = 0
+
+					for _, issueTime in ipairs(Store._issueQueue) do
+						if clock - issueTime < Store._maxIssueTime then
+							issueCount += 1
+						end
+					end
+
+					if issueCount >= Store._criticalStateThreshold then
+						Store.CriticalState = true
+						Store.CriticalStateSignal:Fire()
+					end
+				end)
+		end)
 	end
 end)
 

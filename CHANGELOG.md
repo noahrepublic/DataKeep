@@ -1,5 +1,17 @@
 # DataKeep
 
+## [version 1.2.1](https://github.com/noahrepublic/DataKeep/releases/tag/v1.2.0): 11/07/2023
+
+### Fixed
+
+- Data not saving
+- Basic Usage example
+
+### Improved
+
+- Reverted to an older method that works better for splitting up workload
+
+
 ## [version 1.2.0](https://github.com/noahrepublic/DataKeep/releases/tag/v1.2.0): 11/07/2023
 
 ### Added

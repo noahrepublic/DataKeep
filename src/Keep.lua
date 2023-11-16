@@ -375,15 +375,20 @@ local function transformUpdate(keep: Keep, newestData: KeepStruct, release: bool
 	if not isKeepLocked(newestData.MetaData) then
 		newestData.MetaData.ActiveSession = if release and newestData.MetaData.ForceLoad
 			then newestData.MetaData.ForceLoad
-			else DefaultMetaData.ActiveSession -- give the session to the new keep
+			else DefaultMetaData.ActiveSession
 
+		local activeSession = DefaultMetaData.ActiveSession -- give the session to the new keep
 		if release then
-			if newestData.MetaData.ActiveSession == DefaultMetaData.ActiveSession then
-				newestData.MetaData.ActiveSession = nil
+			if newestData.MetaData.ForceLoad then
+				newestData.MetaData.ActiveSession = newestData.MetaData.ForceLoad
+			else
+				activeSession = nil
 			end
 
-			keep.MetaData.ForceLoad = nil -- remove the force load, if any
+			newestData.MetaData.ForceLoad = nil -- remove the force load, if any
 		end
+
+		newestData.MetaData.ActiveSession = activeSession
 
 		newestData.MetaData.LastUpdate = os.time()
 
@@ -405,6 +410,7 @@ end
 
 function Keep:_save(newestData: KeepStruct, release: boolean) -- used to internally save, so we can better reveal have :Save()
 	if not self:IsActive() then
+		print("not active")
 		if self.MetaData.ForceLoad == nil then
 			return newestData
 		end
@@ -424,6 +430,8 @@ function Keep:_save(newestData: KeepStruct, release: boolean) -- used to interna
 		and (newestData.MetaData.ForceLoad.PlaceID ~= game.PlaceId or newestData.MetaData.ForceLoad.JobID ~= game.JobId)
 	then
 		waitingForceLoad = true
+	elseif newestData and newestData.MetaData and newestData.MetaData.ForceLoad then
+		newestData.MetaData.ForceLoad = nil -- shouldn't happen in theory, but just incase
 	end
 
 	release = release or waitingForceLoad
@@ -600,14 +608,20 @@ function Keep:Release()
 		return releaseCache[self:Identify()]
 	end
 
-	releaseCache[self:Identify()] = Promise.new(function(resolve)
+	releaseCache[self:Identify()] = Promise.new(function(resolve, reject)
 		if self._released then
 			return resolve(self)
 		end
 
-		self._store:UpdateAsync(self._key, function(newestData: KeepStruct)
-			return self:_save(newestData, true)
+		Promise.try(function()
+			self._store:UpdateAsync(self._key, function(newestData: KeepStruct)
+				return self:_save(newestData, true)
+			end)
 		end)
+			:timeout(30)
+			:catch(reject)
+
+		self._last_save = os.clock()
 
 		self._released = true
 
