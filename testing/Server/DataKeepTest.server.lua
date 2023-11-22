@@ -69,6 +69,15 @@ Players.PlayerAdded:Connect(function(player)
 
 			print(keep.Data)
 		end)
+
+		print("UserIds: ")
+		keep:AddUserId(player.UserId)
+
+		print(keep.UserIds)
+
+		keep:AddUserId(player.UserId)
+
+		print(keep.UserIds)
 	end)
 
 	for i = 1, 2 do

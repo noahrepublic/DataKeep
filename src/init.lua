@@ -106,6 +106,9 @@ export type Store = typeof(Store) & {
 	_mock: boolean,
 
 	_keeps: { [string]: Keep.Keep },
+
+	Wrapper: { [string]: (...any) -> any },
+	Transformer: {}, -- Metatable: _processors, :RegisterProcessor -> () -> nil (destructor function)
 }
 
 export type GlobalUpdates = typeof(setmetatable({}, GlobalUpdates))
@@ -198,15 +201,16 @@ local function releaseKeepInternally(keep: Keep.Keep)
 end
 
 local function saveKeep(keep: Keep.Keep, release: boolean): Promise
+	print("auto saving")
+
+	if keep._released then
+		releaseKeepInternally(keep)
+		return Promise.resolve()
+	end
 	return Promise.new(function(resolve)
 		local recentKeyInfo: DataStoreKeyInfo
 
 		if keep._store then
-			if keep._released then -- already was saved & released
-				releaseKeepInternally(keep)
-				resolve()
-			end
-
 			recentKeyInfo = keep._store:UpdateAsync(keep._key, function(newestData)
 				return keep:_save(newestData, release or false)
 			end)
@@ -224,7 +228,11 @@ local function saveKeep(keep: Keep.Keep, release: boolean): Promise
 		}
 
 		resolve(recentKeyInfo or {})
-	end):catch(function() end)
+	end):catch(function(err)
+		local keepStore = keep._keep_store
+
+		keepStore._processError(err)
+	end)
 end
 
 --[[
@@ -323,6 +331,31 @@ function Store.GetStore(storeInfo: StoreInfo | string, dataTemplate): Promise
 	}, Store)
 
 	Store._storeQueue[identifier] = self._store
+
+	self._processError = function(err)
+		Store.IssueSignal:Fire(err)
+
+		local clock = os.clock()
+
+		table.insert(Store._issueQueue, clock)
+
+		if Store._issueQueue[Store._criticalStateThreshold + 1] then
+			table.remove(Store._issueQueue, Store._criticalStateThreshold + 1)
+		end
+
+		local issueCount = 0
+
+		for _, issueTime in ipairs(Store._issueQueue) do
+			if clock - issueTime < Store._maxIssueTime then
+				issueCount += 1
+			end
+		end
+
+		if issueCount >= Store._criticalStateThreshold then
+			Store.CriticalState = true
+			Store.CriticalStateSignal:Fire()
+		end
+	end
 
 	return Promise.resolve(self)
 end
@@ -838,26 +871,7 @@ saveLoop = RunService.Heartbeat:Connect(function(dt)
 				end)
 				:timeout(Store._saveInterval)
 				:catch(function(err)
-					Store.IssueSignal:Fire(err)
-
-					table.insert(Store._issueQueue, clock)
-
-					if Store._issueQueue[Store._criticalStateThreshold + 1] then
-						table.remove(Store._issueQueue, Store._criticalStateThreshold + 1)
-					end
-
-					local issueCount = 0
-
-					for _, issueTime in ipairs(Store._issueQueue) do
-						if clock - issueTime < Store._maxIssueTime then
-							issueCount += 1
-						end
-					end
-
-					if issueCount >= Store._criticalStateThreshold then
-						Store.CriticalState = true
-						Store.CriticalStateSignal:Fire()
-					end
+					keep._keep_store._processError(err)
 				end)
 		end)
 	end

@@ -1,6 +1,18 @@
 # DataKeep
 
-## [version 1.2.1](https://github.com/noahrepublic/DataKeep/releases/tag/v1.2.0): 11/16/2023
+## [version 1.2.2](https://github.com/noahrepublic/DataKeep/releases/tag/v1.2.2): 11/21/2023
+
+### Fixed
+
+- 'cannot resume dead coroutine' error on release
+- Fixed UpdatedAsync accidentally yielding causing a failure to save
+
+### Improved
+
+- OnRelease fires quicker
+- Finished issue signal implementation, and code reused
+
+## [version 1.2.1](https://github.com/noahrepublic/DataKeep/releases/tag/v1.2.1): 11/16/2023
 
 ### Fixed
 
