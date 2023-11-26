@@ -78,7 +78,7 @@ type MockStore = MockStore.MockStore
 export type Promise = typeof(Promise.new(function() end))
 
 --[=[
-	@type Store {Mock: MockStore, LoadKeep: (string, UnReleasedHandler?) -> Promise<Keep>, ViewKeep: (string) -> Keep, PostGlobalUpdate: (string, (GlobalUpdates) -> nil) -> Promise<void>}
+	@type Store {Mock: MockStore, LoadKeep: (string, UnReleasedHandler?) -> Promise<Keep>, ViewKeep: (string) -> Promise<Keep>, PostGlobalUpdate: (string, (GlobalUpdates) -> nil) -> Promise<void>}
 
 	@within Store
 
