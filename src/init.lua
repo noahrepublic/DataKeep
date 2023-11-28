@@ -78,7 +78,7 @@ type MockStore = MockStore.MockStore
 export type Promise = typeof(Promise.new(function() end))
 
 --[=[
-	@type Store {Mock: MockStore, LoadKeep: (string, UnReleasedHandler?) -> Promise<Keep>, ViewKeep: (string) -> Promise<Keep>, PostGlobalUpdate: (string, (GlobalUpdates) -> nil) -> Promise<void>}
+	@type Store {Mock: MockStore, LoadKeep: (string, UnReleasedHandler?) -> Promise<Keep>, ViewKeep: (string) -> Promise<Keep>, PreSave: (({any}) -> {any}) -> nil, PreLoad: (({any}) -> {any}) -> nil, PostGlobalUpdate: (string, (GlobalUpdates) -> nil) -> Promise<void>}
 
 	@within Store
 
@@ -340,14 +340,6 @@ function Store.GetStore(storeInfo: StoreInfo | string, dataTemplate): Promise
 		_mock = if Store.mockStore then true else false, -- studio only/datastores not available
 
 		_cachedKeepPromises = {},
-
-		_compression = function(...)
-			return ...
-		end,
-
-		_decompression = function(...)
-			return ...
-		end,
 	}, Store)
 
 	Store._storeQueue[identifier] = self._store
@@ -466,8 +458,8 @@ function Store:LoadKeep(key: string, unReleasedHandler: UnReleasedHandler): Prom
 			end
 		end
 
-		if keep.Data and len(keep.Data) > 0 then
-			keep.Data = self._decompression(DeepCopy(keep.Data))
+		if keep.Data and len(keep.Data) > 0 and self._preLoad then
+			keep.Data = self._preLoad(DeepCopy(keep.Data))
 		end
 
 		local keepClass = Keep.new(keep, self._data_template) -- why does typing break here? no idea.
@@ -550,8 +542,8 @@ function Store:ViewKeep(key: string, version: string?): Promise
 
 		local data = self._store:GetAsync(key, version) or {}
 
-		if len(data.Data) > 0 then
-			data.Data = self._decompression(DeepCopy(data.Data))
+		if data.Data and len(data.Data) > 0 and self._preLoad then
+			data.Data = self._preLoad(DeepCopy(data.Data))
 		end
 
 		local keepObject = Keep.new(data, self._data_template)
@@ -566,22 +558,25 @@ function Store:ViewKeep(key: string, version: string?): Promise
 end
 
 --[=[
-	@method AttachToSave
+	@method PreSave
 	@within Store
 
-	@param compression ({ any: any }) -> any
-	@param decompression ({ any: any }) -> any
+	@param callback ({ any }) -> { any: any }
 
-	@return void
-	
-	Attaches compression and decompression 'plugin' functions to the store
+	Runs before saving a Keep, allowing you to modify the data before, like compressing data
 
 	:::caution
-	Functions **must** return a new data table. Do not compress the entire table into a JSON string. Failure to do so will result in data loss.
+	Functions **must** return a new data table. Failure to do so will result in data loss.
 	:::caution
+
+	:::warning
+	PreSave can only be set once
+	:::warning
+
+	Compression example:
 
 	```lua
-	keepStore:AttachToSave(function(data)
+	keepStore:PreSave(function(data)
 		local newData = {}
 
 		for key, value in data do
@@ -589,7 +584,39 @@ end
 		end
 
 		return newData
-	end, function(data)
+	end)
+	```
+
+	@return void
+]=]
+
+function Store:PreSave(callback: ({ any }) -> { any: any })
+	assert(self._preSave == nil, "PreSave can only be set once")
+	assert(callback and type(callback) == "function", "Callback must be a function")
+
+	self._preSave = callback
+end
+
+--[=[
+	@method PreLoad
+	@within Store
+
+	@param callback ({ any }) -> { any: any }
+
+	Runs before loading a Keep, allowing you to modify the data before, like decompressing compressed data
+
+	:::caution
+	Functions **must** return a new data table. Failure to do so will result in data loss.
+	:::caution
+
+	:::warning
+	PreLoad can only be set once
+	:::warning
+
+	Decompression example:
+
+	```lua
+	keepStore:PreLoad(function(data)
 		local newData = {}
 
 		for key, value in data do
@@ -599,14 +626,15 @@ end
 		return newData
 	end)
 	```
+
+	@return void
 ]=]
 
-function Store:AttachToSave(compression: ({ any: any }) -> any, decompression: ({ any: any }) -> any)
-	assert(compression and type(compression) == "function", "Compression must be a function")
-	assert(decompression and type(decompression) == "function", "Decompression must be a function")
+function Store:PreLoad(callback: ({ any }) -> { any: any })
+	assert(self._preLoad == nil, "PreLoad can only be set once")
+	assert(callback and type(callback) == "function", "Callback must be a function")
 
-	self._compression = compression
-	self._decompression = decompression
+	self._preLoad = callback
 end
 
 --[=[
@@ -631,6 +659,8 @@ end
 		end)
 	end)
 	```
+
+
 ]=]
 
 function Store:PostGlobalUpdate(key: string, updateHandler: (GlobalUpdates) -> nil) -- gets passed add, lock & change functions

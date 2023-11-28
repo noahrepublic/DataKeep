@@ -508,8 +508,8 @@ function Keep:_save(newestData: KeepStruct, release: boolean) -- used to interna
 
 	local transformedData = transformUpdate(self, newestData, release)
 
-	if self._keep_store then
-		local compressedData = self._keep_store._compression(DeepCopy(transformedData.Data))
+	if self._keep_store and self._keep_store._preSave then
+		local compressedData = self._keep_store._preSave(DeepCopy(transformedData.Data))
 
 		transformedData.Data = compressedData
 	end

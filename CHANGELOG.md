@@ -1,5 +1,13 @@
 # DataKeep
 
+## [version 2.0.0](https://github.com/noahrepublic/DataKeep/releases/tag/v2.0.0): 11/28/2023
+
+API Breaking Change
+
+:AttachSave -> :PreSave & :PreLoad
+
+Allows for more control and not limited to just compression/decompression but transforming the data however.
+
 ## [version 1.3.0 & 1.3.1](https://github.com/noahrepublic/DataKeep/releases/tag/v1.3.1): 11/27/2023
 
 (version skip due to small patch)

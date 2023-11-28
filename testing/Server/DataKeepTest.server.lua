@@ -21,20 +21,22 @@ local Keeps = {}
 
 --> Public Functions
 
+keepStore:PreSave(function(data)
+	print(data)
+	data.Inventory.Sword = "Compressed"
+
+	return data
+end)
+
+keepStore:PreLoad(function(data)
+	data.Inventory.Sword = "Iron Sword"
+
+	return data
+end)
+
 Players.PlayerAdded:Connect(function(player)
 	keepStore.IssueSignal:Connect(function(signal, ...)
 		print("Received signal", signal, ...)
-	end)
-
-	keepStore:AttachToSave(function(data)
-		print(data)
-		data.Inventory.Sword = "Compressed"
-
-		return data
-	end, function(data)
-		data.Inventory.Sword = "Iron Sword"
-
-		return data
 	end)
 
 	keepStore:LoadKeep("Player_" .. player.UserId):andThen(function(keep)
