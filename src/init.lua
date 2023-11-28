@@ -466,7 +466,7 @@ function Store:LoadKeep(key: string, unReleasedHandler: UnReleasedHandler): Prom
 			end
 		end
 
-		if len(keep.Data) > 0 then
+		if keep.Data and len(keep.Data) > 0 then
 			keep.Data = self._decompression(DeepCopy(keep.Data))
 		end
 
