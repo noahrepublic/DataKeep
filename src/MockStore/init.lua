@@ -62,6 +62,7 @@ end
 
 function MockStore:SetAsync(key: string, value: any)
 	self._data[key] = value
+
 	createNewVersion(self, key, value)
 end
 

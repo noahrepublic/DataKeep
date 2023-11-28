@@ -1,5 +1,12 @@
 # DataKeep
 
+## [version 1.3.0](https://github.com/noahrepublic/DataKeep/releases/tag/v1.3.0): 11/27/2023
+
+### Added
+
+- Finally added compression 'plugins' see https://github.com/noahrepublic/DataKeep/issues/2
+    :AttachToSave()
+
 ## [version 1.2.2](https://github.com/noahrepublic/DataKeep/releases/tag/v1.2.2): 11/21/2023
 
 ### Fixed

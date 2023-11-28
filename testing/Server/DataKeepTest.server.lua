@@ -22,6 +22,21 @@ local Keeps = {}
 --> Public Functions
 
 Players.PlayerAdded:Connect(function(player)
+	keepStore.IssueSignal:Connect(function(signal, ...)
+		print("Received signal", signal, ...)
+	end)
+
+	keepStore:AttachToSave(function(data)
+		print(data)
+		data.Inventory.Sword = "Compressed"
+
+		return data
+	end, function(data)
+		data.Inventory.Sword = "Iron Sword"
+
+		return data
+	end)
+
 	keepStore:LoadKeep("Player_" .. player.UserId):andThen(function(keep)
 		Keeps[player] = keep
 
@@ -59,25 +74,31 @@ Players.PlayerAdded:Connect(function(player)
 		keep.Data.Test = "Hello World! 2"
 		keep:Save()
 
-		local versions = keep:GetVersions()
+		-- local versions = keep:GetVersions()
 
-		versions:andThen(function(iterator)
-			print(keep.Data)
-			local versionToRoll = iterator.Next()
+		-- versions:andThen(function(iterator)
+		-- 	print(keep.Data)
+		-- 	local versionToRoll = iterator.Current()
 
-			keep:SetVersion(versionToRoll.Version)
+		-- 	keep:SetVersion(versionToRoll.Version)
 
-			print(keep.Data)
-		end)
+		-- 	print(keep.Data)
+		-- end)
 
-		print("UserIds: ")
-		keep:AddUserId(player.UserId)
+		-- print("UserIds: ")
+		-- keep:AddUserId(player.UserId)
 
-		print(keep.UserIds)
+		-- print(keep.UserIds)
 
-		keep:AddUserId(player.UserId)
+		-- keep:AddUserId(player.UserId)
 
-		print(keep.UserIds)
+		-- print(keep.UserIds)
+
+		warn(keep.Data)
+
+		print(keepStore._store:GetAsync(keep._key))
+
+		keep:Release()
 	end)
 
 	for i = 1, 2 do
@@ -104,6 +125,12 @@ Players.PlayerAdded:Connect(function(player)
 			})
 		end)
 	end
+
+	print("viewing")
+	keepStore:ViewKeep("Player_" .. player.UserId):andThen(function(keep)
+		print("Viewed keep")
+		print(keep.Data)
+	end)
 end)
 
 Players.PlayerRemoving:Connect(function(player)

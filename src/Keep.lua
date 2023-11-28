@@ -481,7 +481,6 @@ function Keep:_save(newestData: KeepStruct, release: boolean) -- used to interna
 	local processUpdates = {} -- we want to run them in batch, so half are saved and half aren't incase of specific needs
 
 	for i = 1, #globalUpdates do
-		print(globalUpdates[i])
 		if not globalUpdates[i].Locked then
 			self.GlobalStateProcessor(globalUpdates[i].Data, function()
 				table.insert(processUpdates, function()
@@ -507,7 +506,15 @@ function Keep:_save(newestData: KeepStruct, release: boolean) -- used to interna
 		updateProcessor()
 	end
 
-	return transformUpdate(self, newestData, release)
+	local transformedData = transformUpdate(self, newestData, release)
+
+	if self._keep_store then
+		local compressedData = self._keep_store._compression(DeepCopy(transformedData.Data))
+
+		transformedData.Data = compressedData
+	end
+
+	return transformedData
 end
 --> Public Methods
 
@@ -611,9 +618,7 @@ function Keep:Release()
 	end
 
 	local updater = Promise.try(function()
-		print("lets see")
 		self._store:UpdateAsync(self._key, function(newestData: KeepStruct)
-			print("updating")
 			return self:_save(newestData, true)
 		end)
 	end):timeout(30)
@@ -633,6 +638,8 @@ function Keep:Release()
 		end
 
 		self.OnGlobalUpdate:Destroy()
+
+		self._keep_store._cachedKeepPromises[self:Identify()] = nil
 	end):catch(function(err)
 		local keepStore = self._keep_store
 
