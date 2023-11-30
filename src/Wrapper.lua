@@ -30,6 +30,22 @@ return {
 	Mutate = function(self, dataPath: string, processor)
 		local dataToFindSplit = string.split(dataPath, ".")
 
+		if #dataToFindSplit == 1 then
+			self.Data[dataPath] = processor(self.Data[dataPath])
+
+			local listeners = self._listeners
+
+			if listeners then
+				local signal = listeners[dataPath]
+
+				if signal then
+					signal:Fire(self.Data[dataPath])
+				end
+			end
+
+			return
+		end
+
 		local currentData = self.Data
 
 		for i, part in ipairs(dataToFindSplit) do

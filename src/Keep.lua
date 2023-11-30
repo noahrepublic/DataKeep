@@ -123,6 +123,24 @@ local function DeepCopy(tbl: { [any]: any })
 	return copy
 end
 
+local function isType(value: any, reference: any): boolean
+	if typeof(reference) == "table" then
+		if typeof(value) ~= "table" then
+			return false
+		end
+
+		for key, _ in pairs(reference) do
+			if not isType(value[key], reference[key]) then
+				return false
+			end
+		end
+
+		return true
+	end
+
+	return typeof(value) == typeof(reference)
+end
+
 --> Constructor
 
 --[=[
@@ -209,7 +227,7 @@ function Keep.new(structure: KeepStruct, dataTemplate: {}): Keep
 end
 
 --[=[
-		@type Keep { Data: {}, MetaData: MetaData, GlobalUpdates: GlobalUpdates, UserIds: {}, OnGlobalUpdate: Signal<GlobalUpdate & number>, GlobalStateProcessor: (update: GlobalUpdate, lock: () -> boolean, remove: () -> boolean) -> void, OnRelease: Signal}
+		@type Keep { Data: {}, MetaData: MetaData, GlobalUpdates: GlobalUpdates, UserIds: {}, OnGlobalUpdate: Signal<GlobalUpdate & number>, GlobalStateProcessor: (update: GlobalUpdate, lock: () -> boolean, remove: () -> boolean) -> void, OnRelease: Signal }
 		@within Keep
 	]=]
 
@@ -252,10 +270,22 @@ local function transformUpdate(keep: Keep, newestData: KeepStruct, release: bool
 			type(newestData.Data) == "table" and typeof(newestData.MetaData) == "table"
 			-- full profile
 		then
-			if not isKeepLocked(newestData.MetaData) then
-				newestData.Data = keep.Data
+			if not isKeepLocked(newestData.MetaData) and keep._keep_store then
+				local keepStore = keep._keep_store
 
-				newestData.UserIds = keep.UserIds
+				local valid, err = keepStore.validate(newestData.Data)
+
+				if valid then
+					newestData.Data = keep.Data
+
+					newestData.UserIds = keep.UserIds
+				else
+					if not keep._keep_store then
+						return newestData
+					end
+
+					keep._keep_store._processError(err, 0)
+				end
 			end
 		end
 
@@ -543,7 +573,7 @@ function Keep:Save()
 	end):catch(function(err)
 		local keepStore = self._keep_store
 
-		keepStore._processError(err)
+		keepStore._processError(err, 1)
 	end)
 end
 
@@ -643,7 +673,7 @@ function Keep:Release()
 	end):catch(function(err)
 		local keepStore = self._keep_store
 
-		keepStore._processError(err)
+		keepStore._processError("Failed to release: " .. err, 2)
 
 		error(err) -- dont want to silence the error
 	end)
@@ -928,7 +958,7 @@ function Keep:SetVersion(version: string, migrateProcessor: (versionKeep: Keep) 
 		local versionKeep = self._keep_store
 			:ViewKeep(self._key, version)
 			:catch(function(err)
-				self._keep_store._processError(err)
+				self._keep_store._processError(err, 1)
 			end)
 			:awaitValue()
 
@@ -995,7 +1025,7 @@ end
 		@method ClearLockedUpdate
 		@within Keep
 
-		@param id {number}
+		@param id number
 
 		@return Promise<void>
 

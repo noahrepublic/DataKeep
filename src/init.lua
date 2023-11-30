@@ -96,6 +96,29 @@ export type Promise = typeof(Promise.new(function() end))
 	:::info
 ]=]
 
+--[=[
+	@prop validate (any) -> true | (false & string)
+	@within Store
+
+	Used to validate data before saving. Ex. type guards
+
+
+
+	```lua
+	keepStore.validate = function(data)
+		for key, value in data do
+			local dataTempVersion = dataTemplate[key]
+
+			if type(key) ~= type(dataTempVersion) then
+				return false, "Invalid type for key " .. key
+			end
+		end
+
+		return true
+	end
+	```
+]=]
+
 export type Store = typeof(Store) & {
 	_store_info: StoreInfo,
 	_data_template: any,
@@ -243,7 +266,7 @@ local function saveKeep(keep: Keep.Keep, release: boolean): Promise
 	end):catch(function(err)
 		local keepStore = keep._keep_store
 
-		keepStore._processError(err)
+		keepStore._processError(err, 1)
 	end)
 end
 
@@ -340,16 +363,35 @@ function Store.GetStore(storeInfo: StoreInfo | string, dataTemplate): Promise
 		_mock = if Store.mockStore then true else false, -- studio only/datastores not available
 
 		_cachedKeepPromises = {},
+
+		validate = function()
+			return true
+		end,
 	}, Store)
 
 	Store._storeQueue[identifier] = self._store
 
-	self._processError = function(err)
+	self._processError = function(err, priority: number)
 		Store.IssueSignal:Fire(err)
+
+		priority = priority or 1
+
+		-- priorities:
+		-- 0: no issue signal, warn
+		-- 1: warn
+		-- 2: error issue signal
+
+		if priority > 1 then
+			error(err)
+		else
+			warn(err)
+		end
 
 		local clock = os.clock()
 
-		table.insert(Store._issueQueue, clock)
+		if priority ~= 0 then
+			table.insert(Store._issueQueue, clock)
+		end
 
 		if Store._issueQueue[Store._criticalStateThreshold + 1] then
 			table.remove(Store._issueQueue, Store._criticalStateThreshold + 1)
@@ -977,7 +1019,7 @@ saveLoop = RunService.Heartbeat:Connect(function(dt)
 				end)
 				:timeout(Store._saveInterval)
 				:catch(function(err)
-					keep._keep_store._processError(err)
+					keep._keep_store._processError(err, 1)
 				end)
 		end)
 	end

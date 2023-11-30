@@ -9,36 +9,48 @@ local ServerPackages = ServerScriptService:FindFirstChild("ServerPackages")
 
 local DataKeep = require(ServerPackages:FindFirstChild("datakeep"))
 
-local keepStore = DataKeep.GetStore("TestStore", {
+type DataTemplate = {
+	Test: string,
+
+	Inventory: {
+		Sword: string,
+	},
+}
+
+local dataTemplate: DataTemplate = {
 	Test = "Hello World!",
 
 	Inventory = {
 		Sword = "Iron Sword",
 	},
-}):awaitValue()
+}
+
+local keepStore = DataKeep.GetStore("TestStore", dataTemplate):awaitValue()
 
 local Keeps = {}
 
+keepStore.validate = function(data)
+	local function isValid(dataToCheck, reference)
+		if typeof(dataToCheck) ~= typeof(reference) then
+			return false
+		end
+
+		if typeof(dataToCheck) == "table" then
+			for key, value in pairs(dataToCheck) do
+				if not isValid(value, reference[key]) then
+					return false, `Key {key} returned type {typeof(value)}, should have been {typeof(reference[key])}`
+				end
+			end
+		end
+		return true
+	end
+
+	return isValid(data, dataTemplate)
+end
+
 --> Public Functions
 
-keepStore:PreSave(function(data)
-	print(data)
-	data.Inventory.Sword = "Compressed"
-
-	return data
-end)
-
-keepStore:PreLoad(function(data)
-	data.Inventory.Sword = "Iron Sword"
-
-	return data
-end)
-
 Players.PlayerAdded:Connect(function(player)
-	keepStore.IssueSignal:Connect(function(signal, ...)
-		print("Received signal", signal, ...)
-	end)
-
 	keepStore:LoadKeep("Player_" .. player.UserId):andThen(function(keep)
 		Keeps[player] = keep
 
@@ -47,7 +59,7 @@ Players.PlayerAdded:Connect(function(player)
 		end)
 
 		keep:Mutate("Inventory.Sword", function()
-			return "Hello World! 2"
+			return "Iron Sword 2"
 		end)
 
 		--keep.Data.Test = nil
@@ -73,8 +85,8 @@ Players.PlayerAdded:Connect(function(player)
 
 		keep:Save()
 
-		keep.Data.Test = "Hello World! 2"
-		keep:Save()
+		-- keep.Data.Test = "Hello World! 2"
+		-- keep:Save()
 
 		-- local versions = keep:GetVersions()
 
@@ -100,7 +112,7 @@ Players.PlayerAdded:Connect(function(player)
 
 		print(keepStore._store:GetAsync(keep._key))
 
-		keep:Release()
+		-- keep:Release()
 	end)
 
 	for i = 1, 2 do
@@ -128,11 +140,11 @@ Players.PlayerAdded:Connect(function(player)
 		end)
 	end
 
-	print("viewing")
-	keepStore:ViewKeep("Player_" .. player.UserId):andThen(function(keep)
-		print("Viewed keep")
-		print(keep.Data)
-	end)
+	-- print("viewing")
+	-- keepStore:ViewKeep("Player_" .. player.UserId):andThen(function(keep)
+	-- 	print("Viewed keep")
+	-- 	print(keep.Data)
+	-- end)
 end)
 
 Players.PlayerRemoving:Connect(function(player)

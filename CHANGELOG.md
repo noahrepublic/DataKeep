@@ -1,5 +1,11 @@
 # DataKeep
 
+## [version 2.1.0](https://github.com/noahrepublic/DataKeep/releases/tag/v2.1.0): 11/30/2023
+
+### Added 
+
+- Store.validate() for validating data before saving ex: type guards
+
 ## [version 2.0.0](https://github.com/noahrepublic/DataKeep/releases/tag/v2.0.0): 11/28/2023
 
 API Breaking Change
