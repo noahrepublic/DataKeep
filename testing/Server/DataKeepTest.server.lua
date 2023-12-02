@@ -54,14 +54,15 @@ Players.PlayerAdded:Connect(function(player)
 	keepStore:LoadKeep("Player_" .. player.UserId):andThen(function(keep)
 		Keeps[player] = keep
 
-		keep:onDataChange("Inventory.Sword", function(newValue)
-			print("Sword changed to", newValue)
-		end)
+		-- keep:onDataChange("Inventory.Sword", function(newValue)
+		-- 	print("Sword changed to", newValue)
+		-- end)
 
-		keep:Mutate("Inventory.Sword", function()
-			return "Iron Sword 2"
-		end)
+		-- keep:Mutate("Inventory.Sword", function()
+		-- 	return "Iron Sword 2"
+		-- end)
 
+		keep:CoolFunction()
 		--keep.Data.Test = nil
 
 		print(keep.Data)

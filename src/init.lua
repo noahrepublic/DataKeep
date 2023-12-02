@@ -109,7 +109,7 @@ export type Promise = typeof(Promise.new(function() end))
 		for key, value in data do
 			local dataTempVersion = dataTemplate[key]
 
-			if type(key) ~= type(dataTempVersion) then
+			if typeof(data[key]) ~= typeof(dataTempVersion) then
 				return false, "Invalid type for key " .. key
 			end
 		end
