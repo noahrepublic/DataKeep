@@ -223,7 +223,12 @@ local function createMockStore(storeInfo: StoreInfo, dataTemplate) -- complete m
 		_mock = true,
 
 		_keeps = {},
+
 		_cachedKeepPromises = {},
+
+		validate = function()
+			return true
+		end,
 	}, Store)
 end
 
