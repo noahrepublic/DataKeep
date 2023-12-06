@@ -1,5 +1,10 @@
 # DataKeep
 
+## [version 2.1.1](https://github.com/noahrepublic/DataKeep/releases/tag/v2.1.1): 12/05/2023
+
+### Fixes
+- Merged PR [#12](https://github.com/noahrepublic/DataKeep/pull/12)
+
 ## [version 2.1.0](https://github.com/noahrepublic/DataKeep/releases/tag/v2.1.0): 11/30/2023
 
 ### Added 
