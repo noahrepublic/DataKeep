@@ -600,6 +600,19 @@ function Store:ViewKeep(key: string, version: string?): Promise
 		keepObject._view_only = true
 		keepObject._released = true -- incase they call :release and it tries to save
 
+		keepObject._store = self._store -- mock store or real store
+		keepObject._key = key
+		keepObject._store_info.Name = self._store_info.Name
+		keepObject._store_info.Scope = self._store_info.Scope or ""
+
+		keepObject._keep_store = self
+
+		for functionName, func in Store.Wrapper do -- attach wrapper functions
+			keepObject[functionName] = function(...)
+				return func(...)
+			end
+		end
+
 		return resolve(keepObject)
 	end)
 end

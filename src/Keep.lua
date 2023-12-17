@@ -205,6 +205,7 @@ function Keep.new(structure: KeepStruct, dataTemplate: {}): Keep
 		_released = false,
 
 		_view_only = false,
+		_overwriting = false,
 		_global_updates_only = false, -- if true, can access global updates but nothing else (used for global updates)
 
 		OnGlobalUpdate = Signal.new(), -- fires on a new locked global update (ready to be progressed)
@@ -440,9 +441,12 @@ function Keep:_save(newestData: KeepStruct, release: boolean) -- used to interna
 		end
 	end
 
-	if self._view_only then
-		error("Attempted to save a view only keep")
+	if self._view_only and not self._overwriting then
+		--error("Attempted to save a view only keep, do you mean to use :Overwrite()?")
+		self._keep_store._processError("Attempted to save a view only keep, do you mean :Overwrite()?", 2)
 		return newestData
+	elseif self._overwriting then
+		self._overwriting = false -- already overrided, so we can reset
 	end
 
 	local waitingForceLoad = false
@@ -498,7 +502,8 @@ function Keep:_save(newestData: KeepStruct, release: boolean) -- used to interna
 			end
 
 			if not globalUpdates[index].Locked and not self._pending_global_locks[index] then
-				error("Attempted to remove a global update that was not locked")
+				--error("Attempted to remove a global update that was not locked")
+				self._keep_store._processError("Attempted to remove a global update that was not locked", 2)
 				return reject()
 			end
 
@@ -565,6 +570,21 @@ end
 
 function Keep:Save()
 	return Promise.new(function(resolve)
+		local dataKeyInfo: DataStoreKeyInfo = self._store:UpdateAsync(self._key, function(newestData)
+			return self:_save(newestData, false)
+		end)
+
+		resolve(dataKeyInfo)
+	end):catch(function(err)
+		local keepStore = self._keep_store
+
+		keepStore._processError(err, 1)
+	end)
+end
+
+function Keep:Overwrite()
+	return Promise.new(function(resolve)
+		self._overwriting = true
 		local dataKeyInfo: DataStoreKeyInfo = self._store:UpdateAsync(self._key, function(newestData)
 			return self:_save(newestData, false)
 		end)
