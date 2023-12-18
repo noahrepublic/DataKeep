@@ -557,7 +557,7 @@ end
 		@method Save
 		@within Keep
 
-		@return KeepStruct
+		@return Promise<DataStoreKeyInfo>
 
 		Manually Saves a keep and returns the data from UpdateAsync()
 
@@ -566,6 +566,10 @@ end
 		:::caution
 		RESETS AUTO SAVE TIMER ON THE KEEP
 		:::caution
+
+		:::warning
+		Using :Save on a  **view only keep** will error. Use :Overwrite() instead
+		:::warning
 	]=]
 
 function Keep:Save()
@@ -581,6 +585,19 @@ function Keep:Save()
 		keepStore._processError(err, 1)
 	end)
 end
+
+--[=[
+	@method Overwrite
+	@within Keep
+
+	Used to overwrite on a view only keep 
+
+	:::warning
+	Ignores any session locks
+	:::warning
+
+	@return Promise<DataStoreKeyInfo>
+]=]
 
 function Keep:Overwrite()
 	return Promise.new(function(resolve)
