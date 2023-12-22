@@ -174,10 +174,21 @@ end
 	]=]
 
 --[=[
-		@prop OnRelease Signal<()>
+		@prop OnRelease Signal<Promise>
 		@within Keep
 
-		Fired when the keep is released (fires before internally released, but after session release)
+		Fired when the keep is being released (fires before internally released, but during session release)
+
+		```lua
+		keep.OnRelease:Connect(function(state)
+			print(`Releasing {keep:Identify()}`)
+			state:andThen(function()
+				print(`Released {keep:Identify()}`)
+			end, function()
+				print(`Failed to release {keep:Identify()}`)
+			end)
+		end)
+		```
 	]=]
 
 function Keep.new(structure: KeepStruct, dataTemplate: {}): Keep
@@ -208,7 +219,7 @@ function Keep.new(structure: KeepStruct, dataTemplate: {}): Keep
 		_overwriting = false,
 		_global_updates_only = false, -- if true, can access global updates but nothing else (used for global updates)
 
-		OnGlobalUpdate = Signal.new(), -- fires on a new locked global update (ready to be progressed)
+		OnGlobalUpdate = Signal.new(), -- fires on a new locked global update (ready to be processed)
 		GlobalStateProcessor = function(_: GlobalUpdate, lock: () -> boolean, _: () -> boolean) -- by default just locks the global update (this is only ran if the keep is online)
 			lock()
 		end,
@@ -693,16 +704,17 @@ function Keep:Release()
 	self._last_save = os.clock()
 
 	return Promise.new(function(resolve)
+		if not self._released then
+			self.OnRelease:Fire(updater) -- unlocked, but not removed internally
+		end
+
 		updater
 			:andThen(function()
 				resolve() -- else should auto reject because error
 			end)
 			:await()
 
-		if not self._released then
-			self.OnRelease:Fire() -- unlocked, but not removed internally
-			self._released = true -- will tell the store class to remove internally
-		end
+		self._released = true -- will tell the store class to remove internally
 
 		self.OnGlobalUpdate:Destroy()
 

@@ -42,8 +42,6 @@ local Store = {
 	IssueSignal = Signal.new(), -- fires when we have an issue (issue logging)
 	_issueQueue = {}, -- queue of issues to keep track of if CriticalState should activate
 	_maxIssueTime = 60, -- how long to keep issues 'valid' in the queue
-
-	Wrapper = require(script.Wrapper),
 }
 Store.__index = Store
 
@@ -130,7 +128,7 @@ export type Store = typeof(Store) & {
 
 	_keeps: { [string]: Keep.Keep },
 
-	Wrapper: { [string]: (...any) -> any },
+	Wrapper: { [string]: (any) -> any },
 }
 
 export type GlobalUpdates = typeof(setmetatable({}, GlobalUpdates))
@@ -372,6 +370,8 @@ function Store.GetStore(storeInfo: StoreInfo | string, dataTemplate): Promise
 		validate = function()
 			return true
 		end,
+
+		Wrapper = require(script.Wrapper),
 	}, Store)
 
 	Store._storeQueue[identifier] = self._store
@@ -530,7 +530,7 @@ function Store:LoadKeep(key: string, unReleasedHandler: UnReleasedHandler): Prom
 
 		self._cachedKeepPromises[identifier] = nil
 
-		for functionName, func in Store.Wrapper do
+		for functionName, func in self.Wrapper do
 			keepClass[functionName] = function(...)
 				return func(...)
 			end
@@ -607,7 +607,7 @@ function Store:ViewKeep(key: string, version: string?): Promise
 
 		keepObject._keep_store = self
 
-		for functionName, func in Store.Wrapper do -- attach wrapper functions
+		for functionName, func in self.Wrapper do -- attach wrapper functions
 			keepObject[functionName] = function(...)
 				return func(...)
 			end
