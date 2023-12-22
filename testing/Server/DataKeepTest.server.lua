@@ -51,70 +51,87 @@ end
 --> Public Functions
 
 Players.PlayerAdded:Connect(function(player)
-	-- keepStore:LoadKeep("Player_" .. player.UserId):andThen(function(keep)
-	-- 	Keeps[player] = keep
+	keepStore:LoadKeep("Player_" .. player.UserId):andThen(function(keep)
+		Keeps[player] = keep
 
-	-- 	-- keep:onDataChange("Inventory.Sword", function(newValue)
-	-- 	-- 	print("Sword changed to", newValue)
-	-- 	-- end)
+		-- keep:onDataChange("Inventory.Sword", function(newValue)
+		-- 	print("Sword changed to", newValue)
+		-- end)
 
-	-- 	-- keep:Mutate("Inventory.Sword", function()
-	-- 	-- 	return "Iron Sword 2"
-	-- 	-- end)
+		-- keep:Mutate("Inventory.Sword", function()
+		-- 	return "Iron Sword 2"
+		-- end)
 
-	-- 	keep:CoolFunction()
-	-- 	--keep.Data.Test = nil
+		--keep.Data.Test = nil
 
-	-- 	print(keep.Data)
+		print(keep.Data)
 
-	-- 	keep:Reconcile()
+		keep:Reconcile()
 
-	-- 	print(keep.Data)
+		print(keep.Data)
 
-	-- 	keep.OnGlobalUpdate:Connect(function(_, id)
-	-- 		print(player.UserId .. " received global update", id)
+		keep.OnGlobalUpdate:Connect(function(_, id)
+			print(player.UserId .. " received global update", id)
 
-	-- 		keep:ClearLockedUpdate(id)
-	-- 	end)
+			keep:ClearLockedUpdate(id)
+		end)
 
-	-- 	print("Lets try loading AGAIN")
+		keep.Releasing:Connect(function(state)
+			print(`Releasing {keep:Identify()}`)
+			state:andThen(function()
+				print(`Released {keep:Identify()}`)
+				player:Kick("Keep released")
+			end, function()
+				print(`Failed to release {keep:Identify()}`)
+			end)
+		end)
 
-	-- 	keepStore:LoadKeep("Player_" .. player.UserId):andThen(function(keep2)
-	-- 		print("Loaded cached keep again")
-	-- 		print(keep2, keep)
-	-- 	end)
+		keep.Saving:Connect(function(state)
+			print(`Saving {keep:Identify()}`)
 
-	-- 	keep:Save()
+			state
+				:andThen(function()
+					print(`Saved {keep:Identify()}`)
+				end)
+				:catch(function()
+					print(`Failed to save {keep:Identify()}`)
+				end)
+		end)
 
-	-- 	-- keep.Data.Test = "Hello World! 2"
-	-- 	-- keep:Save()
+		-- print("Lets try loading AGAIN")
 
-	-- 	-- local versions = keep:GetVersions()
+		-- keepStore:LoadKeep("Player_" .. player.UserId):andThen(function(keep2)
+		-- 	print("Loaded cached keep again")
+		-- 	print(keep2, keep)
+		-- end)
 
-	-- 	-- versions:andThen(function(iterator)
-	-- 	-- 	print(keep.Data)
-	-- 	-- 	local versionToRoll = iterator.Current()
+		-- keep.Data.Test = "Hello World! 2"
+		-- keep:Save()
 
-	-- 	-- 	keep:SetVersion(versionToRoll.Version)
+		-- local versions = keep:GetVersions()
 
-	-- 	-- 	print(keep.Data)
-	-- 	-- end)
+		-- versions:andThen(function(iterator)
+		-- 	print(keep.Data)
+		-- 	local versionToRoll = iterator.Current()
 
-	-- 	-- print("UserIds: ")
-	-- 	-- keep:AddUserId(player.UserId)
+		-- 	keep:SetVersion(versionToRoll.Version)
 
-	-- 	-- print(keep.UserIds)
+		-- 	print(keep.Data)
+		-- end)
 
-	-- 	-- keep:AddUserId(player.UserId)
+		-- print("UserIds: ")
+		-- keep:AddUserId(player.UserId)
 
-	-- 	-- print(keep.UserIds)
+		-- print(keep.UserIds)
 
-	-- 	warn(keep.Data)
+		-- keep:AddUserId(player.UserId)
 
-	-- 	print(keepStore._store:GetAsync(keep._key))
+		-- print(keep.UserIds)
 
-	-- 	-- keep:Release()
-	-- end)
+		warn(keep.Data)
+
+		print(keepStore._store:GetAsync(keep._key))
+	end)
 
 	-- for i = 1, 2 do
 	-- 	local message = if i == 1 then "Hello" else "Goodbye"
@@ -141,23 +158,23 @@ Players.PlayerAdded:Connect(function(player)
 	-- 	end)
 	-- end
 
-	print("viewing")
-	keepStore:ViewKeep("Player_" .. player.UserId):andThen(function(keep)
-		print("Viewed keep")
-		print(keep.Data)
+	-- print("viewing")
+	-- keepStore:ViewKeep("Player_" .. player.UserId):andThen(function(keep)
+	-- 	print("Viewed keep")
+	-- 	print(keep.Data)
 
-		print("Changing")
+	-- 	print("Changing")
 
-		keep:Mutate("Inventory.Sword", function()
-			return "Iron Sword 2"
-		end)
+	-- 	keep:Mutate("Inventory.Sword", function()
+	-- 		return "Iron Sword 2"
+	-- 	end)
 
-		print(keep.Data)
+	-- 	print(keep.Data)
 
-		keep:Overwrite()
+	-- 	keep:Overwrite()
 
-		print(keepStore._store:GetAsync(keep._key))
-	end)
+	-- 	print(keepStore._store:GetAsync(keep._key))
+	-- end)
 end)
 
 Players.PlayerRemoving:Connect(function(player)

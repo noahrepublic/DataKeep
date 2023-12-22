@@ -26,6 +26,21 @@ export type MockStore = typeof(MockStore.new()) & {
 
 --> Private Functions
 
+function didyield(func, ...)
+	local evt = Instance.new("BindableEvent")
+	local args = { ... }
+	local argCount = select("#", ...)
+	local reachedEnd = false
+	local result = nil
+
+	evt.Event:Connect(function()
+		result = func(unpack(args, 1, argCount))
+		reachedEnd = true
+	end)
+	evt:Fire()
+	return not reachedEnd, result
+end
+
 local function deepCopy(t: any)
 	local copy = {}
 
@@ -68,7 +83,12 @@ end
 
 function MockStore:UpdateAsync(key: string, callback: (any) -> any)
 	local value = self._data[key]
-	local newValue = callback(value)
+	local yielded, newValue = didyield(callback, value)
+
+	if yielded then
+		error("UpdateAsync yielded!")
+		return value
+	end
 
 	self:SetAsync(key, newValue)
 

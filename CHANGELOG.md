@@ -1,5 +1,23 @@
 # DataKeep
 
+## [version 3.0.0](https://github.com/noahrepublic/DataKeep/releases/tag/v3.0.0): 12/22/2023
+
+**API Breaking Change**
+
+### Added
+
+- Documented IssueSignal, CriticalState, & CriticalStateSignal
+- Added 'Saving' signal to Keep
+- Mockstore didyield detection for more accurate development testing
+
+### Changes
+
+- DataKeep.Wrapper is now: DataStore.Wrapper (independant wrappers supported)
+- OnRelease -> Releasing (signal) to address [#13](https://github.com/noahrepublic/DataKeep/issues/13)
+- [#13](https://github.com/noahrepublic/DataKeep/issues/13) Releasing, and Saving signals now pass a promise to track the state
+
+
+
 ## [version 2.1.1](https://github.com/noahrepublic/DataKeep/releases/tag/v2.1.1): 12/17/2023
 
 ## **API Breaking Change**
