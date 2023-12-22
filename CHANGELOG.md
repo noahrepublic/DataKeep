@@ -16,7 +16,9 @@
 - OnRelease -> Releasing (signal) to address [#13](https://github.com/noahrepublic/DataKeep/issues/13)
 - [#13](https://github.com/noahrepublic/DataKeep/issues/13) Releasing, and Saving signals now pass a promise to track the state
 
+### Fixed
 
+- Wrapper type warning
 
 ## [version 2.1.1](https://github.com/noahrepublic/DataKeep/releases/tag/v2.1.1): 12/17/2023
 
