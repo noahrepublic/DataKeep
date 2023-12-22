@@ -76,7 +76,7 @@ type MockStore = MockStore.MockStore
 export type Promise = typeof(Promise.new(function() end))
 
 --[=[
-	@type Store {Mock: MockStore, LoadKeep: (string, UnReleasedHandler?) -> Promise<Keep>, ViewKeep: (string) -> Promise<Keep>, PreSave: (({any}) -> {any}) -> nil, PreLoad: (({any}) -> {any}) -> nil, PostGlobalUpdate: (string, (GlobalUpdates) -> nil) -> Promise<void>}
+	@type Store {Mock: MockStore, LoadKeep: (string, UnReleasedHandler?) -> Promise<Keep>, ViewKeep: (string) -> Promise<Keep>, PreSave: (({any}) -> {any}) -> nil, PreLoad: (({any}) -> {any}) -> nil, PostGlobalUpdate: (string, (GlobalUpdates) -> nil) -> Promise<void>, IssueSignal: Signal, CriticalStateSignal: Signal, CriticalState: boolean}
 
 	@within Store
 
@@ -92,6 +92,55 @@ export type Promise = typeof(Promise.new(function() end))
 	:::info
 	Any wrapper changes post .GetStore will not apply to that store but the next one.
 	:::info
+]=]
+
+--[=[
+	@prop Mock MockStore
+	@within Store
+
+	A mock store that mirrors the real store, but doesn't save data
+]=]
+
+--[=[
+	@prop IssueSignal Signal
+	@within Store
+
+	Fired when an issue occurs, like a failed request
+
+	```lua
+	keepStore.IssueSignal:Connect(function(err)
+		print("Issue!", err)
+	end)
+	```
+]=]
+
+--[=[
+	@prop CriticalStateSignal Signal
+	@within Store
+
+	Fired when the store enters critical state. After it has failed many requests and maybe dangerous to proceed with purchases or other important actions 
+
+	```lua
+	keepStore.CriticalStateSignal:Connect(function()
+		print("Critical State!")
+	end)
+	```
+]=]
+
+--[=[
+	@prop CriticalState boolean
+	@within Store
+
+	Whether the store is in critical state or not. See ```CriticalStateSignal```
+
+	```lua
+	if keepStore.CriticalState then
+		warn("Critical State!")
+		return
+	end
+
+	-- process purchase
+	```
 ]=]
 
 --[=[
@@ -237,7 +286,7 @@ local function releaseKeepInternally(keep: Keep.Keep)
 
 	keepStore._cachedKeepPromises[keep:Identify()] = nil
 
-	keep.OnRelease:Destroy()
+	keep.Releasing:Destroy()
 end
 
 local function saveKeep(keep: Keep.Keep, release: boolean): Promise
@@ -245,7 +294,7 @@ local function saveKeep(keep: Keep.Keep, release: boolean): Promise
 		releaseKeepInternally(keep)
 		return Promise.resolve()
 	end
-	return Promise.new(function(resolve)
+	local savingState = Promise.new(function(resolve)
 		local recentKeyInfo: DataStoreKeyInfo
 
 		if keep._store then
@@ -271,6 +320,9 @@ local function saveKeep(keep: Keep.Keep, release: boolean): Promise
 
 		keepStore._processError(err, 1)
 	end)
+
+	keep.Saving:Fire(savingState)
+	return savingState
 end
 
 --[[

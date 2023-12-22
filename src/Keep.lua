@@ -174,13 +174,13 @@ end
 	]=]
 
 --[=[
-		@prop OnRelease Signal<Promise>
+		@prop Releasing Signal<Promise>
 		@within Keep
 
-		Fired when the keep is being released (fires before internally released, but during session release)
+		Fired when the keep is releasing (fires before internally released, but during session release)
 
 		```lua
-		keep.OnRelease:Connect(function(state)
+		keep.Releasing:Connect(function(state)
 			print(`Releasing {keep:Identify()}`)
 			state:andThen(function()
 				print(`Released {keep:Identify()}`)
@@ -189,7 +189,26 @@ end
 			end)
 		end)
 		```
-	]=]
+]=]
+
+--[=[
+	@prop Saving Signal<Promise>
+	@within Keep
+
+	Fired when the keep is saving, resolves on complete
+
+	```lua
+	keep.Saving:Connect(function(state)
+		print(`Saving {keep:Identify()}`)
+		
+		state:andThen(function()
+			print(`Saved {keep:Identify()}`)
+		end):catch(function()
+			print(`Failed to save {keep:Identify()}`)
+		end)
+	end)
+	```
+]=]
 
 function Keep.new(structure: KeepStruct, dataTemplate: {}): Keep
 	return setmetatable({
@@ -212,7 +231,7 @@ function Keep.new(structure: KeepStruct, dataTemplate: {}): Keep
 			UserIds = DeepCopy(structure.UserIds or DefaultKeep.UserIds),
 		},
 
-		OnRelease = Signal.new(),
+		Releasing = Signal.new(),
 		_released = false,
 
 		_view_only = false,
@@ -232,6 +251,7 @@ function Keep.new(structure: KeepStruct, dataTemplate: {}): Keep
 		_keep_store = nil, -- the store class that created the keep
 
 		_last_save = os.clock(),
+		Saving = Signal.new(),
 		_store_info = { Name = "", Scope = "" },
 
 		_data_template = dataTemplate,
@@ -239,7 +259,7 @@ function Keep.new(structure: KeepStruct, dataTemplate: {}): Keep
 end
 
 --[=[
-		@type Keep { Data: {}, MetaData: MetaData, GlobalUpdates: GlobalUpdates, UserIds: {}, OnGlobalUpdate: Signal<GlobalUpdate & number>, GlobalStateProcessor: (update: GlobalUpdate, lock: () -> boolean, remove: () -> boolean) -> void, OnRelease: Signal }
+		@type Keep { Data: {}, MetaData: MetaData, GlobalUpdates: GlobalUpdates, UserIds: {}, OnGlobalUpdate: Signal<GlobalUpdate & number>, GlobalStateProcessor: (update: GlobalUpdate, lock: () -> boolean, remove: () -> boolean) -> void, Releasing: Signal, Saving: Signal }
 		@within Keep
 	]=]
 
@@ -584,10 +604,18 @@ end
 	]=]
 
 function Keep:Save()
-	return Promise.new(function(resolve)
+	local savingState = Promise.new(function(resolve)
 		local dataKeyInfo: DataStoreKeyInfo = self._store:UpdateAsync(self._key, function(newestData)
 			return self:_save(newestData, false)
 		end)
+
+		self._last_save = os.clock() -- reset the auto save timer
+
+		self._keyInfo = { -- have to map the tuple to a table for type checking (even though tuples are arrays in lua)
+			CreatedTime = dataKeyInfo.CreatedTime,
+			UpdatedTime = dataKeyInfo.UpdatedTime,
+			Version = dataKeyInfo.Version,
+		}
 
 		resolve(dataKeyInfo)
 	end):catch(function(err)
@@ -595,6 +623,10 @@ function Keep:Save()
 
 		keepStore._processError(err, 1)
 	end)
+
+	self.Saving:Fire(savingState)
+
+	return savingState
 end
 
 --[=[
@@ -611,11 +643,19 @@ end
 ]=]
 
 function Keep:Overwrite()
-	return Promise.new(function(resolve)
+	local savingState = Promise.new(function(resolve)
 		self._overwriting = true
 		local dataKeyInfo: DataStoreKeyInfo = self._store:UpdateAsync(self._key, function(newestData)
 			return self:_save(newestData, false)
 		end)
+
+		self._last_save = os.clock() -- reset the auto save timer
+
+		self._keyInfo = { -- have to map the tuple to a table for type checking (even though tuples are arrays in lua)
+			CreatedTime = dataKeyInfo.CreatedTime,
+			UpdatedTime = dataKeyInfo.UpdatedTime,
+			Version = dataKeyInfo.Version,
+		}
 
 		resolve(dataKeyInfo)
 	end):catch(function(err)
@@ -623,6 +663,10 @@ function Keep:Overwrite()
 
 		keepStore._processError(err, 1)
 	end)
+
+	self.Saving:Fire(savingState)
+
+	return savingState
 end
 
 --[=[
@@ -701,20 +745,18 @@ function Keep:Release()
 		end)
 	end):timeout(30)
 
+	self.Saving:Fire(updater)
+
 	self._last_save = os.clock()
 
-	return Promise.new(function(resolve)
-		if not self._released then
-			self.OnRelease:Fire(updater) -- unlocked, but not removed internally
-		end
-
+	local releasingState = Promise.new(function(resolve)
 		updater
 			:andThen(function()
 				resolve() -- else should auto reject because error
 			end)
 			:await()
 
-		self._released = true -- will tell the store class to remove internally
+		-- will tell the store class to remove internally
 
 		self.OnGlobalUpdate:Destroy()
 
@@ -726,6 +768,16 @@ function Keep:Release()
 
 		error(err) -- dont want to silence the error
 	end)
+
+	if not self._released then
+		self.Releasing:Fire(releasingState) -- unlocked, but not removed internally
+
+		releasingState:andThen(function()
+			self._released = true
+		end)
+	end
+
+	return releasingState
 end
 
 --[=[
