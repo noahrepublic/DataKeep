@@ -30,8 +30,15 @@ local function onPlayerJoin(player)
         keep:Reconcile()
         keep:AddUserId(player.UserId) -- help with GDPR requests
 
-        keep.OnRelease:Connect(function() -- don't have to clean up, it cleans up internally.
-            player:Kick("Session Release")
+        keep.Releasing:Connect(function(state) -- don't have to clean up, it cleans up internally.
+            print(`{player.Name}'s Keep is releasing!`)
+
+            state:andThen(function()
+                print(`{player.Name}'s Keep has been released!`)
+                player:Kick("Session Release")
+            end):catch(function(err)
+                warn(`{player.Name}'s Keep failed to release!`, err)
+            end)
         end)
 
         if not player:IsDescendantOf(Players) then
