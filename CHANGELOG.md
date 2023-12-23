@@ -1,5 +1,12 @@
 # DataKeep
 
+## [version 3.0.1](https://github.com/noahrepublic/DataKeep/releases/tag/v3.0.1): 12/22/2023
+
+### Fixed
+
+- Default Wrapper error relating to new API
+- Docs
+
 ## [version 3.0.0](https://github.com/noahrepublic/DataKeep/releases/tag/v3.0.0): 12/22/2023
 
 **API Breaking Change**
