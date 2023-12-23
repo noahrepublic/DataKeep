@@ -21,9 +21,11 @@ return {
 
 -- main.lua
 
-DataKeep.WriteLib = require(path_to_WriteLib)
+
 
 local keepStore = DataKeep.GetStore("PlayerData", defaultData):awaitValue()
+
+keepStore.WriteLib = require(path_to_WriteLib)
 
 keepStore:LoadKeep("Player_" .. player.UserId):andThen(function(keep)
     keep:AddCoins(100)
