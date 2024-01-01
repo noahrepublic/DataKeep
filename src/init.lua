@@ -272,6 +272,8 @@ local function createMockStore(storeInfo: StoreInfo, dataTemplate) -- complete m
 		_keeps = {},
 
 		_cachedKeepPromises = {},
+		
+		Wrapper = require(script.Wrapper),
 
 		validate = function()
 			return true

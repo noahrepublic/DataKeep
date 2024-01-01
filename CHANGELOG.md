@@ -1,5 +1,12 @@
 # DataKeep
 
+## [version 3.0.2](https://github.com/noahrepublic/DataKeep/releases/tag/v3.0.2): 01/01/2024
+
+### Fixed
+
+- .Mock erroring due to no ‘Wrapper’
+
+
 ## [version 3.0.1](https://github.com/noahrepublic/DataKeep/releases/tag/v3.0.1): 12/22/2023
 
 ### Fixed
