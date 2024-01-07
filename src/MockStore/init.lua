@@ -26,23 +26,21 @@ export type MockStore = typeof(MockStore.new()) & {
 
 --> Private Functions
 
-function didyield(func, ...)
-	local evt = Instance.new("BindableEvent")
-	local args = { ... }
-	local argCount = select("#", ...)
-	local reachedEnd = false
-	local result = nil
-
-	evt.Event:Connect(function()
-		result = func(unpack(args, 1, argCount))
-		reachedEnd = true
-	end)
-	evt:Fire()
-	return not reachedEnd, result
+function didyield(f, ...)
+	local finished=false
+	local data
+	coroutine.wrap(function(...)
+		data =  f(...)
+		finished=true
+	end)(...)
+	return not finished, data
 end
 
 local function deepCopy(t: any)
 	local copy = {}
+
+	if not t then return copy end
+	
 
 	for key, value in pairs(t) do
 		if type(value) == "table" then
@@ -78,7 +76,7 @@ end
 function MockStore:SetAsync(key: string, value: any)
 	self._data[key] = value
 
-	createNewVersion(self, key, value)
+	return createNewVersion(self, key, value)
 end
 
 function MockStore:UpdateAsync(key: string, callback: (any) -> any)
@@ -90,9 +88,7 @@ function MockStore:UpdateAsync(key: string, callback: (any) -> any)
 		return value
 	end
 
-	self:SetAsync(key, newValue)
-
-	return newValue
+	return self:SetAsync(key, newValue)
 end
 
 function MockStore:ListVersionsAsync(

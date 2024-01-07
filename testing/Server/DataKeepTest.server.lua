@@ -9,6 +9,8 @@ local ServerPackages = ServerScriptService:FindFirstChild("ServerPackages")
 
 local DataKeep = require(ServerPackages:FindFirstChild("datakeep"))
 
+local Wrapper = require(ServerScriptService:FindFirstChild("Wrapper"))
+
 type DataTemplate = {
 	Test: string,
 
@@ -26,6 +28,8 @@ local dataTemplate: DataTemplate = {
 }
 
 local keepStore = DataKeep.GetStore("TestStore", dataTemplate):awaitValue()
+keepStore = keepStore.Mock
+keepStore.Wrapper = Wrapper
 
 local Keeps = {}
 
@@ -53,6 +57,8 @@ end
 Players.PlayerAdded:Connect(function(player)
 	keepStore:LoadKeep("Player_" .. player.UserId):andThen(function(keep)
 		Keeps[player] = keep
+
+		print(keep)
 
 		-- keep:onDataChange("Inventory.Sword", function(newValue)
 		-- 	print("Sword changed to", newValue)
@@ -129,6 +135,7 @@ Players.PlayerAdded:Connect(function(player)
 		-- print(keep.UserIds)
 
 		warn(keep.Data)
+	
 
 		print(keepStore._store:GetAsync(keep._key))
 	end)

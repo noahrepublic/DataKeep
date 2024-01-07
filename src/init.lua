@@ -310,11 +310,14 @@ local function saveKeep(keep: Keep.Keep, release: boolean): Promise
 
 		keep._last_save = os.clock()
 
-		keep._keyInfo = { -- have to map the tuple to a table for type checking (even though tuples are arrays in lua)
-			CreatedTime = recentKeyInfo.CreatedTime,
-			UpdatedTime = recentKeyInfo.UpdatedTime,
-			Version = recentKeyInfo.Version,
-		}
+		if recentKeyInfo then
+			keep._keyInfo = { -- have to map the tuple to a table for type checking (even though tuples are arrays in lua)
+				CreatedTime = recentKeyInfo.CreatedTime,
+				UpdatedTime = recentKeyInfo.UpdatedTime,
+				Version = recentKeyInfo.Version,
+			}
+		end
+		
 
 		resolve(recentKeyInfo or {})
 	end):catch(function(err)
@@ -430,7 +433,7 @@ function Store.GetStore(storeInfo: StoreInfo | string, dataTemplate): Promise
 
 	Store._storeQueue[identifier] = self._store
 
-	self._processError = function(err, priority: number)
+	local function processError(err, priority: number)
 		Store.IssueSignal:Fire(err)
 
 		priority = priority or 1
@@ -469,6 +472,9 @@ function Store.GetStore(storeInfo: StoreInfo | string, dataTemplate): Promise
 			Store.CriticalStateSignal:Fire()
 		end
 	end
+
+	self._processError = processError
+	self.Mock._processError = processError
 
 	return Promise.resolve(self)
 end

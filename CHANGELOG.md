@@ -1,5 +1,12 @@
 # DataKeep
 
+## [version 3.0.3](https://github.com/noahrepublic/DataKeep/releases/tag/v3.0.3): 01/06/2024
+
+### Fixed
+- Mockstore not returning version key
+- Mockstore yield detection flagged false
+- .Mock missing API
+
 ## [version 3.0.2](https://github.com/noahrepublic/DataKeep/releases/tag/v3.0.2): 01/01/2024
 
 ### Fixed
