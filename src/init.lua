@@ -595,6 +595,14 @@ function Store:LoadKeep(key: string, unReleasedHandler: UnReleasedHandler): Prom
 				return func(...)
 			end
 		end
+		
+		if self.WriteLib then
+			for functionName, func in self.WriteLib do
+				keepClass[functionName] = function(...)
+					return func(...)
+				end
+			end
+		end
 
 		resolve(keepClass)
 	end)
@@ -670,6 +678,14 @@ function Store:ViewKeep(key: string, version: string?): Promise
 		for functionName, func in self.Wrapper do -- attach wrapper functions
 			keepObject[functionName] = function(...)
 				return func(...)
+			end
+		end
+		
+		if self.WriteLib then
+			for functionName, func in self.WriteLib do
+				keepClass[functionName] = function(...)
+					return func(...)
+				end
 			end
 		end
 
