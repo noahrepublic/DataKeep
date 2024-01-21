@@ -272,7 +272,7 @@ local function createMockStore(storeInfo: StoreInfo, dataTemplate) -- complete m
 		_keeps = {},
 
 		_cachedKeepPromises = {},
-		
+
 		Wrapper = require(script.Wrapper),
 
 		validate = function()
@@ -296,37 +296,27 @@ local function saveKeep(keep: Keep.Keep, release: boolean): Promise
 		releaseKeepInternally(keep)
 		return Promise.resolve()
 	end
-	local savingState = Promise.new(function(resolve)
-		local recentKeyInfo: DataStoreKeyInfo
 
-		if keep._store then
-			recentKeyInfo = keep._store:UpdateAsync(keep._key, function(newestData)
-				return keep:_save(newestData, release or false)
-			end)
-		else
-			releaseKeepInternally(keep)
-			error("Keep invalid, internally released | Create a GitHub issue if issue persists")
-		end
+	release = release or false
 
-		keep._last_save = os.clock()
+	local operation
 
-		if recentKeyInfo then
-			keep._keyInfo = { -- have to map the tuple to a table for type checking (even though tuples are arrays in lua)
-				CreatedTime = recentKeyInfo.CreatedTime,
-				UpdatedTime = recentKeyInfo.UpdatedTime,
-				Version = recentKeyInfo.Version,
-			}
-		end
-		
+	if release then
+		operation = keep.Release
+	else
+		operation = keep.Save
+	end
 
-		resolve(recentKeyInfo or {})
-	end):catch(function(err)
-		local keepStore = keep._keep_store
+	local savingState = operation(keep)
+		:andThen(function()
+			keep._last_save = os.clock()
+		end)
+		:catch(function(err)
+			local keepStore = keep._keep_store
 
-		keepStore._processError(err, 1)
-	end)
+			keepStore._processError(err, 1)
+		end)
 
-	keep.Saving:Fire(savingState)
 	return savingState
 end
 
@@ -340,40 +330,38 @@ end
 
 --> Public Functions
 
-if RunService:IsStudio() then
-	local isLive = false
+local isLive = false
 
-	Promise.new(function(resolve)
-		if game.GameId == 0 then
-			isLive = true
+Promise.new(function(resolve)
+	if game.GameId == 0 then
+		isLive = true
 
-			print("[DataKeep] Local file, using mock store")
-			return resolve()
-		end
-
-		local ok, message = pcall(function()
-			DataStoreService:GetDataStore("__LiveCheck"):SetAsync("__LiveCheck", os.time())
-		end)
-
-		isLive = ok
-
-		if message then
-			if message:find("ConnectFail", 1, true) then
-				warn("[DataKeep] No internet connection, using mock store")
-			end
-
-			if message:find("403", 1, true) ~= nil or message:find("must publish", 1, true) ~= nil then
-				print("[DataKeep] Datastores are not available, using mock store")
-			else
-				print("[DataKeep] Datastores are available, using real store")
-			end
-		end
-
+		print("[DataKeep] Local file, using mock store")
 		return resolve()
-	end):andThen(function()
-		Store.mockStore = isLive
+	end
+
+	local ok, message = pcall(function()
+		DataStoreService:GetDataStore("__LiveCheck"):SetAsync("__LiveCheck", os.time())
 	end)
-end
+
+	isLive = ok
+
+	if message then
+		if message:find("ConnectFail", 1, true) then
+			warn("[DataKeep] No internet connection, using mock store")
+		end
+
+		if message:find("403", 1, true) ~= nil or message:find("must publish", 1, true) ~= nil then
+			print("[DataKeep] Datastores are not available, using mock store")
+		else
+			print("[DataKeep] Datastores are available, using real store")
+		end
+	end
+
+	return resolve()
+end):andThen(function()
+	Store.mockStore = isLive
+end)
 
 --[=[
 	@function GetStore
@@ -1035,7 +1023,7 @@ end
 
 local saveLoop
 
-if not RunService:IsStudio() then
+if RunService:IsStudio() then
 	game:BindToClose(function()
 		Store.ServiceDone = true
 		Keep.ServiceDone = true
@@ -1050,10 +1038,12 @@ if not RunService:IsStudio() then
 			local keeps = {}
 
 			for _, keep in Keeps do
-				table.insert(keeps, saveKeep(keep, true))
+				table.insert(keeps, keep:Release())
 			end
 
 			Promise.all(keeps):await()
+
+			task.wait(1)
 		end
 	end)
 end

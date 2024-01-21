@@ -1,5 +1,11 @@
 # DataKeep
 
+## [version 3.0.4](https://github.com/noahrepublic/DataKeep/releases/tag/v3.0.4): 01/21/2024
+
+### Fixed
+
+- Impartial saving issues from Roblox's :UpdateAsync() not working as intended
+
 ## [version 3.0.3](https://github.com/noahrepublic/DataKeep/releases/tag/v3.0.3): 01/06/2024
 
 ### Fixed

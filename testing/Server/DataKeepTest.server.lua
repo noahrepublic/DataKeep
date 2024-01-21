@@ -12,23 +12,14 @@ local DataKeep = require(ServerPackages:FindFirstChild("datakeep"))
 local Wrapper = require(ServerScriptService:FindFirstChild("Wrapper"))
 
 type DataTemplate = {
-	Test: string,
-
-	Inventory: {
-		Sword: string,
-	},
+	T: number,
 }
 
 local dataTemplate: DataTemplate = {
-	Test = "Hello World!",
-
-	Inventory = {
-		Sword = "Iron Sword",
-	},
+	T = 0,
 }
 
 local keepStore = DataKeep.GetStore("TestStore", dataTemplate):awaitValue()
-keepStore = keepStore.Mock
 keepStore.Wrapper = Wrapper
 
 local Keeps = {}
@@ -51,6 +42,10 @@ keepStore.validate = function(data)
 
 	return isValid(data, dataTemplate)
 end
+
+keepStore.IssueSignal:Connect(function(err)
+	print(err)
+end)
 
 --> Public Functions
 
@@ -135,7 +130,6 @@ Players.PlayerAdded:Connect(function(player)
 		-- print(keep.UserIds)
 
 		warn(keep.Data)
-	
 
 		print(keepStore._store:GetAsync(keep._key))
 	end)
@@ -185,5 +179,10 @@ Players.PlayerAdded:Connect(function(player)
 end)
 
 Players.PlayerRemoving:Connect(function(player)
-	Keeps[player]:Release()
+	local keep = Keeps[player]
+
+	local t = os.time()
+
+	keep.Data.T = t
+	keep:Release()
 end)
