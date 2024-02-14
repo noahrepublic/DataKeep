@@ -542,31 +542,25 @@ function Keep:_save(newestData: KeepStruct, release: boolean) -- used to interna
 			return resolve()
 		end)
 	end
-
-	--local processors = {}
 	local processUpdates = {} -- we want to run them in batch, so half are saved and half aren't incase of specific needs
 
-	for i = 1, #globalUpdates do
-		if not globalUpdates[i].Locked then
-			self.GlobalStateProcessor(globalUpdates[i].Data, function()
-				table.insert(processUpdates, function()
-					lockGlobalUpdate(i)
+	if globalUpdates then
+		for i = 1, #globalUpdates do
+			if not globalUpdates[i].Locked then
+				self.GlobalStateProcessor(globalUpdates[i].Data, function()
+					table.insert(processUpdates, function()
+						lockGlobalUpdate(i)
+					end)
+				end, function()
+					table.insert(processUpdates, function()
+						removeLockedUpdate(i, globalUpdates[i].ID)
+					end)
 				end)
-			end, function()
-				table.insert(processUpdates, function()
-					removeLockedUpdate(i, globalUpdates[i].ID)
-				end)
-			end)
-
-			--table.insert(processors, processor)
+			end
 		end
+	else
+		self.GlobalUpdates = DefaultGlobalUpdates
 	end
-
-	-- Promise.all(processors):andThen(function()
-	-- 	Promise.all(processUpdates):timeout(1 / 60):catch(function()
-	-- 		error("GlobalUpdate processor cannot yield")
-	-- 	end) -- run in bulk
-	-- end)
 
 	for _, updateProcessor in processUpdates do
 		updateProcessor()

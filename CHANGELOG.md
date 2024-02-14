@@ -1,5 +1,11 @@
 # DataKeep
 
+## [version 3.0.5](https://github.com/noahrepublic/DataKeep/releases/tag/v3.0.5): 02/13/2024
+
+### Fixed
+
+- GlobalUpdates returning nil causing an error
+
 ## [version 3.0.4](https://github.com/noahrepublic/DataKeep/releases/tag/v3.0.4): 01/21/2024
 
 ### Fixed
