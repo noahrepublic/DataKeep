@@ -118,7 +118,7 @@ export type Promise = typeof(Promise.new(function() end))
 	@prop CriticalStateSignal Signal
 	@within Store
 
-	Fired when the store enters critical state. After it has failed many requests and maybe dangerous to proceed with purchases or other important actions 
+	Fired when the store enters critical state. After it has failed many requests and maybe dangerous to proceed with purchases or other important actions
 
 	```lua
 	keepStore.CriticalStateSignal:Connect(function()
@@ -195,12 +195,12 @@ export type GlobalUpdates = typeof(setmetatable({}, GlobalUpdates))
 	Used to determine how to handle an session locked Keep
 
 	### Default: "Ignore"
-	
-	Ignores the locked Keep and steals the lock, releasing the previous session 
 
-	
+	Ignores the locked Keep and steals the lock, releasing the previous session
+
+
 	### "Cancel"
-	
+
 	Cancels the load of the Keep
 ]=]
 export type UnReleasedHandler = (Keep.ActiveSession) -> string -- use a function for any purposes, logging, whitelist only certain places, etc
@@ -323,7 +323,7 @@ end
 --[[
 	Future idea: I doubt it is needed so it may just throttle speed.
 
-	local function getRequestBudget(keep) 
+	local function getRequestBudget(keep)
 		return keep._store:GetRequestBudgetForRequestType(Enum.DataStoreRequestType.UpdateAsync)
 	end
 ]]
@@ -334,7 +334,7 @@ local isLive = false
 
 Promise.new(function(resolve)
 	if game.GameId == 0 then
-		isLive = true
+		isLive = false
 
 		print("[DataKeep] Local file, using mock store")
 		return resolve()
@@ -360,8 +360,8 @@ Promise.new(function(resolve)
 
 	return resolve()
 end):andThen(function()
-	Store.mockStore = isLive
-end)
+	Store.mockStore = not isLive
+end):await()
 
 --[=[
 	@function GetStore
@@ -816,7 +816,7 @@ end
 --[=[
 	@class GlobalUpdates
 	@server
-	
+
 	Used to add, lock and change global updates
 
 	Revealed through ```PostGlobalUpdate```
@@ -987,7 +987,7 @@ end
 
 	@return Promise<void>
 
-	Change an **active** global update's data to the new data. 
+	Change an **active** global update's data to the new data.
 
 	Useful for stacking updates to save space for Keeps that maybe recieving lots of globals. Ex. A YouTuber recieving gifts
 ]=]
