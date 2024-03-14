@@ -359,9 +359,11 @@ Promise.new(function(resolve)
 	end
 
 	return resolve()
-end):andThen(function()
-	Store.mockStore = not isLive
-end):await()
+end)
+	:andThen(function()
+		Store.mockStore = not isLive
+	end)
+	:await()
 
 --[=[
 	@function GetStore
@@ -1023,28 +1025,28 @@ end
 
 local saveLoop
 
-if not RunService:IsStudio() then
-	game:BindToClose(function()
-		Store.ServiceDone = true
-		Keep.ServiceDone = true
+game:BindToClose(function()
+	Store.ServiceDone = true
+	Keep.ServiceDone = true
 
-		saveLoop:Disconnect()
+	Store.mockStore = true
 
-		-- loop through and release (release saves too)
+	saveLoop:Disconnect()
 
-		local saveSize = len(Keeps)
+	-- loop through and release (release saves too)
 
-		if saveSize > 0 then
-			local keeps = {}
+	local saveSize = len(Keeps)
 
-			for _, keep in Keeps do
-				table.insert(keeps, keep:Release())
-			end
+	if saveSize > 0 then
+		local keeps = {}
 
-			Promise.all(keeps):await()
+		for _, keep in Keeps do
+			table.insert(keeps, keep:Release())
 		end
-	end)
-end
+
+		Promise.all(keeps):await()
+	end
+end)
 
 saveLoop = RunService.Heartbeat:Connect(function(dt)
 	saveCycle += dt

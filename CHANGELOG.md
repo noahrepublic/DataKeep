@@ -1,5 +1,14 @@
 # DataKeep
 
+## [version 3.0.6](https://github.com/noahrepublic/DataKeep/releases/tag/v3.0.6): 03/14/2024
+
+### Fixed
+
+- MockStore detection not working correctly. https://github.com/noahrepublic/DataKeep/pull/18
+- BindToClose now runs even in studio
+- Fixed a bug causing limit to 30 players? No idea how that got there. So sorry. This will speed up saving on server shutdown
+
+
 ## [version 3.0.5](https://github.com/noahrepublic/DataKeep/releases/tag/v3.0.5): 02/13/2024
 
 ### Fixed
