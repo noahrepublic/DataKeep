@@ -1042,8 +1042,6 @@ if RunService:IsStudio() then
 			end
 
 			Promise.all(keeps):await()
-
-			task.wait(1)
 		end
 	end)
 end
