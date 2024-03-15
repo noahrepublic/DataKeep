@@ -3,7 +3,6 @@
 --> Services
 
 local DataStoreService = game:GetService("DataStoreService")
-
 local RunService = game:GetService("RunService")
 
 --> Includes
@@ -50,12 +49,6 @@ Keep.assumeDeadLock = Store.assumeDeadLock
 local GlobalUpdates = {}
 GlobalUpdates.__index = GlobalUpdates
 
---> Private Variables
-
-local Keeps = {} -- queues to save
-
-local JobID = game.JobId
-local PlaceID = game.PlaceId
 --> Types
 
 --[=[
@@ -149,8 +142,6 @@ export type Promise = typeof(Promise.new(function() end))
 
 	Used to validate data before saving. Ex. type guards
 
-
-
 	```lua
 	keepStore.validate = function(data)
 		for key, value in data do
@@ -206,6 +197,11 @@ export type GlobalUpdates = typeof(setmetatable({}, GlobalUpdates))
 export type UnReleasedHandler = (Keep.ActiveSession) -> string -- use a function for any purposes, logging, whitelist only certain places, etc
 
 --> Private Variables
+
+local Keeps = {} -- queues to save
+
+local JobID = game.JobId
+local PlaceID = game.PlaceId
 
 local saveCycle = 0 -- total heartbeat dt
 
@@ -525,8 +521,7 @@ function Store:LoadKeep(key: string, unReleasedHandler: UnReleasedHandler): Prom
 		return self._cachedKeepPromises[identifier]
 	end
 
-	local promise
-	promise = Promise.new(function(resolve, reject)
+	local promise = Promise.new(function(resolve, reject)
 		local keep: Keep.KeepStruct = store:GetAsync(key) or {} -- support versions
 
 		local success = canLoad(keep)
@@ -769,8 +764,6 @@ end
 		end)
 	end)
 	```
-
-
 ]=]
 
 function Store:PostGlobalUpdate(key: string, updateHandler: (GlobalUpdates) -> nil) -- gets passed add, lock & change functions
@@ -1029,7 +1022,7 @@ game:BindToClose(function()
 	Store.ServiceDone = true
 	Keep.ServiceDone = true
 
-	Store.mockStore = true
+	Store.mockStore = true -- mock any new store
 
 	saveLoop:Disconnect()
 
@@ -1038,13 +1031,14 @@ game:BindToClose(function()
 	local saveSize = len(Keeps)
 
 	if saveSize > 0 then
-		local keeps = {}
-
 		for _, keep in Keeps do
-			table.insert(keeps, keep:Release())
+			keep:Release()
 		end
+	end
 
-		Promise.all(keeps):await()
+	-- delay server closing process until all save jobs are completed
+	while Keep._activeSaveJobs > 0 do
+		task.wait()
 	end
 end)
 
@@ -1063,34 +1057,35 @@ saveLoop = RunService.Heartbeat:Connect(function(dt)
 
 	local saveSize = len(Keeps)
 
-	if saveSize > 0 then
-		local saveSpeed = Store._saveInterval / saveSize
+	if not (saveSize > 0) then
+		return
+	end
 
-		saveSpeed = 1
+	local saveSpeed = Store._saveInterval / saveSize
+	saveSpeed = 1
 
-		local clock = os.clock() -- offset the saves so not all at once
+	local clock = os.clock() -- offset the saves so not all at once
 
-		local keeps = {}
+	local keeps = {}
 
-		for _, keep in Keeps do
-			if clock - keep._last_save < Store._saveInterval then
-				continue
-			end
-
-			table.insert(keeps, keep)
+	for _, keep in Keeps do
+		if clock - keep._last_save < Store._saveInterval then
+			continue
 		end
 
-		Promise.each(keeps, function(keep)
-			return Promise.delay(saveSpeed)
-				:andThen(function()
-					saveKeep(keep, false)
-				end)
-				:timeout(Store._saveInterval)
-				:catch(function(err)
-					keep._keep_store._processError(err, 1)
-				end)
-		end)
+		table.insert(keeps, keep)
 	end
+
+	Promise.each(keeps, function(keep)
+		return Promise.delay(saveSpeed)
+			:andThen(function()
+				saveKeep(keep, false)
+			end)
+			:timeout(Store._saveInterval)
+			:catch(function(err)
+				keep._keep_store._processError(err, 1)
+			end)
+	end)
 end)
 
 return Store

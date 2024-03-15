@@ -3,16 +3,18 @@
 --> Structure
 
 --[=[
-		@class Keep
-		@server
+	@class Keep
+	@server
 
-		Keep class holds the data for a specific key in a store, and methods to manipulate data
-	]=]
+	Keep class holds the data for a specific key in a store, and methods to manipulate data
+]=]
 
 local Keep = {
 	assumeDeadLock = 0,
 
 	ServiceDone = false, -- set to true when server shutdown
+
+	_activeSaveJobs = 0, -- number of active saving jobs
 }
 Keep.__index = Keep
 
@@ -33,14 +35,14 @@ export type KeepStruct = {
 }
 
 --[=[
-			@type ActiveSession {PlaceID: number, JobID: number}
-			@within Keep
-		]=]
+	@type ActiveSession {PlaceID: number, JobID: number}
+	@within Keep
+]=]
 
 --[=[
-			@type MetaData {ActiveSession: ActiveSession | nil, ForceLoad: ActiveSession | nil, LastUpdate: number, Created: number, LoadCount: number}
-			@within Keep
-		]=]
+	@type MetaData {ActiveSession: ActiveSession | nil, ForceLoad: ActiveSession | nil, LastUpdate: number, Created: number, LoadCount: number}
+	@within Keep
+]=]
 
 type MetaData = {
 	ActiveSession: ActiveSession | nil,
@@ -59,9 +61,9 @@ type GlobalUpdate = {
 }
 
 --[=[
-			@type GlobalUpdates {ID: number, Updates: { [number]: GlobalUpdate }}
-			@within Keep
-		]=]
+	@type GlobalUpdates {ID: number, Updates: { [number]: GlobalUpdate }}
+	@within Keep
+]=]
 
 type GlobalUpdates = { -- unused right now, not sure about the type checking on this.
 	[number]: number, -- most recent update index
@@ -89,11 +91,11 @@ local DefaultGlobalUpdates = {
 	ID = 0, -- [recentUpdateId] newest global update id to process in order
 
 	--[[
-				{
-					updateId,
-					data,
-				}
-			]]
+		{
+			updateId,
+			data,
+		}
+	]]
 
 	Updates = {},
 }
@@ -144,71 +146,69 @@ end
 --> Constructor
 
 --[=[
-			@prop GlobalStateProcessor (updateData: GlobalUpdate, lock: () -> boolean, remove: () -> boolean) -> void
-			@within Keep
-	
-			Define how to process global updates, by default just locks the global update (this is only ran if the keep is online)
-	
-			The function reveals the lock and remove global update function through the parameters.
-	
-	
-	
-			:::caution
-			Updates *must* be locked eventually in order for OnGlobalUpdate to get fired
-			:::caution
-	
-			:::warning
-			The lock and remove function revealed here are **NOT** the same as the ones in the Keep class, they are only for this function.
-			:::warning
-		]=]
+	@prop GlobalStateProcessor (updateData: GlobalUpdate, lock: () -> boolean, remove: () -> boolean) -> void
+	@within Keep
+
+	Define how to process global updates, by default just locks the global update (this is only ran if the keep is online)
+
+	The function reveals the lock and remove global update function through the parameters.
+
+	:::caution
+	Updates *must* be locked eventually in order for OnGlobalUpdate to get fired
+	:::caution
+
+	:::warning
+	The lock and remove function revealed here are **NOT** the same as the ones in the Keep class, they are only for this function.
+	:::warning
+]=]
 
 --[=[
-			@prop OnGlobalUpdate Signal<(updateData: {}, updateId: number)>
-			@within Keep
-	
-			Fired when a new global update is locked and ready to be processed
-	
-			:::caution
-			ONLY locked globals are fired
-			:::caution
-		]=]
+	@prop OnGlobalUpdate Signal<(updateData: {}, updateId: number)>
+	@within Keep
+
+	Fired when a new global update is locked and ready to be processed
+
+	:::caution
+	ONLY locked globals are fired
+	:::caution
+]=]
 
 --[=[
-			@prop Releasing Signal<Promise>
-			@within Keep
-	
-			Fired when the keep is releasing (fires before internally released, but during session release)
-	
-			```lua
-			keep.Releasing:Connect(function(state)
-				print(`Releasing {keep:Identify()}`)
-				state:andThen(function()
-					print(`Released {keep:Identify()}`)
-				end, function()
-					print(`Failed to release {keep:Identify()}`)
-				end)
-			end)
-			```
-	]=]
+	@prop Releasing Signal<Promise>
+	@within Keep
 
---[=[
-		@prop Saving Signal<Promise>
-		@within Keep
-	
-		Fired when the keep is saving, resolves on complete
-	
-		```lua
-		keep.Saving:Connect(function(state)
-			print(`Saving {keep:Identify()}`)
-			
-			state:andThen(function()
-				print(`Saved {keep:Identify()}`)
-			end):catch(function()
-				print(`Failed to save {keep:Identify()}`)
-			end)
+	Fired when the keep is releasing (fires before internally released, but during session release)
+
+	```lua
+	keep.Releasing:Connect(function(state)
+		print(`Releasing {keep:Identify()}`)
+		state:andThen(function()
+			print(`Released {keep:Identify()}`)
+		end, function()
+			print(`Failed to release {keep:Identify()}`)
 		end)
-		```
-	]=]
+	end)
+	```
+]=]
+
+--[=[
+	@prop Saving Signal<Promise>
+	@within Keep
+
+	Fired when the keep is saving, resolves on complete
+
+	```lua
+	keep.Saving:Connect(function(state)
+		print(`Saving {keep:Identify()}`)
+
+		state:andThen(function()
+			print(`Saved {keep:Identify()}`)
+		end):catch(function()
+			print(`Failed to save {keep:Identify()}`)
+		end)
+	end)
+	```
+]=]
 
 function Keep.new(structure: KeepStruct, dataTemplate: {}): Keep
 	return setmetatable({
@@ -259,9 +259,9 @@ function Keep.new(structure: KeepStruct, dataTemplate: {}): Keep
 end
 
 --[=[
-			@type Keep { Data: {}, MetaData: MetaData, GlobalUpdates: GlobalUpdates, UserIds: {}, OnGlobalUpdate: Signal<GlobalUpdate & number>, GlobalStateProcessor: (update: GlobalUpdate, lock: () -> boolean, remove: () -> boolean) -> void, Releasing: Signal, Saving: Signal }
-			@within Keep
-		]=]
+	@type Keep { Data: {}, MetaData: MetaData, GlobalUpdates: GlobalUpdates, UserIds: {}, OnGlobalUpdate: Signal<GlobalUpdate & number>, GlobalStateProcessor: (update: GlobalUpdate, lock: () -> boolean, remove: () -> boolean) -> void, Releasing: Signal, Saving: Signal }
+	@within Keep
+]=]
 
 export type Keep = typeof(Keep.new({
 	Data = DefaultKeep.Data,
@@ -298,10 +298,7 @@ local function transformUpdate(keep: Keep, newestData: KeepStruct, release: bool
 		and (type(newestData) ~= "table" or type(newestData.Data) ~= "table" or type(newestData.MetaData) ~= "table")
 
 	if type(newestData) == "table" then
-		if
-			type(newestData.Data) == "table" and typeof(newestData.MetaData) == "table"
-			-- full profile
-		then
+		if type(newestData.Data) == "table" and typeof(newestData.MetaData) == "table" then -- full profile
 			if not isKeepLocked(newestData.MetaData) and keep._keep_store then
 				local keepStore = keep._keep_store
 
@@ -542,6 +539,7 @@ function Keep:_save(newestData: KeepStruct, release: boolean) -- used to interna
 			return resolve()
 		end)
 	end
+
 	local processUpdates = {} -- we want to run them in batch, so half are saved and half aren't incase of specific needs
 
 	if globalUpdates then
@@ -576,28 +574,31 @@ function Keep:_save(newestData: KeepStruct, release: boolean) -- used to interna
 
 	return transformedData
 end
+
 --> Public Methods
 
 --[=[
-			@method Save
-			@within Keep
-	
-			@return Promise<DataStoreKeyInfo>
-	
-			Manually Saves a keep and returns the data from UpdateAsync()
-	
-			Commonly useful for speeding up global updates
-	
-			:::caution
-			RESETS AUTO SAVE TIMER ON THE KEEP
-			:::caution
-	
-			:::warning
-			Using :Save on a  **view only keep** will error. Use :Overwrite() instead
-			:::warning
-		]=]
+	@method Save
+	@within Keep
+
+	@return Promise<DataStoreKeyInfo>
+
+	Manually Saves a keep and returns the data from UpdateAsync()
+
+	Commonly useful for speeding up global updates
+
+	:::caution
+	RESETS AUTO SAVE TIMER ON THE KEEP
+	:::caution
+
+	:::warning
+	Using :Save on a **view only keep** will error. Use :Overwrite() instead
+	:::warning
+]=]
 
 function Keep:Save()
+	Keep._activeSaveJobs += 1
+
 	local savingState = Promise.new(function(resolve)
 		local dataKeyInfo: DataStoreKeyInfo = self._store:UpdateAsync(self._key, function(newestData)
 			return self:_save(newestData, false)
@@ -615,11 +616,15 @@ function Keep:Save()
 		end
 
 		resolve(dataKeyInfo or {})
-	end):catch(function(err)
-		local keepStore = self._keep_store
-
-		keepStore._processError(err, 1)
 	end)
+		:catch(function(err)
+			local keepStore = self._keep_store
+
+			keepStore._processError(err, 1)
+		end)
+		:finally(function()
+			Keep._activeSaveJobs -= 1
+		end)
 
 	self.Saving:Fire(savingState)
 
@@ -627,17 +632,17 @@ function Keep:Save()
 end
 
 --[=[
-		@method Overwrite
-		@within Keep
-	
-		Used to overwrite on a view only keep 
-	
-		:::warning
-		Ignores any session locks
-		:::warning
-	
-		@return Promise<DataStoreKeyInfo>
-	]=]
+	@method Overwrite
+	@within Keep
+
+	Used to overwrite on a view only keep
+
+	:::warning
+	Ignores any session locks
+	:::warning
+
+	@return Promise<DataStoreKeyInfo>
+]=]
 
 function Keep:Overwrite()
 	local savingState = Promise.new(function(resolve)
@@ -667,26 +672,26 @@ function Keep:Overwrite()
 end
 
 --[=[
-			@method IsActive
-			@within Keep
-	
-			@return {boolean} 
-	
-			Returns if the Keep is active in the session (not locked by another server)
-		]=]
+	@method IsActive
+	@within Keep
+
+	@return {boolean}
+
+	Returns if the Keep is active in the session (not locked by another server)
+]=]
 
 function Keep:IsActive()
 	return not isKeepLocked(self.MetaData)
 end
 
 --[=[
-			@method Identify
-			@within Keep
-	
-			@return string
-	
-			Returns the string identifier for the Keep
-		]=]
+	@method Identify
+	@within Keep
+
+	@return string
+
+	Returns the string identifier for the Keep
+]=]
 
 function Keep:Identify()
 	return string.format(
@@ -698,30 +703,30 @@ function Keep:Identify()
 end
 
 --[=[
-			@method GetKeyInfo
-			@within Keep
-	
-			@return DataStoreKeyInfo
-	
-			Returns the DataStoreKeyInfo for the Keep
-		]=]
+	@method GetKeyInfo
+	@within Keep
+
+	@return DataStoreKeyInfo
+
+	Returns the DataStoreKeyInfo for the Keep
+]=]
 
 function Keep:GetKeyInfo(): DataStoreKeyInfo
 	return self._keyInfo
 end
 
 --[=[
-			@method Release
-			@within Keep
-	
-			@return Promise<Keep>
-	
-			Releases the session lock to allow other servers to access the Keep 
-	
-			:::warning
-			This is called before internal release, but after session release, no edits can be made after this point
-			:::warning
-		]=]
+	@method Release
+	@within Keep
+
+	@return Promise<Keep>
+
+	Releases the session lock to allow other servers to access the Keep
+
+	:::warning
+	This is called before internal release, but after session release, no edits can be made after this point
+	:::warning
+]=]
 
 function Keep:Release()
 	if self.ServiceDone then
@@ -735,6 +740,8 @@ function Keep:Release()
 	if self._released then
 		return
 	end
+
+	Keep._activeSaveJobs += 1
 
 	local updater = Promise.new(function(resolve)
 		local dataKeyInfo: DataStoreKeyInfo = self._store:UpdateAsync(self._key, function(newestData: KeepStruct)
@@ -774,6 +781,9 @@ function Keep:Release()
 
 			error(err) -- dont want to silence the error
 		end)
+		:finally(function()
+			Keep._activeSaveJobs -= 1
+		end)
 
 	if not self._released then
 		self.Releasing:Fire(updater) -- unlocked, but not removed internally
@@ -785,13 +795,13 @@ function Keep:Release()
 end
 
 --[=[
-			@method Reconcile
-			@within Keep
-	
-			@return void
-	
-			Fills in any missing data in the Keep, using the data template
-		]=]
+	@method Reconcile
+	@within Keep
+
+	@return void
+
+	Fills in any missing data in the Keep, using the data template
+]=]
 
 function Keep:Reconcile() -- fills in blank stuff
 	local function reconcileData(data: any, template: any)
@@ -815,13 +825,13 @@ function Keep:Reconcile() -- fills in blank stuff
 end
 
 --[=[
-			@method AddUserId
-			@within Keep
-	
-			@param userId number
-	
-			Associates a userId to a datastore to assist with GDPR requests (The right to erasure)
-		]=]
+	@method AddUserId
+	@within Keep
+
+	@param userId number
+
+	Associates a userId to a datastore to assist with GDPR requests (The right to erasure)
+]=]
 
 function Keep:AddUserId(userId: number)
 	if not self:IsActive() then
@@ -836,13 +846,13 @@ function Keep:AddUserId(userId: number)
 end
 
 --[=[
-			@method RemoveUserId
-			@within Keep
-	
-			@param userId number
-	
-			Unassociates a userId to a datastore
-		]=]
+	@method RemoveUserId
+	@within Keep
+
+	@param userId number
+
+	Unassociates a userId to a datastore
+]=]
 
 function Keep:RemoveUserId(userId: number)
 	local index = table.find(self.UserIds, userId)
@@ -854,55 +864,56 @@ end
 
 --> Version API
 
---[[ Design for public version API
-			While ProfileService provides a very nice query API that automatically changes the version and saves on :OverwriteAsync 
-			I think it is better to have a more manual approach, as it is more flexible and allows for more control over the versioning + migration process exists to handle any data changes
-		]]
+--[[
+	Design for public version API
+	While ProfileService provides a very nice query API that automatically changes the version and saves on :OverwriteAsync
+	I think it is better to have a more manual approach, as it is more flexible and allows for more control over the versioning + migration process exists to handle any data changes
+]]
 
 --[=[
-			@interface Iterator
-			
-			@within Keep
-	
-			.Current () -> version? -- Returns the current version, nil if none
-			.Next () -> version? -- Returns the next version, nil if none
-			.Previous () -> version? -- Returns the previous version, nil if none
-			.PageUp () -> void -- Goes to the next page of versions
-			.PageDown () -> void -- Goes to the previous page of versions
-			.SkipEnd () -> void -- Goes to the last page of versions
-			.SkipStart () -> void -- Goes to the first page of versions
-		]=]
+	@interface Iterator
+
+	@within Keep
+
+	.Current () -> version? -- Returns the current version, nil if none
+	.Next () -> version? -- Returns the next version, nil if none
+	.Previous () -> version? -- Returns the previous version, nil if none
+	.PageUp () -> void -- Goes to the next page of versions
+	.PageDown () -> void -- Goes to the previous page of versions
+	.SkipEnd () -> void -- Goes to the last page of versions
+	.SkipStart () -> void -- Goes to the first page of versions
+]=]
 
 --[=[
-			@method GetVersions
-			@within Keep
-	
-			@param minDate? number
-			@param maxDate? number
-	
-			@return Promise<Iterator>
-	
-			Grabs past versions of the Keep and returns an iterator to customize how to handle the versions
-	
-			"I lost my progress! Last time I had 200 gems!"
-	
-			```lua
-				keep:GetVersions():andThen(function(iterator)
-					local version = iterator.Current()
-	
-					while version do
-						local data = keepStore:ViewKeep(player.UserId, version.Version).Data
-		
-						if data.Gems >= 200 then
-							print("Found the version with 200 gems!")
-							break
-						end
-	
-						version = iterator.Next()
-					end
-				end)
-			```
-		]=]
+	@method GetVersions
+	@within Keep
+
+	@param minDate? number
+	@param maxDate? number
+
+	@return Promise<Iterator>
+
+	Grabs past versions of the Keep and returns an iterator to customize how to handle the versions
+
+	"I lost my progress! Last time I had 200 gems!"
+
+	```lua
+	keep:GetVersions():andThen(function(iterator)
+		local version = iterator.Current()
+
+		while version do
+			local data = keepStore:ViewKeep(player.UserId, version.Version).Data
+
+			if data.Gems >= 200 then
+				print("Found the version with 200 gems!")
+				break
+			end
+
+			version = iterator.Next()
+		end
+	end)
+	```
+]=]
 
 function Keep:GetVersions(minDate: number | nil, maxDate: number | nil): Promise
 	return Promise.new(function(resolve)
@@ -1018,28 +1029,28 @@ function Keep:GetVersions(minDate: number | nil, maxDate: number | nil): Promise
 end
 
 --[=[
-			@method SetVersion
-			@within Keep
-	
-			@param version string
-			@param migrateProcessor? (versionKeep: Keep) -> Keep
-	
-			@return Promise<Keep>
-	
-			Allows for a manual versioning process, where the version is set and the data is migrated to the new version using the optional migrateProcessor function
-	
-			DataKeep provides a version list iterator. See *GetVersions*
-	
-			Returns a Promise that resolves to the old keep (before the migration) This is the **last** time the old keep's GlobalUpdates will be accessible before **permanently** being removed
-	
-			:::warning
-			Will not save until the next loop unless otherwise called using :Save or :Overwrite for ViewOnly Keeps
-			:::warning
-	
-			:::caution
-			Any global updates not taken care of in migrateProcessor will be lost
-			:::caution
-		]=]
+	@method SetVersion
+	@within Keep
+
+	@param version string
+	@param migrateProcessor? (versionKeep: Keep) -> Keep
+
+	@return Promise<Keep>
+
+	Allows for a manual versioning process, where the version is set and the data is migrated to the new version using the optional migrateProcessor function
+
+	DataKeep provides a version list iterator. See *GetVersions*
+
+	Returns a Promise that resolves to the old keep (before the migration) This is the **last** time the old keep's GlobalUpdates will be accessible before **permanently** being removed
+
+	:::warning
+	Will not save until the next loop unless otherwise called using :Save or :Overwrite for ViewOnly Keeps
+	:::warning
+
+	:::caution
+	Any global updates not taken care of in migrateProcessor will be lost
+	:::caution
+]=]
 
 function Keep:SetVersion(version: string, migrateProcessor: (versionKeep: Keep) -> Keep): Promise
 	if migrateProcessor == nil then
@@ -1081,13 +1092,13 @@ end
 --> Global Updates
 
 --[=[
-			@method GetActiveGlobalUpdates
-			@within Keep
-	
-			@return {Array<{ Data: {}, ID: number }>}
-	
-			Returns an array of active global updates (not locked/processed)
-		]=]
+	@method GetActiveGlobalUpdates
+	@within Keep
+
+	@return {Array<{ Data: {}, ID: number }>}
+
+	Returns an array of active global updates (not locked/processed)
+]=]
 
 function Keep:GetActiveGlobalUpdates()
 	local activeUpdates = {}
@@ -1102,17 +1113,17 @@ function Keep:GetActiveGlobalUpdates()
 end
 
 --[=[
-			@method GetLockedGlobalUpdates
-			@within Keep
-	
-			@return {Array<{ Data: {}, ID: number }>}
-	
-			Returns an array of locked global updates (processed)
-	
-			:::caution
-			Lock updates can **not** be changed, only cleared after done being used.
-			:::caution
-		]=]
+	@method GetLockedGlobalUpdates
+	@within Keep
+
+	@return {Array<{ Data: {}, ID: number }>}
+
+	Returns an array of locked global updates (processed)
+
+	:::caution
+	Lock updates can **not** be changed, only cleared after done being used.
+	:::caution
+]=]
 
 function Keep:GetLockedGlobalUpdates()
 	local lockedUpdates = {}
@@ -1127,19 +1138,19 @@ function Keep:GetLockedGlobalUpdates()
 end
 
 --[=[
-			@method ClearLockedUpdate
-			@within Keep
-	
-			@param id number
-	
-			@return Promise<void>
-	
-			Clears a locked global update after being used
-	
-			:::warning
-			Passing an **active** global update id will throw an error & reject the Promise. 
-			:::warning
-		]=]
+	@method ClearLockedUpdate
+	@within Keep
+
+	@param id number
+
+	@return Promise<void>
+
+	Clears a locked global update after being used
+
+	:::warning
+	Passing an **active** global update id will throw an error & reject the Promise.
+	:::warning
+]=]
 
 function Keep:ClearLockedUpdate(id: number): Promise
 	return Promise.new(function(resolve, reject)
