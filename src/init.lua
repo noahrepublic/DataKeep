@@ -326,40 +326,32 @@ end
 
 --> Public Functions
 
-local isLive = false
-
-Promise.new(function(resolve)
+local mockStoreCheck = Promise.new(function(resolve)
 	if game.GameId == 0 then
-		isLive = false
-
 		print("[DataKeep] Local file, using mock store")
-		return resolve()
+		return resolve(false)
 	end
 
-	local ok, message = pcall(function()
+	local success, message = pcall(function()
 		DataStoreService:GetDataStore("__LiveCheck"):SetAsync("__LiveCheck", os.time())
 	end)
 
-	isLive = ok
-
 	if message then
-		if message:find("ConnectFail", 1, true) then
+		if string.find(message, "ConnectFail", 1, true) then
 			warn("[DataKeep] No internet connection, using mock store")
 		end
 
-		if message:find("403", 1, true) ~= nil or message:find("must publish", 1, true) ~= nil then
+		if string.find(message, "403", 1, true) or string.find(message, "must publish", 1, true) then
 			print("[DataKeep] Datastores are not available, using mock store")
 		else
 			print("[DataKeep] Datastores are available, using real store")
 		end
 	end
 
-	return resolve()
+	return resolve(success)
+end):andThen(function(isLive)
+	Store.mockStore = if not Store.ServiceDone then not isLive else true -- check for Store.ServiceDone to prevent loading keeps during BindToClose()
 end)
-	:andThen(function()
-		Store.mockStore = not isLive
-	end)
-	:await()
 
 --[=[
 	@function GetStore
@@ -397,72 +389,73 @@ function Store.GetStore(storeInfo: StoreInfo | string, dataTemplate): Promise
 		return Promise.resolve(Store._storeQueue[identifier])
 	end
 
-	local self
-	self = setmetatable({
-		_store_info = info,
-		_data_template = dataTemplate,
+	return mockStoreCheck:andThen(function()
+		local self = setmetatable({
+			_store_info = info,
+			_data_template = dataTemplate,
 
-		_store = if Store.mockStore then MockStore.new() else DataStoreService:GetDataStore(info.Name, info.Scope), -- this always returns even with datastores down, so only way of tracking is via failed requests
+			_store = if Store.mockStore then MockStore.new() else DataStoreService:GetDataStore(info.Name, info.Scope), -- this always returns even with datastores down, so only way of tracking is via failed requests
 
-		Mock = createMockStore(info, dataTemplate), -- revealed to api
+			Mock = createMockStore(info, dataTemplate), -- revealed to api
 
-		_mock = if Store.mockStore then true else false, -- studio only/datastores not available
+			_mock = if Store.mockStore then true else false, -- studio only/datastores not available
 
-		_cachedKeepPromises = {},
+			_cachedKeepPromises = {},
 
-		validate = function()
-			return true
-		end,
+			validate = function()
+				return true
+			end,
 
-		Wrapper = require(script.Wrapper),
-	}, Store)
+			Wrapper = require(script.Wrapper),
+		}, Store)
 
-	Store._storeQueue[identifier] = self._store
+		Store._storeQueue[identifier] = self._store
 
-	local function processError(err, priority: number)
-		Store.IssueSignal:Fire(err)
+		local function processError(err, priority: number)
+			Store.IssueSignal:Fire(err)
 
-		priority = priority or 1
+			priority = priority or 1
 
-		-- priorities:
-		-- 0: no issue signal, warn
-		-- 1: warn
-		-- 2: error issue signal
+			-- priorities:
+			-- 0: no issue signal, warn
+			-- 1: warn
+			-- 2: error issue signal
 
-		if priority > 1 then
-			error(err)
-		else
-			warn(err)
-		end
+			if priority > 1 then
+				error(err)
+			else
+				warn(err)
+			end
 
-		local clock = os.clock()
+			local clock = os.clock()
 
-		if priority ~= 0 then
-			table.insert(Store._issueQueue, clock)
-		end
+			if priority ~= 0 then
+				table.insert(Store._issueQueue, clock)
+			end
 
-		if Store._issueQueue[Store._criticalStateThreshold + 1] then
-			table.remove(Store._issueQueue, Store._criticalStateThreshold + 1)
-		end
+			if Store._issueQueue[Store._criticalStateThreshold + 1] then
+				table.remove(Store._issueQueue, Store._criticalStateThreshold + 1)
+			end
 
-		local issueCount = 0
+			local issueCount = 0
 
-		for _, issueTime in ipairs(Store._issueQueue) do
-			if clock - issueTime < Store._maxIssueTime then
-				issueCount += 1
+			for _, issueTime in ipairs(Store._issueQueue) do
+				if clock - issueTime < Store._maxIssueTime then
+					issueCount += 1
+				end
+			end
+
+			if issueCount >= Store._criticalStateThreshold then
+				Store.CriticalState = true
+				Store.CriticalStateSignal:Fire()
 			end
 		end
 
-		if issueCount >= Store._criticalStateThreshold then
-			Store.CriticalState = true
-			Store.CriticalStateSignal:Fire()
-		end
-	end
+		self._processError = processError
+		self.Mock._processError = processError
 
-	self._processError = processError
-	self.Mock._processError = processError
-
-	return Promise.resolve(self)
+		return Promise.resolve(self)
+	end)
 end
 
 --[=[
