@@ -2,6 +2,13 @@
 
 
 
+## [version 3.1.0](https://github.com/noahrepublic/DataKeep/releases/tag/v3.1.0): 03/17/2024
+
+### Fixed
+- Mock detection fix
+### SLIGHT BREAKING CHANGE
+- GetStore now waits for mockstore detection to finish. Players.PlayerAdded events may fire before getstore is ready. Use a loop of current players first. (See Example)
+
 ## [version 3.0.5](https://github.com/noahrepublic/DataKeep/releases/tag/v3.0.5): 02/13/2024
 
 ### Fixed
