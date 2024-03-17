@@ -729,9 +729,9 @@ end
 ]=]
 
 function Keep:Release()
-	if self.ServiceDone then
-		return Promise.resolve(self)
-	end
+	-- if self.ServiceDone then -- I see no time where you don't want to release. If anyone thinks of one lmk.
+	-- 	return Promise.resolve(self)
+	-- end
 
 	if releaseCache[self:Identify()] then
 		return releaseCache[self:Identify()]
