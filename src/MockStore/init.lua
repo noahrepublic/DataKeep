@@ -27,11 +27,11 @@ export type MockStore = typeof(MockStore.new()) & {
 --> Private Functions
 
 function didyield(f, ...)
-	local finished=false
+	local finished = false
 	local data
 	coroutine.wrap(function(...)
-		data =  f(...)
-		finished=true
+		data = f(...)
+		finished = true
 	end)(...)
 	return not finished, data
 end
@@ -39,8 +39,9 @@ end
 local function deepCopy(t: any)
 	local copy = {}
 
-	if not t then return copy end
-	
+	if not t then
+		return copy
+	end
 
 	for key, value in pairs(t) do
 		if type(value) == "table" then

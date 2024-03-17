@@ -71,6 +71,11 @@ end)
 
 keepStore:andThen(function(store)
     keepStore = store
+    
+    for _, player in Players:GetPlayers() do
+        task.spawn(onPlayerJoin, player)
+    end
+
     Players.PlayerAdded:Connect(onPlayerJoin)
 end)
 ```
