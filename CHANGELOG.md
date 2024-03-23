@@ -1,6 +1,12 @@
 # DataKeep
 
+## [version 3.1.1](https://github.com/noahrepublic/DataKeep/releases/tag/v3.1.1): 03/17/2024
 
+### Fixed
+- LoadCount not incrementing
+
+### Added
+- Class implementation to Usage docs
 
 ## [version 3.1.0](https://github.com/noahrepublic/DataKeep/releases/tag/v3.1.0): 03/17/2024
 

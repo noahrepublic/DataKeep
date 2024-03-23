@@ -458,6 +458,7 @@ local function transformUpdate(keep: Keep, newestData: KeepStruct, release: bool
 
 	keep._last_save = os.clock()
 	newestData.MetaData.ForceLoad = keep.MetaData.ForceLoad
+	newestData.MetaData.LoadCount = keep.MetaData.LoadCount
 
 	return newestData, newestData.UserIds
 end
