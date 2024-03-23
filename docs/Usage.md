@@ -91,16 +91,9 @@ Note: "attributes" and "leaderstats" are folders in the script parent which cont
 --> Services
 
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 
 --> Includes
-
-local Packages = ReplicatedStorage.Packages
-
-local require = require(Packages.Loader).load(script)
-
-local Maid = require("Maid")
 
 local ServerPackages = ServerStorage.Packages
 
@@ -117,18 +110,6 @@ Player.__index = Player
 
 local keepStore = DataKeep.GetStore("PlayerData", DataTemplate):awaitValue()
 
-keepStore.validate = function(data)
-	for key in data do
-		local dataTempVersion = DataTemplate[key]
-
-		if typeof(data[key]) ~= typeof(dataTempVersion) then
-			return false,
-				`Invalid type for key {key}, expected {typeof(dataTempVersion)}, got {typeof(key)}, value {data[key]}`
-		end
-	end
-
-	return true
-end
 --> Private Functions
 
 local function initKeep(playerClass, keep)
