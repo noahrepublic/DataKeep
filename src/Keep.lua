@@ -475,7 +475,7 @@ function Keep:_save(newestData: KeepStruct, release: boolean) -- used to interna
 		self._keep_store._processError("Attempted to save a view only keep, do you mean :Overwrite()?", 2)
 		return newestData
 	elseif self._overwriting then
-		self._overwriting = false -- already overrided, so we can reset
+		self._overwriting = false -- already overwrited, so we can reset
 	end
 
 	local waitingForceLoad = false
@@ -646,6 +646,8 @@ end
 ]=]
 
 function Keep:Overwrite()
+	Keep._activeSaveJobs += 1
+
 	local savingState = Promise.new(function(resolve)
 		self._overwriting = true
 		local dataKeyInfo: DataStoreKeyInfo = self._store:UpdateAsync(self._key, function(newestData)
@@ -661,11 +663,15 @@ function Keep:Overwrite()
 		}
 
 		resolve(dataKeyInfo)
-	end):catch(function(err)
-		local keepStore = self._keep_store
-
-		keepStore._processError(err, 1)
 	end)
+		:catch(function(err)
+			local keepStore = self._keep_store
+
+			keepStore._processError(err, 1)
+		end)
+		:finally(function()
+			Keep._activeSaveJobs -= 1
+		end)
 
 	self.Saving:Fire(savingState)
 
