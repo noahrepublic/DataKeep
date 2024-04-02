@@ -69,7 +69,7 @@ type MockStore = MockStore.MockStore
 export type Promise = typeof(Promise.new(function() end))
 
 --[=[
-	@type Store {Mock: MockStore, LoadKeep: (string, UnReleasedHandler?) -> Promise<Keep>, ViewKeep: (string) -> Promise<Keep>, PreSave: (({any}) -> {any}) -> nil, PreLoad: (({any}) -> {any}) -> nil, PostGlobalUpdate: (string, (GlobalUpdates) -> nil) -> Promise<void>, IssueSignal: Signal, CriticalStateSignal: Signal, CriticalState: boolean}
+	@type Store {Mock: MockStore, LoadKeep: (string, unreleasedHandler?) -> Promise<Keep>, ViewKeep: (string) -> Promise<Keep>, PreSave: (({any}) -> {any}) -> nil, PreLoad: (({any}) -> {any}) -> nil, PostGlobalUpdate: (string, (GlobalUpdates) -> nil) -> Promise<void>, IssueSignal: Signal, CriticalStateSignal: Signal, CriticalState: boolean}
 
 	@within Store
 
@@ -174,27 +174,30 @@ export type Store = typeof(Store) & {
 export type GlobalUpdates = typeof(setmetatable({}, GlobalUpdates))
 
 --[=[
-	@type UnReleasedActions {Ignore: string, Cancel: string}
+	@type unreleasedActions {ForceLoad: string, Cancel: string}
 	@within Store
 ]=]
 
 --[=[
-	@type UnReleasedHandler (Keep.ActiveSession) -> UnReleasedActions
+	@type unreleasedHandler (Keep.ActiveSession) -> unreleasedActions
 
 	@within Store
 
 	Used to determine how to handle an session locked Keep
 
-	### Default: "Ignore"
+	### Default: "ForceLoad"
 
-	Ignores the locked Keep and steals the lock, releasing the previous session
+
+	### "ForceLoad"
+
+	Steals the lock, releasing the previous session. It can take up to around 2 auto save cycles (1 on session that is requesting and 1 on session that already owns the lock) if session is locked and up to around 10 minutes if session is in dead lock
 
 
 	### "Cancel"
 
 	Cancels the load of the Keep
 ]=]
-export type UnReleasedHandler = (Keep.ActiveSession) -> string -- use a function for any purposes, logging, whitelist only certain places, etc
+export type unreleasedHandler = (Keep.ActiveSession) -> "ForceLoad" | "Cancel" -- use a function for any purposes, logging, whitelist only certain places, etc
 
 --> Private Variables
 
@@ -217,12 +220,12 @@ local function len(tbl: { [any]: any })
 	return count
 end
 
-local function DeepCopy(tbl: { [any]: any })
+local function deepCopy(tbl: { [any]: any })
 	local copy = {}
 
 	for key, value in pairs(tbl) do
 		if type(value) == "table" then
-			copy[key] = DeepCopy(value)
+			copy[key] = deepCopy(value)
 		else
 			copy[key] = value
 		end
@@ -232,10 +235,12 @@ local function DeepCopy(tbl: { [any]: any })
 end
 
 local function canLoad(keep: Keep.KeepStruct)
-	-- return not keep.MetaData
-	-- 	or not keep.MetaData.ActiveSession -- no active session, so we can load (most likely a new Keep)
-	-- 	or keep.MetaData.ActiveSession.PlaceID == PlaceID and keep.MetaData.ActiveSession.JobID == JobID
-	-- 	or os.time() - keep.MetaData.LastUpdate < Store.assumeDeadLock
+	--[[
+		return not keep.MetaData
+		or not keep.MetaData.ActiveSession -- no active session, so we can load (most likely a new Keep)
+		or keep.MetaData.ActiveSession.PlaceID == PlaceID and keep.MetaData.ActiveSession.JobID == JobID
+		or os.time() - keep.MetaData.LastUpdate < Store.assumeDeadLock
+	]]
 
 	if not keep.MetaData then
 		return true
@@ -281,7 +286,6 @@ local function releaseKeepInternally(keep: Keep.Keep)
 	Keeps[keep:Identify()] = nil
 
 	local keepStore = keep._keep_store
-
 	keepStore._cachedKeepPromises[keep:Identify()] = nil
 
 	keep.Releasing:Destroy()
@@ -383,10 +387,10 @@ function Store.GetStore(storeInfo: StoreInfo | string, dataTemplate): Promise
 		info = storeInfo
 	end
 
-	local identifier = info.Name .. (info.Scope and info.Scope or "")
+	local id = `{info.Name}{info.Scope or ""}`
 
-	if Store._storeQueue[identifier] then
-		return Promise.resolve(Store._storeQueue[identifier])
+	if Store._storeQueue[id] then
+		return Promise.resolve(Store._storeQueue[id])
 	end
 
 	return mockStoreCheck:andThen(function()
@@ -409,7 +413,7 @@ function Store.GetStore(storeInfo: StoreInfo | string, dataTemplate): Promise
 			Wrapper = require(script.Wrapper),
 		}, Store)
 
-		Store._storeQueue[identifier] = self._store
+		Store._storeQueue[id] = self._store
 
 		local function processError(err, priority: number)
 			Store.IssueSignal:Fire(err)
@@ -463,14 +467,14 @@ end
 	@within Store
 
 	@param key string
-	@param unReleasedHandler UnReleasedHandler?
+	@param unreleasedHandler unreleasedHandler?
 
 	@return Promise<Keep>
 
 	Loads a Keep from the store and returns a Keep object
 
 	```lua
-	keepStore:LoadKeep("Player_" .. player.UserId, function() return "Ignore" end)):andThen(function(keep)
+	keepStore:LoadKeep("Player_" .. player.UserId, function() return "ForceLoad" end)):andThen(function(keep)
 		print("Loaded Keep!")
 	end)
 	```
@@ -480,71 +484,63 @@ end
 	:::info
 ]=]
 
-function Store:LoadKeep(key: string, unReleasedHandler: UnReleasedHandler): Promise
+function Store:LoadKeep(key: string, unreleasedHandler: unreleasedHandler): Promise
 	local store = self._store
+
+	local validLoadMethods = {
+		ForceLoad = "ForceLoad",
+		-- maybe add "Ignore"?
+		Cancel = "Cancel",
+	}
 
 	if self._mock then
 		print("Using mock store!")
 	end
 
-	if unReleasedHandler == nil then
-		unReleasedHandler = function(_)
-			return "Ignore"
+	if unreleasedHandler == nil then
+		unreleasedHandler = function(_)
+			return validLoadMethods.ForceLoad
 		end
 	end
 
-	if type(unReleasedHandler) ~= "function" then
-		error("UnReleasedHandler must be a function")
+	if type(unreleasedHandler) ~= "function" then
+		error("unreleasedHandler must be a function")
 	end
 
-	local identifier = string.format(
-		"%s/%s%s",
-		self._store_info.Name,
-		if self._store_info.Scope ~= nil then self._store_info.Scope .. "/" else "",
-		key
-	)
+	local id = `{self._store_info.Name}/{self._store_info.Scope or ""}{self._store_info.Scope and "/" or ""}{key}`
 
-	if Keeps[identifier] then -- TODO: check if got rejected before returning cache
-		return Promise.resolve(Keeps[identifier])
-	elseif
-		self._cachedKeepPromises[identifier]
-		and self._cachedKeepPromises[identifier].Status ~= Promise.Status.Rejected
-		and self._cachedKeepPromises[identifier].Status ~= Promise.Status.Cancelled
-	then
-		return self._cachedKeepPromises[identifier]
+	if Keeps[id] then -- TODO: check if got rejected before returning cache
+		return Promise.resolve(Keeps[id])
+	elseif self._cachedKeepPromises[id] and self._cachedKeepPromises[id].Status ~= Promise.Status.Rejected and self._cachedKeepPromises[id].Status ~= Promise.Status.Cancelled then
+		return self._cachedKeepPromises[id]
 	end
 
 	local promise = Promise.new(function(resolve, reject)
 		local keep: Keep.KeepStruct = store:GetAsync(key) or {} -- support versions
 
-		local success = canLoad(keep)
+		local forceLoad = nil
 
-		local forceload = nil
+		if not canLoad(keep) and keep.MetaData.ActiveSession then
+			local loadMethod = unreleasedHandler(keep.MetaData.ActiveSession)
 
-		if not success and keep.MetaData.ActiveSession then
-			local loadMethod = unReleasedHandler(keep.MetaData.ActiveSession)
+			if not validLoadMethods[loadMethod] then
+				warn(`unreleasedHandler returned an invalid value, defaulting to {validLoadMethods.ForceLoad}`) -- TODO: Custom Error Class to fire to IssueSignal
 
-			if loadMethod ~= "Ignore" and loadMethod ~= "Cancel" then
-				warn("UnReleasedHandler returned an invalid value, defaulting to Ignore") -- TODO: Custom Error Class to fire to IssueSignal
-
-				loadMethod = "Ignore"
+				loadMethod = validLoadMethods.ForceLoad
 			end
 
-			if loadMethod == "Cancel" then
+			if loadMethod == validLoadMethods.Cancel then
 				reject(nil) -- should this return an error object?
 				return
 			end
 
-			if loadMethod == "Ignore" then
-				forceload = {
-					PlaceID = PlaceID,
-					JobID = JobID,
-				}
+			if loadMethod == validLoadMethods.ForceLoad then
+				forceLoad = { PlaceID = PlaceID, JobID = JobID }
 			end
 		end
 
 		if keep.Data and len(keep.Data) > 0 and self._preLoad then
-			keep.Data = self._preLoad(DeepCopy(keep.Data))
+			keep.Data = self._preLoad(deepCopy(keep.Data))
 		end
 
 		local keepClass = Keep.new(keep, self._data_template) -- why does typing break here? no idea.
@@ -556,8 +552,7 @@ function Store:LoadKeep(key: string, unReleasedHandler: UnReleasedHandler): Prom
 
 		keepClass._keep_store = self
 
-		keepClass.MetaData.ForceLoad = forceload
-
+		keepClass.MetaData.ForceLoad = forceLoad
 		keepClass.MetaData.LoadCount = (keepClass.MetaData.LoadCount or 0) + 1
 
 		self._storeQueue[key] = keepClass
@@ -566,7 +561,7 @@ function Store:LoadKeep(key: string, unReleasedHandler: UnReleasedHandler): Prom
 
 		Keeps[keepClass:Identify()] = keepClass
 
-		self._cachedKeepPromises[identifier] = nil
+		self._cachedKeepPromises[id] = nil
 
 		for functionName, func in self.Wrapper do
 			keepClass[functionName] = function(...)
@@ -577,7 +572,7 @@ function Store:LoadKeep(key: string, unReleasedHandler: UnReleasedHandler): Prom
 		resolve(keepClass)
 	end)
 
-	self._cachedKeepPromises[identifier] = promise
+	self._cachedKeepPromises[id] = promise
 
 	return promise
 end
@@ -604,12 +599,7 @@ end
 
 function Store:ViewKeep(key: string, version: string?): Promise
 	return Promise.new(function(resolve)
-		local id = string.format(
-			"%s/%s%s",
-			self._store_info.Name,
-			string.format("%s%s", self._store_info.Scope or "", if self._store_info.Scope ~= nil then "/" else ""),
-			key
-		)
+		local id = `{self._store_info.Name}/{self._store_info.Scope or ""}{self._store_info.Scope and "/" or ""}{key}`
 
 		if Keeps[id] then -- TODO: check if got rejected before returning cache
 			if Keeps[id]._released then
@@ -617,18 +607,14 @@ function Store:ViewKeep(key: string, version: string?): Promise
 			else
 				return resolve(Keeps[id])
 			end
-		elseif
-			self._cachedKeepPromises[id]
-			and self._cachedKeepPromises[id].Status ~= Promise.Status.Rejected
-			and self._cachedKeepPromises[id].Status ~= Promise.Status.Cancelled
-		then
+		elseif self._cachedKeepPromises[id] and self._cachedKeepPromises[id].Status ~= Promise.Status.Rejected and self._cachedKeepPromises[id].Status ~= Promise.Status.Cancelled then
 			return self._cachedKeepPromises[id]
 		end
 
 		local data = self._store:GetAsync(key, version) or {}
 
 		if data.Data and len(data.Data) > 0 and self._preLoad then
-			data.Data = self._preLoad(DeepCopy(data.Data))
+			data.Data = self._preLoad(deepCopy(data.Data))
 		end
 
 		local keepObject = Keep.new(data, self._data_template)
@@ -762,21 +748,15 @@ end
 function Store:PostGlobalUpdate(key: string, updateHandler: (GlobalUpdates) -> nil) -- gets passed add, lock & change functions
 	return Promise.new(function(resolve)
 		if Store.ServiceDone then
-			error("Game is closing, can't post global update")
+			error("Server is closing, can't post global update")
 		end
 
-		local id = string.format(
-			"%s/%s%s",
-			self._store_info.Name,
-			string.format("%s%s", self._store_info.Scope or "", if self._store_info.Scope ~= nil then "/" else ""),
-			key
-		)
+		local id = `{self._store_info.Name}/{self._store_info.Scope or ""}{self._store_info.Scope and "/" or ""}{key}`
 
 		local keep = Keeps[id]
 
 		if not keep then
 			keep = self:ViewKeep(key):awaitValue()
-
 			keep._global_updates_only = true
 		end
 
@@ -884,7 +864,7 @@ end
 
 function GlobalUpdates:GetActiveUpdates()
 	if Store.ServiceDone then
-		warn("Game is closing, can't get active updates") -- maybe shouldn't error incase they don't :catch?
+		warn("Server is closing, can't get active updates") -- maybe shouldn't error incase they don't :catch?
 	end
 
 	if self._view_only and not self._global_updates_only then
