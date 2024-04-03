@@ -49,6 +49,8 @@ type MetaData = {
 
 	ForceLoad: ActiveSession | nil, -- the session stealing the session lock, if any
 
+	IsOverwriting: boolean?, -- true if .ActiveSession is found during :Overwrite()
+
 	LastUpdate: number,
 	Created: number,
 	LoadCount: number,
@@ -331,7 +333,10 @@ local function transformUpdate(keep: Keep, newestData: KeepStruct, isReleasing: 
 
 	if type(newestData) == "table" then
 		if type(newestData.Data) == "table" and typeof(newestData.MetaData) == "table" then -- full profile
-			if not isKeepLocked(newestData.MetaData) and keep._keep_store then
+			-- save .Data only if this server owns session lock, when there is no ForceLoad and when there is no overwriting
+			local isKeepAvailable = if not isKeepLocked(newestData.MetaData) and not isForceLoadingKeepRemotely(newestData.MetaData) and not newestData.MetaData.IsOverwriting then true else false
+
+			if (isKeepAvailable or keep._overwriting) and keep._keep_store then
 				local keepStore = keep._keep_store
 
 				local valid, err = keepStore.validate(keep.Data) -- validate data before saving
@@ -457,17 +462,32 @@ local function transformUpdate(keep: Keep, newestData: KeepStruct, isReleasing: 
 		}
 	end
 
-	if not isKeepLocked(newestData.MetaData) then -- keep is available for this server
-		local activeSession = DefaultMetaData.ActiveSession -- give the session to the new keep
+	if keep._overwriting then
+		if newestData.MetaData.ActiveSession then
+			newestData.MetaData.IsOverwriting = true -- tell the other server to release session
+		end
 
-		if isReleasing then
-			activeSession = if newestData.MetaData.ForceLoad then table.clone(newestData.MetaData.ForceLoad) else nil -- switch active session to the new server before releasing session on this server, if any
+		newestData.MetaData.LastUpdate = os.time()
+		newestData.MetaData.LoadCount = keep.MetaData.LoadCount
+
+		keep.MetaData.ActiveSession = { PlaceID = 0, JobID = "" } -- set session on this server to not active just in case?
+	elseif not isKeepLocked(newestData.MetaData) then -- keep is available for this server
+		local activeSession = DefaultMetaData.ActiveSession -- give the session to the new keep
+		local isOverwriting = newestData.MetaData.IsOverwriting
+
+		if isReleasing or isOverwriting then
+			activeSession = if newestData.MetaData.ForceLoad and not isOverwriting then table.clone(newestData.MetaData.ForceLoad) else nil -- switch active session to the new server before releasing session on this server, if any or release session when overwriting
+
 			newestData.MetaData.ForceLoad = nil -- remove the ForceLoad, if any
 			newestData.MetaData.LastUpdate = os.time()
 
-			keep.MetaData.ActiveSession = { PlaceID = 0, JobID = "" } -- just in case?
+			keep.MetaData.ActiveSession = { PlaceID = 0, JobID = "" } -- set session on this server to not active just in case?
 
-			if activeSession then
+			if isOverwriting then
+				newestData.MetaData.IsOverwriting = nil
+			end
+
+			if activeSession or isOverwriting then
 				keep:_release(Promise.resolve(keep)) -- release keep without saving data to prevent servers overwriting each other
 			end
 		else
@@ -539,7 +559,7 @@ function Keep:_save(newestData: KeepStruct, isReleasing: boolean) -- used to int
 		end
 	end
 
-	if not self:IsActive() then -- session released or locked on different server. It will not save data until session lock is released on different server. Used with "ForceLoad"
+	if not self:IsActive() and not self._overwriting then -- session released or locked on different server. It will not save data until session lock is released on different server. Used with "ForceLoad"
 		if self.MetaData.ForceLoad == nil then
 			return newestData
 		end
@@ -561,8 +581,6 @@ function Keep:_save(newestData: KeepStruct, isReleasing: boolean) -- used to int
 	if self._view_only and not self._overwriting then
 		self._keep_store._processError("Attempted to save a view only keep, do you mean :Overwrite()?", 2)
 		return newestData
-	elseif self._overwriting then
-		self._overwriting = false -- already overwritten, so we can reset
 	end
 
 	local remoteForceLoadRequest = false
@@ -651,6 +669,10 @@ function Keep:_save(newestData: KeepStruct, isReleasing: boolean) -- used to int
 	if self._keep_store and self._keep_store._preSave then
 		local compressedData = self._keep_store._preSave(deepCopy(transformedData.Data))
 		transformedData.Data = compressedData
+	end
+
+	if self._overwriting then
+		self._overwriting = false -- already overwritten, so we can reset
 	end
 
 	return transformedData
