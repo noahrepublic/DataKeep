@@ -56,12 +56,12 @@ GlobalUpdates.__index = GlobalUpdates
 
 	@within Store
 
-	Table format for a store's info in :GetStore()
+	Table format for a store's info in ```:GetStore()```
 ]=]
 
 export type StoreInfo = {
 	Name: string,
-	Scope: string | nil,
+	Scope: string?,
 }
 
 type MockStore = MockStore.MockStore
@@ -73,7 +73,7 @@ export type Promise = typeof(Promise.new(function() end))
 
 	@within Store
 
-	Stores are used to load and save Keeps from a DataStoreService:GetDataStore()
+	Stores are used to load and save Keeps from a ```DataStoreService:GetDataStore()```
 ]=]
 
 --[=[
@@ -83,7 +83,7 @@ export type Promise = typeof(Promise.new(function() end))
 	Wrapper functions that are inheritted by Keeps when they are loaded
 
 	:::info
-	Any wrapper changes post .GetStore will not apply to that store but the next one.
+	Any wrapper changes post ```.GetStore``` will not apply to that store but the next one.
 	:::info
 ]=]
 
@@ -161,8 +161,8 @@ export type Store = typeof(Store) & {
 	_store_info: StoreInfo,
 	_data_template: any,
 
-	_store: DataStore | nil,
-	_mock_store: MockStore | nil,
+	_store: DataStore?,
+	_mock_store: MockStore?,
 
 	_mock: boolean,
 
@@ -197,7 +197,7 @@ export type GlobalUpdates = typeof(setmetatable({}, GlobalUpdates))
 
 	Cancels the load of the Keep
 ]=]
-export type unreleasedHandler = (Keep.ActiveSession) -> "ForceLoad" | "Cancel" -- use a function for any purposes, logging, whitelist only certain places, etc
+export type unreleasedHandler = (Keep.Session) -> "ForceLoad" | "Cancel" -- use a function for any purposes, logging, whitelist only certain places, etc
 
 --> Private Variables
 
@@ -289,6 +289,8 @@ local function releaseKeepInternally(keep: Keep.Keep)
 	keepStore._cachedKeepPromises[keep:Identify()] = nil
 
 	keep.Releasing:Destroy()
+	keep.Saving:Destroy()
+	keep.Overwritten:Destroy()
 end
 
 local function saveKeep(keep: Keep.Keep, release: boolean): Promise
@@ -366,7 +368,7 @@ end)
 
 	@return Promise<Store>
 
-	Loads a store from a DataStoreService:GetDataStore() and returns a Store object
+	Loads a store from a ```DataStoreService:GetDataStore()``` and returns a Store object
 
 	```lua
 	local keepStore = DataKeep.GetStore("TestStore", {
@@ -475,16 +477,16 @@ end
 
 	```lua
 	keepStore:LoadKeep("Player_" .. player.UserId, function() return "ForceLoad" end)):andThen(function(keep)
-		print("Loaded Keep!")
+		print(`Loaded {keep:Identify()}!`)
 	end)
 	```
 
 	:::info
-	Stores can be loaded multiple times as they are cached, that way you can call :LoadKeep() and get the same cached Keeps
+	Stores can be loaded multiple times as they are cached, that way you can call ```:LoadKeep()``` and get the same cached Keeps
 	:::info
 ]=]
 
-function Store:LoadKeep(key: string, unreleasedHandler: unreleasedHandler): Promise
+function Store:LoadKeep(key: string, unreleasedHandler: unreleasedHandler?): Promise
 	local store = self._store
 
 	local validLoadMethods = {
@@ -584,7 +586,7 @@ end
 	@param key string
 	@param version string?
 
-	@return Promise<Keep?>
+	@return Promise<Keep>
 
 	Loads a Keep from the store and returns a Keep object, but doesn't save it
 
@@ -592,7 +594,7 @@ end
 
 	```lua
 	keepStore:ViewKeep("Player_" .. player.UserId):andThen(function(viewOnlyKeep)
-		print(`Viewing {viewOnlyKeep:Identify()}`)
+		print(`Viewing {viewOnlyKeep:Identify()}!`)
 	end)
 	```
 ]=]
@@ -654,7 +656,7 @@ end
 	:::caution
 
 	:::warning
-	PreSave can only be set once
+	```:PreSave()``` can only be set once
 	:::warning
 
 	Compression example:
@@ -670,8 +672,6 @@ end
 		return newData
 	end)
 	```
-
-	@return void
 ]=]
 
 function Store:PreSave(callback: ({ any }) -> { any: any })
@@ -694,7 +694,7 @@ end
 	:::caution
 
 	:::warning
-	PreLoad can only be set once
+	```:PreLoad()``` can only be set once
 	:::warning
 
 	Decompression example:
@@ -710,8 +710,6 @@ end
 		return newData
 	end)
 	```
-
-	@return void
 ]=]
 
 function Store:PreLoad(callback: ({ any }) -> { any: any })
@@ -864,7 +862,7 @@ end
 
 function GlobalUpdates:GetActiveUpdates()
 	if Store.ServiceDone then
-		warn("Server is closing, can't get active updates") -- maybe shouldn't error incase they don't :catch?
+		warn("Server is closing, can't get active updates") -- maybe shouldn't error incase they don't :catch()?
 	end
 
 	if self._view_only and not self._global_updates_only then
@@ -957,7 +955,7 @@ end
 
 	Change an **active** global update's data to the new data.
 
-	Useful for stacking updates to save space for Keeps that maybe recieving lots of globals. Ex. A YouTuber recieving gifts
+	Useful for stacking updates to save space for Keeps that maybe receiving lots of globals. Ex. A YouTuber receiving gifts
 ]=]
 
 function GlobalUpdates:ChangeActiveUpdate(updateId: number, globalData: {}): Promise

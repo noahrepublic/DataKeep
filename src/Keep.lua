@@ -35,21 +35,27 @@ export type KeepStruct = {
 }
 
 --[=[
-	@type ActiveSession {PlaceID: number, JobID: string}
+	@type Session {PlaceID: number, JobID: string}
 	@within Keep
 ]=]
 
+export type Session = {
+	PlaceID: number,
+	JobID: string,
+}
+
 --[=[
-	@type MetaData {ActiveSession: ActiveSession | nil, ForceLoad: ActiveSession | nil, LastUpdate: number, Created: number, LoadCount: number}
+	@type MetaData {ActiveSession: Session?, ForceLoad: Session?, LastUpdate: number, Created: number, LoadCount: number}
 	@within Keep
 ]=]
 
 type MetaData = {
-	ActiveSession: ActiveSession | nil,
+	ActiveSession: Session?,
 
-	ForceLoad: ActiveSession | nil, -- the session stealing the session lock, if any
+	ForceLoad: Session?, -- the session stealing the session lock, if any
 
 	IsOverwriting: boolean?, -- true if .ActiveSession is found during :Overwrite()
+	ReleaseSessionOnOverwrite: boolean?,
 
 	LastUpdate: number,
 	Created: number,
@@ -71,11 +77,6 @@ type GlobalUpdates = { -- unused right now, not sure about the type checking on 
 	[number]: number, -- most recent update index
 
 	Updates: any,
-}
-
-export type ActiveSession = {
-	PlaceID: number,
-	JobID: string,
 }
 
 export type Promise = typeof(Promise.new(function() end))
@@ -145,7 +146,7 @@ end
 --> Constructor
 
 --[=[
-	@prop GlobalStateProcessor (updateData: GlobalUpdate, lock: () -> boolean, remove: () -> boolean) -> void
+	@prop GlobalStateProcessor (updateData: GlobalUpdate, lock: () -> boolean, remove: () -> boolean) -> ()
 	@within Keep
 
 	Define how to process global updates, by default just locks the global update (this is only ran if the keep is online)
@@ -153,7 +154,7 @@ end
 	The function reveals the lock and remove global update function through the parameters.
 
 	:::caution
-	Updates *must* be locked eventually in order for OnGlobalUpdate to get fired
+	Updates *must* be locked eventually in order for ```.OnGlobalUpdate``` to get fired
 	:::caution
 
 	:::warning
@@ -210,6 +211,19 @@ end
 	```
 ]=]
 
+--[=[
+	@prop Overwritten Signal<boolean>
+	@within Keep
+
+	Fired when the keep has been overwritten. Keep will be released if ```isReleasingSession``` is true
+
+	```lua
+	keep.Overwritten:Connect(function(isReleasingSession)
+		print(`{keep:Identify()} has been overwritten. Is releasing session: {isReleasingSession}`)
+	end)
+	```
+]=]
+
 function Keep.new(structure: KeepStruct, dataTemplate: {}): Keep
 	return setmetatable({
 		Data = structure.Data or deepCopy(dataTemplate),
@@ -235,7 +249,11 @@ function Keep.new(structure: KeepStruct, dataTemplate: {}): Keep
 		_released = false,
 
 		_view_only = false,
+
 		_overwriting = false,
+		_releaseSessionOnOverwrite = nil,
+		Overwritten = Signal.new(),
+
 		_global_updates_only = false, -- if true, can access global updates but nothing else (used for global updates)
 
 		OnGlobalUpdate = Signal.new(), -- fires on a new locked global update (ready to be processed)
@@ -259,7 +277,7 @@ function Keep.new(structure: KeepStruct, dataTemplate: {}): Keep
 end
 
 --[=[
-	@type Keep { Data: {}, MetaData: MetaData, GlobalUpdates: GlobalUpdates, UserIds: {}, OnGlobalUpdate: Signal<GlobalUpdate & number>, GlobalStateProcessor: (update: GlobalUpdate, lock: () -> boolean, remove: () -> boolean) -> void, Releasing: Signal, Saving: Signal }
+	@type Keep { Data: {}, MetaData: MetaData, GlobalUpdates: GlobalUpdates, UserIds: {number}, OnGlobalUpdate: Signal<GlobalUpdate & number>, GlobalStateProcessor: (update: GlobalUpdate, lock: () -> boolean, remove: () -> boolean) -> (), Releasing: Signal<Promise>, Saving: Signal<Promise>, Overwritten: Signal<boolean> }
 	@within Keep
 ]=]
 
@@ -354,7 +372,10 @@ local function transformUpdate(keep: Keep, newestData: KeepStruct, isReleasing: 
 			end
 		end
 
-		if type(newestData.GlobalUpdates) == "table" then -- this handles full profiles and if there is just global updates but no data (globals posted with never loaded)
+		-- save .GlobalUpdates only if this server is not being released on ForceLoad or on overwriting
+		local isCanUpdateGlobalUpdates = if typeof(newestData.MetaData) == "table" then not isForceLoadingKeepRemotely(newestData.MetaData) and not newestData.MetaData.IsOverwriting else true
+
+		if type(newestData.GlobalUpdates) == "table" and isCanUpdateGlobalUpdates then -- this handles full profiles and if there is just global updates but no data (globals posted with never loaded)
 			-- support globals
 
 			local latestKeep = keep.LatestKeep -- "old" to other servers
@@ -465,36 +486,46 @@ local function transformUpdate(keep: Keep, newestData: KeepStruct, isReleasing: 
 	if keep._overwriting then
 		if newestData.MetaData.ActiveSession then
 			newestData.MetaData.IsOverwriting = true -- tell the other server to release session
+			newestData.MetaData.ReleaseSessionOnOverwrite = keep._releaseSessionOnOverwrite
 		end
 
-		newestData.MetaData.LastUpdate = os.time()
-		newestData.MetaData.LoadCount = keep.MetaData.LoadCount
-
+		keep.MetaData.LoadCount += 1
 		keep.MetaData.ActiveSession = { PlaceID = 0, JobID = "" } -- set session on this server to not active just in case?
+
+		newestData.MetaData.LoadCount = keep.MetaData.LoadCount
 	elseif not isKeepLocked(newestData.MetaData) then -- keep is available for this server
 		local activeSession = DefaultMetaData.ActiveSession -- give the session to the new keep
 		local isOverwriting = newestData.MetaData.IsOverwriting
 
-		if isReleasing or isOverwriting then
+		if isReleasing or (isOverwriting and newestData.MetaData.ReleaseSessionOnOverwrite) then
 			activeSession = if newestData.MetaData.ForceLoad and not isOverwriting then table.clone(newestData.MetaData.ForceLoad) else nil -- switch active session to the new server before releasing session on this server, if any or release session when overwriting
 
 			newestData.MetaData.ForceLoad = nil -- remove the ForceLoad, if any
-			newestData.MetaData.LastUpdate = os.time()
 
 			keep.MetaData.ActiveSession = { PlaceID = 0, JobID = "" } -- set session on this server to not active just in case?
 
 			if isOverwriting then
 				newestData.MetaData.IsOverwriting = nil
+				newestData.MetaData.ReleaseSessionOnOverwrite = nil
 			end
 
 			if activeSession or isOverwriting then
 				keep:_release(Promise.resolve(keep)) -- release keep without saving data to prevent servers overwriting each other
 			end
+		elseif isOverwriting and not newestData.MetaData.ReleaseSessionOnOverwrite then
+			newestData.MetaData.IsOverwriting = nil
+			newestData.MetaData.ReleaseSessionOnOverwrite = nil
+
+			keep.Data = newestData.Data
+			keep.MetaData = newestData.MetaData
+			keep.GlobalUpdates = newestData.GlobalUpdates
+			keep.UserIds = newestData.UserIds
 		else
 			newestData.MetaData.LoadCount = keep.MetaData.LoadCount
 		end
 
 		newestData.MetaData.ActiveSession = activeSession
+		newestData.MetaData.LastUpdate = os.time()
 
 		if not empty then
 			keep.LatestKeep = deepCopy(newestData)
@@ -673,6 +704,7 @@ function Keep:_save(newestData: KeepStruct, isReleasing: boolean) -- used to int
 
 	if self._overwriting then
 		self._overwriting = false -- already overwritten, so we can reset
+		self._releaseSessionOnOverwrite = nil
 	end
 
 	return transformedData
@@ -686,7 +718,7 @@ end
 
 	@return Promise<Keep>
 
-	Manually Saves a keep and returns the data from UpdateAsync()
+	Manually Saves a keep and returns the data from ```:UpdateAsync()```
 
 	Commonly useful for speeding up global updates
 
@@ -695,7 +727,7 @@ end
 	:::caution
 
 	:::warning
-	Using :Save on a **view only keep** will error. Use :Overwrite() instead
+	Using ```:Save()``` on a **view only keep** will error. Use ```:Overwrite()``` instead
 	:::warning
 ]=]
 
@@ -703,7 +735,13 @@ function Keep:Save()
 	Keep._activeSaveJobs += 1
 
 	local savingState = Promise.new(function(resolve)
+		local isOverwritten = false
+		local isReleasingSession = false
+
 		local dataKeyInfo: DataStoreKeyInfo = self._store:UpdateAsync(self._key, function(newestData)
+			isOverwritten = newestData.MetaData.IsOverwriting == true
+			isReleasingSession = newestData.MetaData.ReleaseSessionOnOverwrite == true
+
 			return self:_save(newestData, false)
 		end)
 
@@ -715,6 +753,10 @@ function Keep:Save()
 				UpdatedTime = dataKeyInfo.UpdatedTime,
 				Version = dataKeyInfo.Version,
 			}
+		end
+
+		if isOverwritten then
+			self.Overwritten:Fire(isReleasingSession)
 		end
 
 		resolve(self)
@@ -736,20 +778,23 @@ end
 	@method Overwrite
 	@within Keep
 
+	@param releaseExistingSession boolean?
+
 	@return Promise<Keep>
 
-	Used to overwrite on a view only keep
+	Used to overwrite on a view only keep.
 
-	:::warning
-	Ignores any session locks
-	:::warning
+	```releaseExistingSession``` controls the behavior of the server with the active session lock, defaults to true
 ]=]
 
-function Keep:Overwrite()
+function Keep:Overwrite(releaseExistingSession: boolean?)
+	releaseExistingSession = if typeof(releaseExistingSession) == "boolean" then releaseExistingSession else true
+
 	Keep._activeSaveJobs += 1
 
 	local savingState = Promise.new(function(resolve)
 		self._overwriting = true
+		self._releaseSessionOnOverwrite = releaseExistingSession
 
 		local dataKeyInfo: DataStoreKeyInfo = self._store:UpdateAsync(self._key, function(newestData)
 			return self:_save(newestData, false)
@@ -782,9 +827,9 @@ end
 	@method IsActive
 	@within Keep
 
-	@return {boolean}
+	@return boolean
 
-	Returns if the Keep is active in the session (not locked by another server)
+	Returns ```true``` if the Keep is active in the session (not locked by another server)
 ]=]
 
 function Keep:IsActive()
@@ -810,7 +855,7 @@ end
 
 	@return DataStoreKeyInfo
 
-	Returns the DataStoreKeyInfo for the Keep
+	Returns the ```DataStoreKeyInfo``` for the Keep
 ]=]
 
 function Keep:GetKeyInfo(): DataStoreKeyInfo
@@ -874,8 +919,6 @@ end
 	@method Reconcile
 	@within Keep
 
-	@return void
-
 	Fills in any missing data in the Keep, using the data template
 ]=]
 
@@ -906,7 +949,7 @@ end
 
 	@param userId number
 
-	Associates a userId to a datastore to assist with GDPR requests (The right to erasure)
+	Associates a ```userId``` to a datastore to assist with GDPR requests (The right to erasure)
 ]=]
 
 function Keep:AddUserId(userId: number)
@@ -927,7 +970,7 @@ end
 
 	@param userId number
 
-	Unassociates a userId to a datastore
+	Unassociates a ```userId``` to a datastore
 ]=]
 
 function Keep:RemoveUserId(userId: number)
@@ -954,18 +997,18 @@ end
 	.Current () -> version? -- Returns the current version, nil if none
 	.Next () -> version? -- Returns the next version, nil if none
 	.Previous () -> version? -- Returns the previous version, nil if none
-	.PageUp () -> void -- Goes to the next page of versions
-	.PageDown () -> void -- Goes to the previous page of versions
-	.SkipEnd () -> void -- Goes to the last page of versions
-	.SkipStart () -> void -- Goes to the first page of versions
+	.PageUp () -> () -- Goes to the next page of versions
+	.PageDown () -> () -- Goes to the previous page of versions
+	.SkipEnd () -> () -- Goes to the last page of versions
+	.SkipStart () -> () -- Goes to the first page of versions
 ]=]
 
 --[=[
 	@method GetVersions
 	@within Keep
 
-	@param minDate? number
-	@param maxDate? number
+	@param minDate number?
+	@param maxDate number?
 
 	@return Promise<Iterator>
 
@@ -991,7 +1034,7 @@ end
 	```
 ]=]
 
-function Keep:GetVersions(minDate: number | nil, maxDate: number | nil): Promise
+function Keep:GetVersions(minDate: number?, maxDate: number?): Promise
 	return Promise.new(function(resolve)
 		local versions = self._store:ListVersionsAsync(self._key, Enum.SortDirection.Ascending, minDate, maxDate) -- we don't have to worry about order, the iterator will handle that
 
@@ -1109,30 +1152,34 @@ end
 	@within Keep
 
 	@param version string
-	@param migrateProcessor? (versionKeep: Keep) -> Keep
+	@param migrateProcessor ((versionKeep: Keep) -> Keep)?
 
 	@return Promise<Keep>
 
-	Allows for a manual versioning process, where the version is set and the data is migrated to the new version using the optional migrateProcessor function
+	Allows for a manual versioning process, where the version is set and the data is migrated to the new version using the optional ```migrateProcessor``` function
 
 	DataKeep provides a version list iterator. See *GetVersions*
 
 	Returns a Promise that resolves to the old keep (before the migration) This is the **last** time the old keep's GlobalUpdates will be accessible before **permanently** being removed
 
 	:::warning
-	Will not save until the next loop unless otherwise called using :Save or :Overwrite for ViewOnly Keeps
+	Will not save until the next loop unless otherwise called using ```:Save()``` or ```:Overwrite()``` for ViewOnly Keeps
 	:::warning
 
 	:::caution
-	Any global updates not taken care of in migrateProcessor will be lost
+	Any global updates not taken care of in ```migrateProcessor``` will be lost
 	:::caution
 ]=]
 
-function Keep:SetVersion(version: string, migrateProcessor: (versionKeep: Keep) -> Keep): Promise
+function Keep:SetVersion(version: string, migrateProcessor: ((versionKeep: Keep) -> Keep)?): Promise
 	if migrateProcessor == nil then
 		migrateProcessor = function(versionKeep: Keep)
 			return versionKeep
 		end
+	end
+
+	if type(migrateProcessor) ~= "function" then
+		error("migrateProcessor must be a function")
 	end
 
 	return Promise.new(function(resolve, reject)
