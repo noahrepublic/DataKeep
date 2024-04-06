@@ -739,8 +739,8 @@ function Keep:Save()
 		local isReleasingSession = false
 
 		local dataKeyInfo: DataStoreKeyInfo = self._store:UpdateAsync(self._key, function(newestData)
-			isOverwritten = newestData.MetaData.IsOverwriting == true
-			isReleasingSession = newestData.MetaData.ReleaseSessionOnOverwrite == true
+			isOverwritten = newestData and newestData.MetaData and newestData.MetaData.IsOverwriting == true
+			isReleasingSession = newestData and newestData.MetaData and newestData.MetaData.ReleaseSessionOnOverwrite == true
 
 			return self:_save(newestData, false)
 		end)
