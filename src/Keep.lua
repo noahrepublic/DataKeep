@@ -568,7 +568,7 @@ function Keep:_release(updater)
 			local keepStore = self._keep_store
 			keepStore._processError("Failed to release: " .. err, 2)
 
-			error(err) -- dont want to silence the error
+			error(`[DataKeep] {err}`) -- dont want to silence the error
 		end)
 		:finally(function()
 			Keep._activeSaveJobs -= 1
@@ -1179,7 +1179,7 @@ function Keep:SetVersion(version: string, migrateProcessor: ((versionKeep: Keep)
 	end
 
 	if type(migrateProcessor) ~= "function" then
-		error("migrateProcessor must be a function")
+		error("[DataKeep] migrateProcessor must be a function")
 	end
 
 	return Promise.new(function(resolve, reject)
@@ -1298,7 +1298,7 @@ function Keep:ClearLockedUpdate(id: number): Promise
 			return resolve()
 		end
 
-		error("Can't :ClearLockedUpdate on an active update")
+		error("[DataKeep] Can't clear locked update on an active update")
 	end)
 end
 

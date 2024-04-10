@@ -23,6 +23,12 @@ local Keep = require(script.Keep)
 ]=]
 
 local Store = {
+	LoadMethods = {
+		ForceLoad = "ForceLoad",
+		-- maybe add "Ignore"?
+		Cancel = "Cancel",
+	},
+
 	mockStore = false, -- Enabled when DataStoreService is not available (Studio)
 
 	_saveInterval = 30,
@@ -83,7 +89,7 @@ export type Promise = typeof(Promise.new(function() end))
 	Wrapper functions that are inheritted by Keeps when they are loaded
 
 	:::info
-	Any wrapper changes post ```.GetStore``` will not apply to that store but the next one.
+	Any wrapper changes post ```:GetStore()``` will not apply to that store but the next one.
 	:::info
 ]=]
 
@@ -174,12 +180,7 @@ export type Store = typeof(Store) & {
 export type GlobalUpdates = typeof(setmetatable({}, GlobalUpdates))
 
 --[=[
-	@type unreleasedActions {ForceLoad: string, Cancel: string}
-	@within Store
-]=]
-
---[=[
-	@type unreleasedHandler (Keep.ActiveSession) -> unreleasedActions
+	@type unreleasedHandler (Keep.ActiveSession) -> "ForceLoad" | "Cancel"
 
 	@within Store
 
@@ -190,14 +191,15 @@ export type GlobalUpdates = typeof(setmetatable({}, GlobalUpdates))
 
 	### "ForceLoad"
 
-	Steals the lock, releasing the previous session. It can take up to around 2 auto save cycles (1 on session that is requesting and 1 on session that already owns the lock) if session is locked and up to around 10 minutes if session is in dead lock
+	Steals the lock, releasing the previous session. It can take up to around 2 auto save cycles (1 on session that is requesting and 1 on session that already owns the lock) to release previous session and save new one if session is locked and up to around 10 minutes if session is in dead lock
 
 
 	### "Cancel"
 
 	Cancels the load of the Keep
 ]=]
-export type unreleasedHandler = (Keep.Session) -> "ForceLoad" | "Cancel" -- use a function for any purposes, logging, whitelist only certain places, etc
+
+export type unreleasedHandler = (Keep.Session) -> string -- use a function for any purposes, logging, whitelist only certain places, etc
 
 --> Private Variables
 
@@ -428,9 +430,9 @@ function Store.GetStore(storeInfo: StoreInfo | string, dataTemplate): Promise
 			-- 2: error issue signal
 
 			if priority > 1 then
-				error(err)
+				error(`[DataKeep] {err}`)
 			else
-				warn(err)
+				warn(`[DataKeep] {err}`)
 			end
 
 			local clock = os.clock()
@@ -476,7 +478,9 @@ end
 	Loads a Keep from the store and returns a Keep object
 
 	```lua
-	keepStore:LoadKeep("Player_" .. player.UserId, function() return "ForceLoad" end)):andThen(function(keep)
+	keepStore:LoadKeep(`Player_{player.UserId}`, function()
+		return DataKeep.LoadMethods.ForceLoad
+	end)):andThen(function(keep)
 		print(`Loaded {keep:Identify()}!`)
 	end)
 	```
@@ -489,27 +493,21 @@ end
 function Store:LoadKeep(key: string, unreleasedHandler: unreleasedHandler?): Promise
 	local store = self._store
 
-	local validLoadMethods = {
-		ForceLoad = "ForceLoad",
-		-- maybe add "Ignore"?
-		Cancel = "Cancel",
-	}
-
-	if self._mock then
-		print("Using mock store!")
-	end
-
 	if unreleasedHandler == nil then
 		unreleasedHandler = function(_)
-			return validLoadMethods.ForceLoad
+			return Store.LoadMethods.ForceLoad
 		end
 	end
 
 	if type(unreleasedHandler) ~= "function" then
-		error("unreleasedHandler must be a function")
+		error("[DataKeep] unreleasedHandler must be a function")
 	end
 
 	local id = `{self._store_info.Name}/{self._store_info.Scope or ""}{self._store_info.Scope and "/" or ""}{key}`
+
+	if self._mock then
+		print(`[DataKeep] Using mock store on {id}`)
+	end
 
 	if Keeps[id] then -- TODO: check if got rejected before returning cache
 		return Promise.resolve(Keeps[id])
@@ -525,18 +523,18 @@ function Store:LoadKeep(key: string, unreleasedHandler: unreleasedHandler?): Pro
 		if not canLoad(keep) and keep.MetaData.ActiveSession then
 			local loadMethod = unreleasedHandler(keep.MetaData.ActiveSession)
 
-			if not validLoadMethods[loadMethod] then
-				warn(`unreleasedHandler returned an invalid value, defaulting to {validLoadMethods.ForceLoad}`) -- TODO: Custom Error Class to fire to IssueSignal
+			if not Store.LoadMethods[loadMethod] then
+				warn(`[DataKeep] unreleasedHandler returned an invalid value, defaulting to {Store.LoadMethods.ForceLoad}`) -- TODO: Custom Error Class to fire to IssueSignal
 
-				loadMethod = validLoadMethods.ForceLoad
+				loadMethod = Store.LoadMethods.ForceLoad
 			end
 
-			if loadMethod == validLoadMethods.Cancel then
+			if loadMethod == Store.LoadMethods.Cancel then
 				reject(nil) -- should this return an error object?
 				return
 			end
 
-			if loadMethod == validLoadMethods.ForceLoad then
+			if loadMethod == Store.LoadMethods.ForceLoad then
 				forceLoad = { PlaceID = PlaceID, JobID = JobID }
 			end
 		end
@@ -593,7 +591,7 @@ end
 	View only Keeps have the same functions as normal Keeps, but can not operate on data
 
 	```lua
-	keepStore:ViewKeep("Player_" .. player.UserId):andThen(function(viewOnlyKeep)
+	keepStore:ViewKeep(`Player_{player.UserId}`):andThen(function(viewOnlyKeep)
 		print(`Viewing {viewOnlyKeep:Identify()}!`)
 	end)
 	```
@@ -733,7 +731,7 @@ end
 	```updateHandler``` reveals globalUpdates to the API
 
 	```lua
-	keepStore:PostGlobalUpdate("Player_" .. player.UserId, function(globalUpdates)
+	keepStore:PostGlobalUpdate(`Player_{player.UserId}`, function(globalUpdates)
 		globalUpdates:AddGlobalUpdate({
 			Hello = "World!",
 		}):andThen(function(updateId)
@@ -746,7 +744,7 @@ end
 function Store:PostGlobalUpdate(key: string, updateHandler: (GlobalUpdates) -> nil) -- gets passed add, lock & change functions
 	return Promise.new(function(resolve)
 		if Store.ServiceDone then
-			error("Server is closing, can't post global update")
+			error("[DataKeep] Server is closing, can't post global update")
 		end
 
 		local id = `{self._store_info.Name}/{self._store_info.Scope or ""}{self._store_info.Scope and "/" or ""}{key}`
@@ -822,7 +820,7 @@ function GlobalUpdates:AddGlobalUpdate(globalData: {})
 		end
 
 		if self._view_only and not self._global_updates_only then -- shouldn't happen, fail safe for anyone trying to break the API
-			error("Can't add global update to a view only Keep")
+			error("[DataKeep] Can't add global update to a view only Keep")
 			return reject()
 		end
 
@@ -862,11 +860,11 @@ end
 
 function GlobalUpdates:GetActiveUpdates()
 	if Store.ServiceDone then
-		warn("Server is closing, can't get active updates") -- maybe shouldn't error incase they don't :catch()?
+		warn("[DataKeep] Server is closing, can't get active updates") -- maybe shouldn't error incase they don't :catch()?
 	end
 
 	if self._view_only and not self._global_updates_only then
-		error("Can't get active updates from a view only Keep")
+		error("[DataKeep] Can't get active updates from a view only Keep")
 		return {}
 	end
 
@@ -911,7 +909,7 @@ function GlobalUpdates:RemoveActiveUpdate(updateId: number)
 		end
 
 		if self._view_only and not self._global_updates_only then
-			error("Can't remove active update from a view only Keep")
+			error("[DataKeep] Can't remove active update from a view only Keep")
 			return {}
 		end
 
@@ -935,7 +933,7 @@ function GlobalUpdates:RemoveActiveUpdate(updateId: number)
 		end
 
 		if globalUpdates.Updates[globalUpdateIndex].Locked then
-			error("Can't RemoveActiveUpdate on a locked update")
+			error("[DataKeep] Can't remove active update on a locked update")
 			return reject()
 		end
 
@@ -965,7 +963,7 @@ function GlobalUpdates:ChangeActiveUpdate(updateId: number, globalData: {}): Pro
 		end
 
 		if self._view_only and not self._global_updates_only then
-			error("Can't change active update from a view only Keep")
+			error("[DataKeep] Can't change active update from a view only Keep")
 			return {}
 		end
 
