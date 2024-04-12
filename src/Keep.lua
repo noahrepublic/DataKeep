@@ -1199,7 +1199,7 @@ function Keep:SetVersion(version: string, migrateProcessor: ((versionKeep: Keep)
 			:catch(function(err)
 				self._keep_store._processError(err, 1)
 			end)
-			:awaitValue()
+			:expect()
 
 		versionKeep = migrateProcessor(versionKeep) -- Global updates are still able to be edited here, after this they are gone if not processed.
 

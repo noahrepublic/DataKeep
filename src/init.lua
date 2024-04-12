@@ -375,7 +375,7 @@ end)
 	```lua
 	local keepStore = DataKeep.GetStore("TestStore", {
 		Test = "Hello World!",
-	}):awaitValue()
+	}):expect()
 	```
 ]=]
 
@@ -752,7 +752,7 @@ function Store:PostGlobalUpdate(key: string, updateHandler: (GlobalUpdates) -> n
 		local keep = Keeps[id]
 
 		if not keep then
-			keep = self:ViewKeep(key):awaitValue()
+			keep = self:ViewKeep(key):expect()
 			keep._global_updates_only = true
 		end
 
