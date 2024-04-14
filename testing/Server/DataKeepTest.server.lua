@@ -19,7 +19,7 @@ local dataTemplate: DataTemplate = {
 	T = 0,
 }
 
-local keepStore = DataKeep.GetStore("TestStore", dataTemplate):awaitValue()
+local keepStore = DataKeep.GetStore("TestStore", dataTemplate):expect()
 keepStore.Wrapper = Wrapper
 
 local Keeps = {}

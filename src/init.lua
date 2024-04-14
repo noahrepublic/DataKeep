@@ -771,6 +771,8 @@ function Store:PostGlobalUpdate(key: string, updateHandler: (GlobalUpdates) -> n
 			keep:Release()
 		end
 
+		keep.MetaData.LoadCount = (keep.MetaData.LoadCount or 0) + 1
+
 		return resolve()
 	end)
 end

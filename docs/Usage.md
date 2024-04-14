@@ -19,7 +19,7 @@ local defaultData = {
 
 local loadedKeeps = {}
 
-local keepStore = DataKeep.GetStore("PlayerData", defaultData) -- generally you can just :awaitValue() I just want to showcase Promises to those unfamiliar
+local keepStore = DataKeep.GetStore("PlayerData", defaultData) -- generally you can just :expect() I just want to showcase Promises to those unfamiliar
 
 local function onPlayerJoin(player)
     keepStore:LoadKeep("Player_" .. player.UserId):andThen(function(keep)
@@ -108,7 +108,7 @@ Player.__index = Player
 
 --> Variables
 
-local keepStore = DataKeep.GetStore("PlayerData", DataTemplate):awaitValue()
+local keepStore = DataKeep.GetStore("PlayerData", DataTemplate):expect()
 
 --> Private Functions
 
@@ -215,7 +215,7 @@ function Player:GetKey(keyName: string)
 end
 
 function Player:GetData(key: string)
-	local keep = self.Keep:awaitValue()
+	local keep = self.Keep:expect()
 
 	return keep.Data[key]
 end
