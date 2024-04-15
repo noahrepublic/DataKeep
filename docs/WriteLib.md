@@ -23,13 +23,12 @@ return {
 
 
 
-local keepStore = DataKeep.GetStore("PlayerData", defaultData):awaitValue()
+local keepStore = DataKeep.GetStore("PlayerData", defaultData):expect()
 
 keepStore.Wrapper = require(path_to_WriteLib)
 
-keepStore:LoadKeep("Player_" .. player.UserId):andThen(function(keep)
+keepStore:LoadKeep(`Player_{player.UserId}`):andThen(function(keep)
     keep:AddCoins(100)
     keep:RemoveCoins(50)
 end)
 ```
-

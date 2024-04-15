@@ -23,6 +23,12 @@ local Keep = require(script.Keep)
 ]=]
 
 local Store = {
+	LoadMethods = {
+		ForceLoad = "ForceLoad",
+		-- maybe add "Ignore"?
+		Cancel = "Cancel",
+	},
+
 	mockStore = false, -- Enabled when DataStoreService is not available (Studio)
 
 	_saveInterval = 30,
@@ -56,12 +62,12 @@ GlobalUpdates.__index = GlobalUpdates
 
 	@within Store
 
-	Table format for a store's info in :GetStore()
+	Table format for a store's info in ```:GetStore()```
 ]=]
 
 export type StoreInfo = {
 	Name: string,
-	Scope: string | nil,
+	Scope: string?,
 }
 
 type MockStore = MockStore.MockStore
@@ -69,11 +75,11 @@ type MockStore = MockStore.MockStore
 export type Promise = typeof(Promise.new(function() end))
 
 --[=[
-	@type Store {Mock: MockStore, LoadKeep: (string, UnReleasedHandler?) -> Promise<Keep>, ViewKeep: (string) -> Promise<Keep>, PreSave: (({any}) -> {any}) -> nil, PreLoad: (({any}) -> {any}) -> nil, PostGlobalUpdate: (string, (GlobalUpdates) -> nil) -> Promise<void>, IssueSignal: Signal, CriticalStateSignal: Signal, CriticalState: boolean}
+	@type Store {Mock: MockStore, LoadKeep: (string, unreleasedHandler?) -> Promise<Keep>, ViewKeep: (string) -> Promise<Keep>, PreSave: (({any}) -> {any}) -> nil, PreLoad: (({any}) -> {any}) -> nil, PostGlobalUpdate: (string, (GlobalUpdates) -> nil) -> Promise<void>, IssueSignal: Signal, CriticalStateSignal: Signal, CriticalState: boolean}
 
 	@within Store
 
-	Stores are used to load and save Keeps from a DataStoreService:GetDataStore()
+	Stores are used to load and save Keeps from a ```DataStoreService:GetDataStore()```
 ]=]
 
 --[=[
@@ -83,7 +89,7 @@ export type Promise = typeof(Promise.new(function() end))
 	Wrapper functions that are inheritted by Keeps when they are loaded
 
 	:::info
-	Any wrapper changes post .GetStore will not apply to that store but the next one.
+	Any wrapper changes post ```:GetStore()``` will not apply to that store but the next one.
 	:::info
 ]=]
 
@@ -161,8 +167,8 @@ export type Store = typeof(Store) & {
 	_store_info: StoreInfo,
 	_data_template: any,
 
-	_store: DataStore | nil,
-	_mock_store: MockStore | nil,
+	_store: DataStore?,
+	_mock_store: MockStore?,
 
 	_mock: boolean,
 
@@ -174,27 +180,26 @@ export type Store = typeof(Store) & {
 export type GlobalUpdates = typeof(setmetatable({}, GlobalUpdates))
 
 --[=[
-	@type UnReleasedActions {Ignore: string, Cancel: string}
-	@within Store
-]=]
-
---[=[
-	@type UnReleasedHandler (Keep.ActiveSession) -> UnReleasedActions
+	@type unreleasedHandler (Keep.ActiveSession) -> "ForceLoad" | "Cancel"
 
 	@within Store
 
 	Used to determine how to handle an session locked Keep
 
-	### Default: "Ignore"
+	### Default: "ForceLoad"
 
-	Ignores the locked Keep and steals the lock, releasing the previous session
+
+	### "ForceLoad"
+
+	Steals the lock, releasing the previous session. It can take up to around 2 auto save cycles (1 on session that is requesting and 1 on session that already owns the lock) to release previous session and save new one if session is locked and up to around 10 minutes if session is in dead lock
 
 
 	### "Cancel"
 
 	Cancels the load of the Keep
 ]=]
-export type UnReleasedHandler = (Keep.ActiveSession) -> string -- use a function for any purposes, logging, whitelist only certain places, etc
+
+export type unreleasedHandler = (Keep.Session) -> string -- use a function for any purposes, logging, whitelist only certain places, etc
 
 --> Private Variables
 
@@ -217,12 +222,12 @@ local function len(tbl: { [any]: any })
 	return count
 end
 
-local function DeepCopy(tbl: { [any]: any })
+local function deepCopy(tbl: { [any]: any })
 	local copy = {}
 
 	for key, value in pairs(tbl) do
 		if type(value) == "table" then
-			copy[key] = DeepCopy(value)
+			copy[key] = deepCopy(value)
 		else
 			copy[key] = value
 		end
@@ -232,10 +237,12 @@ local function DeepCopy(tbl: { [any]: any })
 end
 
 local function canLoad(keep: Keep.KeepStruct)
-	-- return not keep.MetaData
-	-- 	or not keep.MetaData.ActiveSession -- no active session, so we can load (most likely a new Keep)
-	-- 	or keep.MetaData.ActiveSession.PlaceID == PlaceID and keep.MetaData.ActiveSession.JobID == JobID
-	-- 	or os.time() - keep.MetaData.LastUpdate < Store.assumeDeadLock
+	--[[
+		return not keep.MetaData
+		or not keep.MetaData.ActiveSession -- no active session, so we can load (most likely a new Keep)
+		or keep.MetaData.ActiveSession.PlaceID == PlaceID and keep.MetaData.ActiveSession.JobID == JobID
+		or os.time() - keep.MetaData.LastUpdate < Store.assumeDeadLock
+	]]
 
 	if not keep.MetaData then
 		return true
@@ -281,10 +288,11 @@ local function releaseKeepInternally(keep: Keep.Keep)
 	Keeps[keep:Identify()] = nil
 
 	local keepStore = keep._keep_store
-
 	keepStore._cachedKeepPromises[keep:Identify()] = nil
 
 	keep.Releasing:Destroy()
+	keep.Saving:Destroy()
+	keep.Overwritten:Destroy()
 end
 
 local function saveKeep(keep: Keep.Keep, release: boolean): Promise
@@ -362,12 +370,12 @@ end)
 
 	@return Promise<Store>
 
-	Loads a store from a DataStoreService:GetDataStore() and returns a Store object
+	Loads a store from a ```DataStoreService:GetDataStore()``` and returns a Store object
 
 	```lua
 	local keepStore = DataKeep.GetStore("TestStore", {
 		Test = "Hello World!",
-	}):awaitValue()
+	}):expect()
 	```
 ]=]
 
@@ -383,10 +391,10 @@ function Store.GetStore(storeInfo: StoreInfo | string, dataTemplate): Promise
 		info = storeInfo
 	end
 
-	local identifier = info.Name .. (info.Scope and info.Scope or "")
+	local id = `{info.Name}{info.Scope or ""}`
 
-	if Store._storeQueue[identifier] then
-		return Promise.resolve(Store._storeQueue[identifier])
+	if Store._storeQueue[id] then
+		return Promise.resolve(Store._storeQueue[id])
 	end
 
 	return mockStoreCheck:andThen(function()
@@ -409,7 +417,7 @@ function Store.GetStore(storeInfo: StoreInfo | string, dataTemplate): Promise
 			Wrapper = require(script.Wrapper),
 		}, Store)
 
-		Store._storeQueue[identifier] = self._store
+		Store._storeQueue[id] = self._store
 
 		local function processError(err, priority: number)
 			Store.IssueSignal:Fire(err)
@@ -422,9 +430,9 @@ function Store.GetStore(storeInfo: StoreInfo | string, dataTemplate): Promise
 			-- 2: error issue signal
 
 			if priority > 1 then
-				error(err)
+				error(`[DataKeep] {err}`)
 			else
-				warn(err)
+				warn(`[DataKeep] {err}`)
 			end
 
 			local clock = os.clock()
@@ -463,88 +471,76 @@ end
 	@within Store
 
 	@param key string
-	@param unReleasedHandler UnReleasedHandler?
+	@param unreleasedHandler unreleasedHandler?
 
 	@return Promise<Keep>
 
 	Loads a Keep from the store and returns a Keep object
 
 	```lua
-	keepStore:LoadKeep("Player_" .. player.UserId, function() return "Ignore" end)):andThen(function(keep)
-		print("Loaded Keep!")
+	keepStore:LoadKeep(`Player_{player.UserId}`, function()
+		return DataKeep.LoadMethods.ForceLoad
+	end)):andThen(function(keep)
+		print(`Loaded {keep:Identify()}!`)
 	end)
 	```
 
 	:::info
-	Stores can be loaded multiple times as they are cached, that way you can call :LoadKeep() and get the same cached Keeps
+	Stores can be loaded multiple times as they are cached, that way you can call ```:LoadKeep()``` and get the same cached Keeps
 	:::info
 ]=]
 
-function Store:LoadKeep(key: string, unReleasedHandler: UnReleasedHandler): Promise
+function Store:LoadKeep(key: string, unreleasedHandler: unreleasedHandler?): Promise
 	local store = self._store
 
-	if self._mock then
-		print("Using mock store!")
-	end
-
-	if unReleasedHandler == nil then
-		unReleasedHandler = function(_)
-			return "Ignore"
+	if unreleasedHandler == nil then
+		unreleasedHandler = function(_)
+			return Store.LoadMethods.ForceLoad
 		end
 	end
 
-	if type(unReleasedHandler) ~= "function" then
-		error("UnReleasedHandler must be a function")
+	if type(unreleasedHandler) ~= "function" then
+		error("[DataKeep] unreleasedHandler must be a function")
 	end
 
-	local identifier = string.format(
-		"%s/%s%s",
-		self._store_info.Name,
-		if self._store_info.Scope ~= nil then self._store_info.Scope .. "/" else "",
-		key
-	)
+	local id = `{self._store_info.Name}/{self._store_info.Scope or ""}{self._store_info.Scope and "/" or ""}{key}`
 
-	if Keeps[identifier] then -- TODO: check if got rejected before returning cache
-		return Promise.resolve(Keeps[identifier])
-	elseif
-		self._cachedKeepPromises[identifier]
-		and self._cachedKeepPromises[identifier].Status ~= Promise.Status.Rejected
-		and self._cachedKeepPromises[identifier].Status ~= Promise.Status.Cancelled
-	then
-		return self._cachedKeepPromises[identifier]
+	if self._mock then
+		print(`[DataKeep] Using mock store on {id}`)
+	end
+
+	if Keeps[id] then -- TODO: check if got rejected before returning cache
+		return Promise.resolve(Keeps[id])
+	elseif self._cachedKeepPromises[id] and self._cachedKeepPromises[id].Status ~= Promise.Status.Rejected and self._cachedKeepPromises[id].Status ~= Promise.Status.Cancelled then
+		return self._cachedKeepPromises[id]
 	end
 
 	local promise = Promise.new(function(resolve, reject)
 		local keep: Keep.KeepStruct = store:GetAsync(key) or {} -- support versions
 
-		local success = canLoad(keep)
+		local forceLoad = nil
 
-		local forceload = nil
+		if not canLoad(keep) and keep.MetaData.ActiveSession then
+			local loadMethod = unreleasedHandler(keep.MetaData.ActiveSession)
 
-		if not success and keep.MetaData.ActiveSession then
-			local loadMethod = unReleasedHandler(keep.MetaData.ActiveSession)
+			if not Store.LoadMethods[loadMethod] then
+				warn(`[DataKeep] unreleasedHandler returned an invalid value, defaulting to {Store.LoadMethods.ForceLoad}`) -- TODO: Custom Error Class to fire to IssueSignal
 
-			if loadMethod ~= "Ignore" and loadMethod ~= "Cancel" then
-				warn("UnReleasedHandler returned an invalid value, defaulting to Ignore") -- TODO: Custom Error Class to fire to IssueSignal
-
-				loadMethod = "Ignore"
+				loadMethod = Store.LoadMethods.ForceLoad
 			end
 
-			if loadMethod == "Cancel" then
+			if loadMethod == Store.LoadMethods.Cancel then
 				reject(nil) -- should this return an error object?
 				return
 			end
 
-			if loadMethod == "Ignore" then
-				forceload = {
-					PlaceID = PlaceID,
-					JobID = JobID,
-				}
+			if loadMethod == Store.LoadMethods.ForceLoad then
+				forceLoad = { PlaceID = PlaceID, JobID = JobID }
 			end
 		end
 
 		if keep.Data and len(keep.Data) > 0 and self._preLoad then
-			keep.Data = self._preLoad(DeepCopy(keep.Data))
+			keep.Data = self._preLoad(deepCopy(keep.Data))
 		end
 
 		local keepClass = Keep.new(keep, self._data_template) -- why does typing break here? no idea.
@@ -556,8 +552,7 @@ function Store:LoadKeep(key: string, unReleasedHandler: UnReleasedHandler): Prom
 
 		keepClass._keep_store = self
 
-		keepClass.MetaData.ForceLoad = forceload
-
+		keepClass.MetaData.ForceLoad = forceLoad
 		keepClass.MetaData.LoadCount = (keepClass.MetaData.LoadCount or 0) + 1
 
 		self._storeQueue[key] = keepClass
@@ -566,7 +561,7 @@ function Store:LoadKeep(key: string, unReleasedHandler: UnReleasedHandler): Prom
 
 		Keeps[keepClass:Identify()] = keepClass
 
-		self._cachedKeepPromises[identifier] = nil
+		self._cachedKeepPromises[id] = nil
 
 		for functionName, func in self.Wrapper do
 			keepClass[functionName] = function(...)
@@ -577,7 +572,7 @@ function Store:LoadKeep(key: string, unReleasedHandler: UnReleasedHandler): Prom
 		resolve(keepClass)
 	end)
 
-	self._cachedKeepPromises[identifier] = promise
+	self._cachedKeepPromises[id] = promise
 
 	return promise
 end
@@ -589,27 +584,22 @@ end
 	@param key string
 	@param version string?
 
-	@return Promise<Keep?>
+	@return Promise<Keep>
 
 	Loads a Keep from the store and returns a Keep object, but doesn't save it
 
 	View only Keeps have the same functions as normal Keeps, but can not operate on data
 
 	```lua
-	keepStore:ViewKeep("Player_" .. player.UserId):andThen(function(viewOnlyKeep)
-		print(`Viewing {viewOnlyKeep:Identify()}`)
+	keepStore:ViewKeep(`Player_{player.UserId}`):andThen(function(viewOnlyKeep)
+		print(`Viewing {viewOnlyKeep:Identify()}!`)
 	end)
 	```
 ]=]
 
 function Store:ViewKeep(key: string, version: string?): Promise
 	return Promise.new(function(resolve)
-		local id = string.format(
-			"%s/%s%s",
-			self._store_info.Name,
-			string.format("%s%s", self._store_info.Scope or "", if self._store_info.Scope ~= nil then "/" else ""),
-			key
-		)
+		local id = `{self._store_info.Name}/{self._store_info.Scope or ""}{self._store_info.Scope and "/" or ""}{key}`
 
 		if Keeps[id] then -- TODO: check if got rejected before returning cache
 			if Keeps[id]._released then
@@ -617,18 +607,14 @@ function Store:ViewKeep(key: string, version: string?): Promise
 			else
 				return resolve(Keeps[id])
 			end
-		elseif
-			self._cachedKeepPromises[id]
-			and self._cachedKeepPromises[id].Status ~= Promise.Status.Rejected
-			and self._cachedKeepPromises[id].Status ~= Promise.Status.Cancelled
-		then
+		elseif self._cachedKeepPromises[id] and self._cachedKeepPromises[id].Status ~= Promise.Status.Rejected and self._cachedKeepPromises[id].Status ~= Promise.Status.Cancelled then
 			return self._cachedKeepPromises[id]
 		end
 
 		local data = self._store:GetAsync(key, version) or {}
 
 		if data.Data and len(data.Data) > 0 and self._preLoad then
-			data.Data = self._preLoad(DeepCopy(data.Data))
+			data.Data = self._preLoad(deepCopy(data.Data))
 		end
 
 		local keepObject = Keep.new(data, self._data_template)
@@ -668,7 +654,7 @@ end
 	:::caution
 
 	:::warning
-	PreSave can only be set once
+	```:PreSave()``` can only be set once
 	:::warning
 
 	Compression example:
@@ -684,8 +670,6 @@ end
 		return newData
 	end)
 	```
-
-	@return void
 ]=]
 
 function Store:PreSave(callback: ({ any }) -> { any: any })
@@ -708,7 +692,7 @@ end
 	:::caution
 
 	:::warning
-	PreLoad can only be set once
+	```:PreLoad()``` can only be set once
 	:::warning
 
 	Decompression example:
@@ -724,8 +708,6 @@ end
 		return newData
 	end)
 	```
-
-	@return void
 ]=]
 
 function Store:PreLoad(callback: ({ any }) -> { any: any })
@@ -749,7 +731,7 @@ end
 	```updateHandler``` reveals globalUpdates to the API
 
 	```lua
-	keepStore:PostGlobalUpdate("Player_" .. player.UserId, function(globalUpdates)
+	keepStore:PostGlobalUpdate(`Player_{player.UserId}`, function(globalUpdates)
 		globalUpdates:AddGlobalUpdate({
 			Hello = "World!",
 		}):andThen(function(updateId)
@@ -762,21 +744,15 @@ end
 function Store:PostGlobalUpdate(key: string, updateHandler: (GlobalUpdates) -> nil) -- gets passed add, lock & change functions
 	return Promise.new(function(resolve)
 		if Store.ServiceDone then
-			error("Game is closing, can't post global update")
+			error("[DataKeep] Server is closing, can't post global update")
 		end
 
-		local id = string.format(
-			"%s/%s%s",
-			self._store_info.Name,
-			string.format("%s%s", self._store_info.Scope or "", if self._store_info.Scope ~= nil then "/" else ""),
-			key
-		)
+		local id = `{self._store_info.Name}/{self._store_info.Scope or ""}{self._store_info.Scope and "/" or ""}{key}`
 
 		local keep = Keeps[id]
 
 		if not keep then
-			keep = self:ViewKeep(key):awaitValue()
-
+			keep = self:ViewKeep(key):expect()
 			keep._global_updates_only = true
 		end
 
@@ -846,7 +822,7 @@ function GlobalUpdates:AddGlobalUpdate(globalData: {})
 		end
 
 		if self._view_only and not self._global_updates_only then -- shouldn't happen, fail safe for anyone trying to break the API
-			error("Can't add global update to a view only Keep")
+			error("[DataKeep] Can't add global update to a view only Keep")
 			return reject()
 		end
 
@@ -886,11 +862,11 @@ end
 
 function GlobalUpdates:GetActiveUpdates()
 	if Store.ServiceDone then
-		warn("Game is closing, can't get active updates") -- maybe shouldn't error incase they don't :catch?
+		warn("[DataKeep] Server is closing, can't get active updates") -- maybe shouldn't error incase they don't :catch()?
 	end
 
 	if self._view_only and not self._global_updates_only then
-		error("Can't get active updates from a view only Keep")
+		error("[DataKeep] Can't get active updates from a view only Keep")
 		return {}
 	end
 
@@ -935,7 +911,7 @@ function GlobalUpdates:RemoveActiveUpdate(updateId: number)
 		end
 
 		if self._view_only and not self._global_updates_only then
-			error("Can't remove active update from a view only Keep")
+			error("[DataKeep] Can't remove active update from a view only Keep")
 			return {}
 		end
 
@@ -959,7 +935,7 @@ function GlobalUpdates:RemoveActiveUpdate(updateId: number)
 		end
 
 		if globalUpdates.Updates[globalUpdateIndex].Locked then
-			error("Can't RemoveActiveUpdate on a locked update")
+			error("[DataKeep] Can't remove active update on a locked update")
 			return reject()
 		end
 
@@ -979,7 +955,7 @@ end
 
 	Change an **active** global update's data to the new data.
 
-	Useful for stacking updates to save space for Keeps that maybe recieving lots of globals. Ex. A YouTuber recieving gifts
+	Useful for stacking updates to save space for Keeps that maybe receiving lots of globals. Ex. A YouTuber receiving gifts
 ]=]
 
 function GlobalUpdates:ChangeActiveUpdate(updateId: number, globalData: {}): Promise
@@ -989,7 +965,7 @@ function GlobalUpdates:ChangeActiveUpdate(updateId: number, globalData: {}): Pro
 		end
 
 		if self._view_only and not self._global_updates_only then
-			error("Can't change active update from a view only Keep")
+			error("[DataKeep] Can't change active update from a view only Keep")
 			return {}
 		end
 
