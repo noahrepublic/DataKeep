@@ -600,18 +600,27 @@ end
 function Store:ViewKeep(key: string, version: string?): Promise
 	return Promise.new(function(resolve)
 		local id = `{self._store_info.Name}/{self._store_info.Scope or ""}{self._store_info.Scope and "/" or ""}{key}`
+		local isFoundLoadedKeep = false
 
-		if Keeps[id] then -- TODO: check if got rejected before returning cache
-			if Keeps[id]._released then
-				Keeps[id] = nil
-			else
-				return resolve(Keeps[id])
-			end
-		elseif self._cachedKeepPromises[id] and self._cachedKeepPromises[id].Status ~= Promise.Status.Rejected and self._cachedKeepPromises[id].Status ~= Promise.Status.Cancelled then
-			return self._cachedKeepPromises[id]
+		if Keeps[id] and not Keeps[id]._released then
+			isFoundLoadedKeep = true
 		end
 
-		local data = self._store:GetAsync(key, version) or {}
+		local data
+
+		if not isFoundLoadedKeep then
+			data = self._store:GetAsync(key, version) or {}
+		else
+			data = { -- copy only data and basic metaData
+				Data = deepCopy(Keeps[id].Data),
+				MetaData = {
+					Created = Keeps[id].MetaData.Created,
+					LastUpdate = Keeps[id].MetaData.LastUpdate,
+					LoadCount = Keeps[id].MetaData.LoadCount,
+				},
+				UserIds = deepCopy(Keeps[id].UserIds),
+			}
+		end
 
 		if data.Data and len(data.Data) > 0 and self._preLoad then
 			data.Data = self._preLoad(deepCopy(data.Data))
@@ -619,10 +628,8 @@ function Store:ViewKeep(key: string, version: string?): Promise
 
 		local keepObject = Keep.new(data, self._data_template)
 
-		self._cachedKeepPromises[id] = nil
-
 		keepObject._view_only = true
-		keepObject._released = true -- incase they call :release and it tries to save
+		keepObject._released = true -- incase they call :Release() and it tries to save
 
 		keepObject._store = self._store -- mock store or real store
 		keepObject._key = key
@@ -1033,7 +1040,7 @@ saveLoop = RunService.Heartbeat:Connect(function(dt)
 	end
 
 	local saveSpeed = Store._saveInterval / saveSize
-	saveSpeed = 1
+	saveSpeed = 1 -- ???
 
 	local clock = os.clock() -- offset the saves so not all at once
 
