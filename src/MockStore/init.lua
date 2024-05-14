@@ -75,7 +75,7 @@ function MockStore:GetAsync(key: string)
 end
 
 function MockStore:SetAsync(key: string, value: any)
-	self._data[key] = value
+	self._data[key] = deepCopy(value)
 
 	return createNewVersion(self, key, value)
 end
@@ -92,13 +92,7 @@ function MockStore:UpdateAsync(key: string, callback: (any) -> any)
 	return self:SetAsync(key, newValue)
 end
 
-function MockStore:ListVersionsAsync(
-	key: string,
-	sortDirection: Enum.SortDirection,
-	minDate: number,
-	maxDate: number,
-	limit: number
-)
+function MockStore:ListVersionsAsync(key: string, sortDirection: Enum.SortDirection, minDate: number, maxDate: number, limit: number)
 	limit = limit or 1
 
 	local versions = self._dataVersions[key]
