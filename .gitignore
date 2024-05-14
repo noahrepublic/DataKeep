@@ -10,3 +10,9 @@
 /sourcemap.json
 
 /Packages
+
+
+/test/Packages
+
+/*.lock
+wally.lock
