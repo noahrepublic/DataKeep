@@ -50,5 +50,75 @@ return function()
 		it("should own session lock", function()
 			expect(testKeep.MetaData.ActiveSession == { PlaceID = game.PlaceId, JobID = game.JobId })
 		end)
+
+		it("should add userids", function()
+			testKeep:AddUserId(0)
+
+			expect(table.find(testKeep.UserIds, 0)).to.be.ok()
+		end)
+
+		it("should remove userids", function()
+			testKeep:RemoveUserId(0)
+			expect(table.find(testKeep.UserIds, 0)).never.to.be.ok()
+		end)
+
+		it("should be active", function()
+			expect(testKeep:IsActive()).to.be.ok()
+		end)
+
+		it("should reconcile missing data", function()
+			testKeep.Data.Coins = nil
+			testKeep:Reconcile()
+
+			expect(testKeep.Data.Coins == 0).to.be.ok()
+		end)
+
+		it("should be able to rollback versions", function()
+			testKeep.Data.Coins = 100
+			testKeep:Save()
+
+			expect(testKeep.Data.Coins == 100).to.be.ok()
+
+			local versions = testKeep:GetVersions()
+
+			local iterator = versions:expect()
+
+			local versionToRoll = iterator.Current()
+			testKeep:SetVersion(versionToRoll.Version)
+
+			expect(testKeep.Data.Coins == 0).to.be.ok()
+		end)
+
+		it("should add an update", function()
+			testStore:PostGlobalUpdate("Data", function(globalUpdates)
+				globalUpdates:AddGlobalUpdate({
+					Message = "Hello",
+				})
+			end)
+		end)
+
+		it("should change and add to an active update", function()
+			testStore:PostGlobalUpdate("Data", function(globalUpdates)
+				for i, globalUpdate in globalUpdates:GetActiveUpdates() do
+					globalUpdates:ChangeActiveUpdate(globalUpdate.ID, {
+						Message = globalUpdate.Data.Message .. "Goodbye",
+					})
+
+					expect(#globalUpdates:GetActiveUpdates() == 1).to.be.ok()
+					expect(globalUpdates:GetActiveUpdates()[i].Data.Message == "HelloGoodbye").to.be.ok()
+				end
+			end)
+		end)
+
+		-- it("should not let viewkeeps change data", function()
+		-- 	local viewKeep = testStore:ViewKeep("Data"):expect()
+
+		-- 	viewKeep.Data.Coins = 100
+		-- 	testStore.IssueSignal:Connect(function(err)
+		-- 		expect(err).to.be.ok()
+		-- 	end)
+
+		-- 	viewKeep:Save() -- not sure how to catch this. this doesn't error but processError does.
+		-- end)
 	end)
 end
