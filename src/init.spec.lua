@@ -110,6 +110,41 @@ return function()
 			end)
 		end)
 
+		it("should get active updates", function()
+			testStore:PostGlobalUpdate("Data", function(globalUpdates)
+				expect(#globalUpdates:GetActiveUpdates() == 1).to.be.ok()
+			end)
+		end)
+
+		it("should remove an active update", function()
+			testStore:PostGlobalUpdate("Data", function(globalUpdates)
+				for i, globalUpdate in globalUpdates:GetActiveUpdates() do
+					globalUpdates:RemoveActiveUpdate(globalUpdate.ID)
+
+					expect(#globalUpdates:GetActiveUpdates() == 0).to.be.ok()
+				end
+			end)
+		end)
+
+		it("should clear locked updates", function()
+			warn(testKeep:GetLockedGlobalUpdates())
+
+			for _, update in testKeep:GetLockedGlobalUpdates() do
+				testKeep:ClearLockedUpdate(update.ID)
+			end
+
+			expect(#testKeep:GetLockedGlobalUpdates() == 0).to.be.ok()
+		end)
+
+		it("should let viewkeeps :Overwrite", function()
+			local viewKeep = testStore:ViewKeep("Data"):expect()
+
+			viewKeep.Data.Coins = 100
+
+			viewKeep:Overwrite()
+			expect(viewKeep.Data.Coins == 100).to.be.ok()
+		end)
+
 		-- it("should not let viewkeeps change data", function()
 		-- 	local viewKeep = testStore:ViewKeep("Data"):expect()
 
