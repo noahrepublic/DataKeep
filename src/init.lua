@@ -1,5 +1,3 @@
---!nonstrict
-
 --> Services
 
 local DataStoreService = game:GetService("DataStoreService")
@@ -19,7 +17,7 @@ local Keep = require(script.Keep)
 --[=[
 	@class Store
 	@server
-	A store is a class that holds inner savable objects, Keep(s), from a datastore (DataStoreService:GetDataStore())
+	A store is a class that holds inner savable objects, Keep(s), from a datastore [DataStoreService:GetDataStore()](https://create.roblox.com/docs/reference/engine/classes/DataStoreService#GetDataStore)
 ]=]
 
 local Store = {
@@ -59,10 +57,9 @@ GlobalUpdates.__index = GlobalUpdates
 
 --[=[
 	@type StoreInfo {Name: string, Scope: string?}
-
 	@within Store
 
-	Table format for a store's info in ```:GetStore()```
+	Table format for a store's info in [.GetStore()](#GetStore)
 ]=]
 
 export type StoreInfo = {
@@ -75,11 +72,15 @@ type MockStore = MockStore.MockStore
 export type Promise = typeof(Promise.new(function() end))
 
 --[=[
-	@type Store {Mock: MockStore, LoadKeep: (string, unreleasedHandler?) -> Promise<Keep>, ViewKeep: (string) -> Promise<Keep>, PreSave: (({any}) -> {any}) -> nil, PreLoad: (({any}) -> {any}) -> nil, PostGlobalUpdate: (string, (GlobalUpdates) -> nil) -> Promise<void>, IssueSignal: Signal, CriticalStateSignal: Signal, CriticalState: boolean}
-
+	@type Store {LoadMethods: LoadMethods, Mock: MockStore, LoadKeep: (string, unreleasedHandler?) -> Promise<Keep>, ViewKeep: (string) -> Promise<Keep>, PreSave: (({any}) -> {any}) -> nil, PreLoad: (({any}) -> {any}) -> nil, PostGlobalUpdate: (string, (GlobalUpdates) -> nil) -> Promise<void>, IssueSignal: Signal, CriticalStateSignal: Signal, CriticalState: boolean}
 	@within Store
 
-	Stores are used to load and save Keeps from a ```DataStoreService:GetDataStore()```
+	Stores are used to load and save Keeps from a [DataStoreService:GetDataStore()](https://create.roblox.com/docs/reference/engine/classes/DataStoreService#GetDataStore)
+]=]
+
+--[=[
+	@prop LoadMethods LoadMethods
+	@within Store
 ]=]
 
 --[=[
@@ -89,7 +90,7 @@ export type Promise = typeof(Promise.new(function() end))
 	Wrapper functions that are inheritted by Keeps when they are loaded
 
 	:::info
-	Any wrapper changes post ```:GetStore()``` will not apply to that store but the next one.
+	Any wrapper changes post [.GetStore()](#GetStore) will not apply to that store but the next one.
 	:::info
 ]=]
 
@@ -130,7 +131,7 @@ export type Promise = typeof(Promise.new(function() end))
 	@prop CriticalState boolean
 	@within Store
 
-	Whether the store is in critical state or not. See ```CriticalStateSignal```
+	Whether the store is in critical state or not. See [CriticalStateSignal](#CriticalStateSignal)
 
 	```lua
 	if keepStore.CriticalState then
@@ -180,16 +181,10 @@ export type Store = typeof(Store) & {
 export type GlobalUpdates = typeof(setmetatable({}, GlobalUpdates))
 
 --[=[
-	@type unreleasedHandler (Keep.ActiveSession) -> "ForceLoad" | "Cancel"
-
+	@type LoadMethods {ForceLoad: string, Cancel: string}
 	@within Store
 
-	Used to determine how to handle an session locked Keep
-
-	### Default: "ForceLoad"
-
-
-	### "ForceLoad"
+	### "ForceLoad" (default)
 
 	Steals the lock, releasing the previous session. It can take up to around 2 auto save cycles (1 on session that is requesting and 1 on session that already owns the lock) to release previous session and save new one if session is locked and up to around 10 minutes if session is in dead lock
 
@@ -197,6 +192,17 @@ export type GlobalUpdates = typeof(setmetatable({}, GlobalUpdates))
 	### "Cancel"
 
 	Cancels the load of the Keep
+]=]
+
+--[=[
+	@type unreleasedHandler (Keep.ActiveSession) -> string
+	@within Store
+
+	Used to determine how to handle an session locked Keep.
+
+	:::info
+	Check [LoadMethods] for more info
+	:::info
 ]=]
 
 export type unreleasedHandler = (Keep.Session) -> string -- use a function for any purposes, logging, whitelist only certain places, etc
@@ -244,19 +250,23 @@ local function canLoad(keep: Keep.KeepStruct)
 		or os.time() - keep.MetaData.LastUpdate < Store.assumeDeadLock
 	]]
 
-	if not keep.MetaData then
+	local metaData = keep.MetaData
+
+	if not metaData then
 		return true
 	end
 
-	if not keep.MetaData.ActiveSession then
+	local activeSession = metaData.ActiveSession
+
+	if not activeSession then
 		return true
 	end
 
-	if keep.MetaData.ActiveSession.PlaceID == PlaceID and keep.MetaData.ActiveSession.JobID == JobID then
+	if activeSession.PlaceID == PlaceID and activeSession.JobID == JobID then
 		return true
 	end
 
-	if os.time() - keep.MetaData.LastUpdate > Store.assumeDeadLock then
+	if os.time() - metaData.LastUpdate > Store.assumeDeadLock then
 		return true
 	end
 
@@ -370,7 +380,7 @@ end)
 
 	@return Promise<Store>
 
-	Loads a store from a ```DataStoreService:GetDataStore()``` and returns a Store object
+	Loads a store from a [DataStoreService:GetDataStore()](https://create.roblox.com/docs/reference/engine/classes/DataStoreService#GetDataStore) and returns a Store object
 
 	```lua
 	local keepStore = DataKeep.GetStore("TestStore", {
@@ -419,7 +429,7 @@ function Store.GetStore(storeInfo: StoreInfo | string, dataTemplate): Promise
 
 		Store._storeQueue[id] = self._store
 
-		local function processError(err, priority: number)
+		local function processError(err: string, priority: number): ()
 			Store.IssueSignal:Fire(err)
 
 			priority = priority or 1
@@ -479,14 +489,14 @@ end
 
 	```lua
 	keepStore:LoadKeep(`Player_{player.UserId}`, function()
-		return DataKeep.LoadMethods.ForceLoad
+		return keepStore.LoadMethods.ForceLoad
 	end)):andThen(function(keep)
 		print(`Loaded {keep:Identify()}!`)
 	end)
 	```
 
 	:::info
-	Stores can be loaded multiple times as they are cached, that way you can call ```:LoadKeep()``` and get the same cached Keeps
+	Stores can be loaded multiple times as they are cached, that way you can call [:LoadKeep()](#LoadKeep) and get the same cached Keeps
 	:::info
 ]=]
 
@@ -539,8 +549,15 @@ function Store:LoadKeep(key: string, unreleasedHandler: unreleasedHandler?): Pro
 			end
 		end
 
-		if keep.Data and len(keep.Data) > 0 and self._preLoad then
-			keep.Data = self._preLoad(deepCopy(keep.Data))
+		if self._preLoad and keep.Data and len(keep.Data) > 0 then
+			local processedData = self._preLoad(deepCopy(keep.Data))
+
+			if not processedData then
+				self._processError(":PreLoad() must return a table", 2)
+				return
+			end
+
+			keep.Data = processedData
 		end
 
 		local keepClass = Keep.new(keep, self._data_template) -- why does typing break here? no idea.
@@ -622,8 +639,15 @@ function Store:ViewKeep(key: string, version: string?): Promise
 			}
 		end
 
-		if data.Data and len(data.Data) > 0 and self._preLoad then
-			data.Data = self._preLoad(deepCopy(data.Data))
+		if self._preLoad and data.Data and len(data.Data) > 0 then
+			local processedData = self._preLoad(deepCopy(data.Data))
+
+			if not processedData then
+				self._processError(":PreLoad() must return a table", 2)
+				return
+			end
+
+			data.Data = processedData
 		end
 
 		local keepObject = Keep.new(data, self._data_template)
@@ -657,7 +681,7 @@ end
 	Runs before saving a Keep, allowing you to modify the data before, like compressing data
 
 	:::caution
-	Functions **must** return a new data table. Failure to do so will result in data loss.
+	Callback **must** return a new data table.
 	:::caution
 
 	:::warning
@@ -680,8 +704,8 @@ end
 ]=]
 
 function Store:PreSave(callback: ({ any }) -> { any: any })
-	assert(self._preSave == nil, "PreSave can only be set once")
-	assert(callback and type(callback) == "function", "Callback must be a function")
+	assert(self._preSave == nil, "[DataKeep] :PreSave() can only be set once")
+	assert(callback and type(callback) == "function", "[DataKeep] :PreSave() callback must be a function")
 
 	self._preSave = callback
 end
@@ -695,7 +719,7 @@ end
 	Runs before loading a Keep, allowing you to modify the data before, like decompressing compressed data
 
 	:::caution
-	Functions **must** return a new data table. Failure to do so will result in data loss.
+	Callback **must** return a new data table.
 	:::caution
 
 	:::warning
@@ -718,8 +742,8 @@ end
 ]=]
 
 function Store:PreLoad(callback: ({ any }) -> { any: any })
-	assert(self._preLoad == nil, "PreLoad can only be set once")
-	assert(callback and type(callback) == "function", "Callback must be a function")
+	assert(self._preLoad == nil, "[DataKeep] :PreLoad() can only be set once")
+	assert(callback and type(callback) == "function", "[DataKeep] :PreLoad() callback must be a function")
 
 	self._preLoad = callback
 end
@@ -792,12 +816,11 @@ end
 
 	Used to add, lock and change global updates
 
-	Revealed through ```PostGlobalUpdate```
+	Revealed through [:PostGlobalUpdate()](Store#PostGlobalUpdate)
 ]=]
 
 --[=[
 	@type GlobalID number
-
 	@within GlobalUpdates
 
 	Used to identify a global update
@@ -946,7 +969,7 @@ function GlobalUpdates:RemoveActiveUpdate(updateId: number)
 			return reject()
 		end
 
-		table.remove(globalUpdates.Updates, globalUpdateIndex) -- instantly removes internally, unlike locked updates. this is because locked updates can still be deleted mid-processing
+		table.remove(globalUpdates.Updates, globalUpdateIndex) -- instantly removes internally, unlike locked updates. This is because locked updates can still be deleted mid-processing
 		return resolve()
 	end)
 end
@@ -962,7 +985,7 @@ end
 
 	Change an **active** global update's data to the new data.
 
-	Useful for stacking updates to save space for Keeps that maybe receiving lots of globals. Ex. A YouTuber receiving gifts
+	Useful for stacking updates to save space for Keeps that maybe receiving lots of globals. Ex. a content creator receiving gifts
 ]=]
 
 function GlobalUpdates:ChangeActiveUpdate(updateId: number, globalData: {}): Promise

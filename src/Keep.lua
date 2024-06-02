@@ -62,21 +62,34 @@ type MetaData = {
 	LoadCount: number,
 }
 
-type GlobalUpdate = {
-	ID: number,
-	Locked: boolean,
-	Data: {},
-}
-
 --[=[
-	@type GlobalUpdates {ID: number, Updates: { [number]: GlobalUpdate }}
+	@type GlobalUpdateData { [any]: any }
 	@within Keep
 ]=]
 
-type GlobalUpdates = { -- unused right now, not sure about the type checking on this.
-	[number]: number, -- most recent update index
+type GlobalUpdateData = { [any]: any }
 
-	Updates: any,
+--[=[
+	@type GlobalUpdate {ID: number, Locked: boolean, Data: GlobalUpdateData}
+	@within Keep
+]=]
+
+export type GlobalUpdate = {
+	ID: number,
+	Locked: boolean,
+	Data: GlobalUpdateData,
+}
+
+--[=[
+	@type GlobalUpdates {ID: number, Updates: { GlobalUpdate }}
+	@within Keep
+
+	```ID``` is the most recent update index
+]=]
+
+type GlobalUpdates = {
+	ID: number,
+	Updates: { GlobalUpdate },
 }
 
 export type Promise = typeof(Promise.new(function() end))
@@ -146,7 +159,7 @@ end
 --> Constructor
 
 --[=[
-	@prop GlobalStateProcessor (updateData: GlobalUpdate, lock: () -> boolean, remove: () -> boolean) -> ()
+	@prop GlobalStateProcessor (updateData: GlobalUpdateData, lock: () -> boolean, remove: () -> boolean) -> ()
 	@within Keep
 
 	Define how to process global updates, by default just locks the global update (this is only ran if the keep is online)
@@ -154,7 +167,7 @@ end
 	The function reveals the lock and remove global update function through the parameters.
 
 	:::caution
-	Updates *must* be locked eventually in order for ```.OnGlobalUpdate``` to get fired
+	Updates **must** be locked eventually in order for [.OnGlobalUpdate](#OnGlobalUpdate) to get fired
 	:::caution
 
 	:::warning
@@ -163,13 +176,13 @@ end
 ]=]
 
 --[=[
-	@prop OnGlobalUpdate Signal<(updateData: {}, updateId: number)>
+	@prop OnGlobalUpdate Signal<GlobalUpdateData, number>
 	@within Keep
 
 	Fired when a new global update is locked and ready to be processed
 
 	:::caution
-	ONLY locked globals are fired
+	**ONLY** locked globals are fired
 	:::caution
 ]=]
 
@@ -277,7 +290,7 @@ function Keep.new(structure: KeepStruct, dataTemplate: {}): Keep
 end
 
 --[=[
-	@type Keep { Data: {}, MetaData: MetaData, GlobalUpdates: GlobalUpdates, UserIds: {number}, OnGlobalUpdate: Signal<GlobalUpdate & number>, GlobalStateProcessor: (update: GlobalUpdate, lock: () -> boolean, remove: () -> boolean) -> (), Releasing: Signal<Promise>, Saving: Signal<Promise>, Overwritten: Signal<boolean> }
+	@type Keep { Data: {}, MetaData: MetaData, GlobalUpdates: GlobalUpdates, UserIds: {number}, OnGlobalUpdate: Signal<GlobalUpdateData, number>, GlobalStateProcessor: (update: GlobalUpdateData, lock: () -> boolean, remove: () -> boolean) -> (), Releasing: Signal<Promise>, Saving: Signal<Promise>, Overwritten: Signal<boolean> }
 	@within Keep
 ]=]
 
@@ -397,7 +410,7 @@ local function transformUpdate(keep: Keep, newestData: KeepStruct, isReleasing: 
 
 				local updates: { [number]: GlobalUpdate } = currentGlobals.Updates
 
-				for _: number, oldUpdate: GlobalUpdate in updates do
+				for _, oldUpdate in updates do
 					if oldUpdate.ID == newUpdate.ID then
 						oldGlobal = oldUpdate
 						break
@@ -698,8 +711,14 @@ function Keep:_save(newestData: KeepStruct, isReleasing: boolean) -- used to int
 	local transformedData = transformUpdate(self, newestData, isReleasing)
 
 	if self._keep_store and self._keep_store._preSave then
-		local compressedData = self._keep_store._preSave(deepCopy(transformedData.Data))
-		transformedData.Data = compressedData
+		local processedData = self._keep_store._preSave(deepCopy(transformedData.Data))
+
+		if not processedData then
+			self._keep_store._processError(":PreSave() must return a table", 2)
+			return
+		end
+
+		transformedData.Data = processedData
 	end
 
 	if self._overwriting then
@@ -718,16 +737,14 @@ end
 
 	@return Promise<Keep>
 
-	Manually Saves a keep and returns the data from ```:UpdateAsync()```
-
-	Commonly useful for speeding up global updates
+	Manually Saves a Keep. Commonly useful for speeding up global updates
 
 	:::caution
-	RESETS AUTO SAVE TIMER ON THE KEEP
+	Calling ```:Save()``` manually will reset the auto save timer on the Keep
 	:::caution
 
 	:::warning
-	Using ```:Save()``` on a **view only keep** will error. Use ```:Overwrite()``` instead
+	Using ```:Save()``` on a **view only keep** will error. Use [:Overwrite()](#Overwrite) instead
 	:::warning
 ]=]
 
@@ -970,7 +987,7 @@ end
 
 	@param userId number
 
-	Unassociates a ```userId``` to a datastore
+	Unassociates a ```userId``` from a datastore
 ]=]
 
 function Keep:RemoveUserId(userId: number)
@@ -985,13 +1002,12 @@ end
 
 --[[
 	Design for public version API
-	While ProfileService provides a very nice query API that automatically changes the version and saves on :OverwriteAsync
+	While ProfileService provides a very nice query API that automatically changes the version and saves on :OverwriteAsync()
 	I think it is better to have a more manual approach, as it is more flexible and allows for more control over the versioning + migration process exists to handle any data changes
 ]]
 
 --[=[
 	@interface Iterator
-
 	@within Keep
 
 	.Current () -> version? -- Returns the current version, nil if none
@@ -1163,7 +1179,7 @@ end
 	Returns a Promise that resolves to the old keep (before the migration) This is the **last** time the old keep's GlobalUpdates will be accessible before **permanently** being removed
 
 	:::warning
-	Will not save until the next loop unless otherwise called using ```:Save()``` or ```:Overwrite()``` for ViewOnly Keeps
+	Will not save until the next loop unless otherwise called using [:Save()](#Save) or [:Overwrite()](#Overwrite) for view only Keeps
 	:::warning
 
 	:::caution
