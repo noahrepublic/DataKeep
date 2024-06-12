@@ -3,6 +3,8 @@ process.spawn("wally", { "install" }, {
 	cwd = process.cwd .. "/test",
 })
 
+print("Installed test packages")
+
 process.spawn("rojo", {
 	"build",
 	"-o",
@@ -10,6 +12,10 @@ process.spawn("rojo", {
 	"test-place.project.json",
 })
 
+print("Built test place")
+
 local result = process.spawn("run-in-roblox", { "--script", "ci/unit.server.lua", "--place", "game.rbxl" })
+
+print("Running")
 
 print(result.stdout)
