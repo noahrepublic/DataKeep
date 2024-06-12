@@ -87,10 +87,6 @@ function MockStore:UpdateAsync(key: string, callback: (any) -> any)
 	local value = self._data[key]
 	local yielded, newValue = didyield(callback, value)
 
-	-- print("Update async called")
-	-- print(value)
-	-- warn(newValue)
-
 	if yielded then
 		error("UpdateAsync yielded!")
 		return value
