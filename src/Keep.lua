@@ -363,11 +363,11 @@ local function transformUpdate(keep: Keep, newestData: KeepStruct, isReleasing: 
 					newestData.Data = keep.Data
 					newestData.UserIds = keep.UserIds
 				else
-					if not keep._keep_store then
-						return newestData
+					if keepStore then
+						keepStore._processError(err, 0)
 					end
 
-					keep._keep_store._processError(err, 0)
+					return newestData
 				end
 			end
 		end

@@ -62,10 +62,13 @@ local function createNewVersion(self, key, data: any)
 	local versionData = {
 		Version = #self._dataVersions[key] + 1,
 		CreatedTime = os.time(),
+		UpdatedTime = os.time(),
 		Deleted = false,
 	}
 
 	table.insert(self._dataVersions[key], { versionData, deepCopy(data) })
+
+	return versionData
 end
 
 --> Public Methods
@@ -84,6 +87,10 @@ function MockStore:UpdateAsync(key: string, callback: (any) -> any)
 	local value = self._data[key]
 	local yielded, newValue = didyield(callback, value)
 
+	-- print("Update async called")
+	-- print(value)
+	-- warn(newValue)
+
 	if yielded then
 		error("UpdateAsync yielded!")
 		return value
@@ -92,13 +99,7 @@ function MockStore:UpdateAsync(key: string, callback: (any) -> any)
 	return self:SetAsync(key, newValue)
 end
 
-function MockStore:ListVersionsAsync(
-	key: string,
-	sortDirection: Enum.SortDirection,
-	minDate: number,
-	maxDate: number,
-	limit: number
-)
+function MockStore:ListVersionsAsync(key: string, sortDirection: Enum.SortDirection, minDate: number, maxDate: number, limit: number)
 	limit = limit or 1
 
 	local versions = self._dataVersions[key]
