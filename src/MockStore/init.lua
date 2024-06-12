@@ -78,7 +78,7 @@ function MockStore:GetAsync(key: string)
 end
 
 function MockStore:SetAsync(key: string, value: any)
-	self._data[key] = value
+	self._data[key] = deepCopy(value)
 
 	return createNewVersion(self, key, value)
 end

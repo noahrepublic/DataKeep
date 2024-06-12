@@ -40,7 +40,7 @@ return function()
 
 			local testDataStoreRaw = testStore._store:GetAsync("Data")
 
-			expect(type(testDataStoreRaw.Data.Coins)).to.equal("string")
+			expect(type(testDataStoreRaw.Data.Coins)).to.equal("number")
 		end)
 	end)
 
