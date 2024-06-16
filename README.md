@@ -1,3 +1,20 @@
+<div align="center">
+  <h1>DataKeep</h1>
+  <p>
+    <a href="https://noahrepublic.github.io/DataKeep">
+      <img src="https://github.com/noahrepublic/DataKeep/actions/workflows/docs.yaml/badge.svg" alt="Documentation status" />
+    </a>
+    <a href="https://discord.gg/qfWfRWwEux">
+      <img src="https://img.shields.io/discord/385151591524597761?color=5865F2&label=discord&logo=discord&logoColor=white" alt="Discord" />
+    </a>
+    <a href="https://github.com/noahrepublic/DataKeep/actions">
+      <img src="https://github.com/noahrepublic/DataKeep/actions/workflows/build.yaml/badge.svg" alt="Build and release status" />
+    </a>
+  </p>
+  <p>A Promised-base auto-saving DataStore library.</p>
+  <a href="https://noahrepublic.github.io/DataKeep">View docs →</a>
+</div>
+
 # DataKeep
  The final data saving solution you need
  
