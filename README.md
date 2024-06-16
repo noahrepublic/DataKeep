@@ -8,7 +8,7 @@
       <img src="https://img.shields.io/discord/385151591524597761?color=5865F2&label=discord&logo=discord&logoColor=white" alt="Discord" />
     </a>
     <a href="https://github.com/noahrepublic/DataKeep/actions">
-      <img src="https://github.com/noahrepublic/DataKeep/actions/workflows/build.yaml/badge.svg" alt="Build and release status" />
+      <img src="https://github.com/noahrepublic/DataKeep/actions/workflows/wally.yaml/badge.svg" alt="Build and release status" />
     </a>
   </p>
   <p>A Promised-base auto-saving DataStore library.</p>
