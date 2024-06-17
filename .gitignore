@@ -12,8 +12,5 @@
 /Packages
 /DevPackages
 
-
-/test/Packages
-
 /*.lock
 wally.lock
