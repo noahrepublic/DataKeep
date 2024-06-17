@@ -24,7 +24,7 @@
       "$className": "ReplicatedStorage",
       "Test": {
         "$className": "Folder",
-        "$path": "test"
+        "$path": "DevPackages"
       }
     }
   }

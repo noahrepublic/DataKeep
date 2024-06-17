@@ -1,6 +1,6 @@
 local process = require("@lune/process")
 process.spawn("wally", { "install" }, {
-	cwd = process.cwd .. "/test",
+	cwd = process.cwd,
 })
 
 print("Installed test packages")
