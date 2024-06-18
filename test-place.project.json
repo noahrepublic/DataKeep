@@ -4,6 +4,11 @@
     "$className": "DataModel",
 
     "ServerScriptService": {
+     
+      "TestRunner": {
+        "$path": "ci"
+      },
+
       "ServerPackages": {
         "$className": "Folder",
         "$path": "Packages",
@@ -11,9 +16,16 @@
         "datakeep": {
           "$path": "src"
         }
-      },
+      }
       
-      "$path": "testing/server"
+    },
+
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "Test": {
+        "$className": "Folder",
+        "$path": "DevPackages"
+      }
     }
   }
 }

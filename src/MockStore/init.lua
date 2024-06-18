@@ -62,10 +62,13 @@ local function createNewVersion(self, key, data: any)
 	local versionData = {
 		Version = #self._dataVersions[key] + 1,
 		CreatedTime = os.time(),
+		UpdatedTime = os.time(),
 		Deleted = false,
 	}
 
 	table.insert(self._dataVersions[key], { versionData, deepCopy(data) })
+
+	return versionData
 end
 
 --> Public Methods
