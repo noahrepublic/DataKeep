@@ -36,22 +36,20 @@ function didyield(f, ...)
 	return not finished, data
 end
 
-local function deepCopy(t: any)
-	local copy = {}
+local function deepCopy<T>(t: T): T
+	local function copyDeep(tbl: { any })
+		local tCopy = table.clone(tbl)
 
-	if not t then
-		return copy
-	end
-
-	for key, value in pairs(t) do
-		if type(value) == "table" then
-			copy[key] = deepCopy(value)
-		else
-			copy[key] = value
+		for k, v in tCopy do
+			if type(v) == "table" then
+				tCopy[k] = copyDeep(v)
+			end
 		end
+
+		return tCopy
 	end
 
-	return copy
+	return copyDeep(t :: any) :: T
 end
 
 local function createNewVersion(self, key, data: any)
@@ -89,6 +87,10 @@ function MockStore:UpdateAsync(key: string, callback: (any) -> any)
 
 	if yielded then
 		error("UpdateAsync yielded!")
+		return value
+	end
+
+	if not newValue then
 		return value
 	end
 
