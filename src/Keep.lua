@@ -782,7 +782,7 @@ function Keep:Save(): Promise
 		local isOverwritten = false
 		local isReleasingSession = false
 
-		local dataKeyInfo: DataStoreKeyInfo = self._store:UpdateAsync(self._key, function(newestData)
+		local _, dataKeyInfo: DataStoreKeyInfo = self._store:UpdateAsync(self._key, function(newestData)
 			isOverwritten = newestData and newestData.MetaData and newestData.MetaData.IsOverwriting == true
 			isReleasingSession = newestData and newestData.MetaData and newestData.MetaData.ReleaseSessionOnOverwrite == true
 
@@ -840,7 +840,7 @@ function Keep:Overwrite(releaseExistingSession: boolean?): Promise
 		self._overwriting = true
 		self._releaseSessionOnOverwrite = releaseExistingSession
 
-		local dataKeyInfo: DataStoreKeyInfo = self._store:UpdateAsync(self._key, function(newestData)
+		local _, dataKeyInfo: DataStoreKeyInfo = self._store:UpdateAsync(self._key, function(newestData)
 			return self:_save(newestData, false)
 		end)
 
@@ -890,7 +890,7 @@ function Keep:Release(): Promise
 	end
 
 	local updater = Promise.new(function(resolve)
-		local dataKeyInfo: DataStoreKeyInfo = self._store:UpdateAsync(self._key, function(newestData: KeepStruct)
+		local _, dataKeyInfo: DataStoreKeyInfo = self._store:UpdateAsync(self._key, function(newestData: KeepStruct)
 			return self:_save(newestData, true)
 		end)
 

@@ -329,18 +329,18 @@ local mockStoreCheck = Promise.new(function(resolve)
 	end
 
 	local success, message = pcall(function()
-		DataStoreService:GetDataStore("__LiveCheck"):SetAsync("__LiveCheck", os.time())
+		return DataStoreService:GetDataStore("__LiveCheck"):SetAsync("__LiveCheck", os.time())
 	end)
 
-	if message then
-		if string.find(message, "ConnectFail", 1, true) then
-			warn("[DataKeep] No internet connection, using mock store")
-		end
-
-		if string.find(message, "403", 1, true) or string.find(message, "must publish", 1, true) then
-			print("[DataKeep] Datastores are not available, using mock store")
-		else
-			print("[DataKeep] Datastores are available, using real store")
+	if success then
+		print("[DataKeep] Datastores are available, using real store")
+	else
+		if message then
+			if string.find(message, "ConnectFail", 1, true) then
+				warn("[DataKeep] No internet connection, using mock store")
+			else
+				print("[DataKeep] Datastores are not available, using mock store")
+			end
 		end
 	end
 

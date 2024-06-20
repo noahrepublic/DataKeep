@@ -94,7 +94,8 @@ function MockStore:UpdateAsync(key: string, callback: (any) -> any)
 		return value
 	end
 
-	return self:SetAsync(key, newValue)
+	local newVersion = self:SetAsync(key, newValue)
+	return self._data[key], newVersion
 end
 
 function MockStore:ListVersionsAsync(key: string, sortDirection: Enum.SortDirection, minDate: number, maxDate: number, limit: number)
