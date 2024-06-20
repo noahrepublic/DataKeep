@@ -4,7 +4,7 @@ sidebar_position: 3
 
 # Basic Usage
 
-DataKeep will lift everything, the only thing you need to do is load data. DataKeep does not use getter/setter functions allowing for customizable experience like, make your own wrapper.
+DataKeep will lift everything, the only thing you need to do is load data. DataKeep does not use getter / setter functions allowing for customizable experience like, make your own wrapper.
 
 The following is a very basic Keep loader implementation.
 
@@ -24,13 +24,13 @@ local keepStore = DataKeep.GetStore("PlayerData", defaultData) -- generally you 
 local function onPlayerJoin(player)
     keepStore:LoadKeep("Player_" .. player.UserId):andThen(function(keep)
         if keep == nil then
-            player:Kick("Data locked") -- will never happen, when no releaseHandler is passed it default steals from the locked session
+            player:Kick("Session locked")
         end
 
         keep:Reconcile()
         keep:AddUserId(player.UserId) -- help with GDPR requests
 
-        keep.Releasing:Connect(function(state) -- don't have to clean up, it cleans up internally.
+        keep.Releasing:Connect(function(state) -- don't have to clean up, it cleans up internally
             print(`{player.Name}'s Keep is releasing!`)
 
             state:andThen(function()
@@ -47,9 +47,9 @@ local function onPlayerJoin(player)
         end
 
         print(`Loaded {player.Name}'s Keep!`)
-        
+
         loadedKeeps[player] = keep
-        
+
         local leaderstats = Instance.new("Folder")
         leaderstats.Name = "leaderstats"
 
@@ -71,7 +71,7 @@ end)
 
 keepStore:andThen(function(store)
     keepStore = store
-    
+
     for _, player in Players:GetPlayers() do
         task.spawn(onPlayerJoin, player)
     end
@@ -84,20 +84,16 @@ end)
 
 For more experienced developers I personally opt in to create a service that returns a "Player" OOP class that holds it own cleaner and a Keep inside.
 
-Note: "attributes" and "leaderstats" are folders in the script parent which contains numbervalues/stringvalues/boolvalues
+Note: "attributes" and "leaderstats" are folders in the script parent which contains numberValues / stringValues / boolValues
 
 ```lua
-
 --> Services
 
 local Players = game:GetService("Players")
-local ServerStorage = game:GetService("ServerStorage")
 
 --> Includes
 
-local ServerPackages = ServerStorage.Packages
-
-local DataKeep = require(ServerPackages.DataKeep)
+local DataKeep = require(path_to_datakeep)
 
 local DataTemplate = require(script.Parent.DataTemplate)
 
@@ -145,9 +141,10 @@ local function initKeep(playerClass, keep)
 		playerClass._keys[value.Name] = value
 	end
 
-    -- "attributes" and "leaderstats" are folders in the script parent which contains numbervalues/stringvalues/boolvalues
+    -- "attributes" and "leaderstats" are folders in the script parent
+	-- which contains numberValues / stringValues / boolValues
 
-	for _, attribute in ipairs(script.Parent.attributes:GetChildren()) do 
+	for _, attribute in ipairs(script.Parent.attributes:GetChildren()) do
 		bindData(attribute, attributes)
 	end
 
@@ -165,13 +162,13 @@ local function loadKeep(playerClass)
 
 	keep:andThen(function(dataKeep)
 		if dataKeep == nil then
-			player:Kick("Data locked")
+			player:Kick("Session locked")
 		end
-		-- add userids
 
 		dataKeep:Reconcile()
+		dataKeep:AddUserId(player.UserId) -- help with GDPR requests
 
-		dataKeep.Releasing:Connect(function(releaseState) -- no clean needed-- datakeep releases internals
+		dataKeep.Releasing:Connect(function(releaseState) -- don't have to clean up, it cleans up internally
 			releaseState
 				:andThen(function()
 					player:Kick("Session released")
@@ -198,11 +195,9 @@ function Player.new(player)
 	local self = setmetatable({
 		Player = player,
 
-		Maid = Maid.new(),
-
 		Keep = {},
 
-		_keys = {}, -- stored attribute/leaderstats keys for changing to automatically change the datakeep. **MUST USE THESE FOR ANY ATTRIBUTES/LEADERSTATS BINDED**
+		_keys = {}, -- stored attribute / leaderstats keys for changing to automatically change the datakeep. **MUST USE THESE FOR ANY ATTRIBUTES / LEADERSTATS BINDED**
 	}, Player)
 
 	self.Keep = loadKeep(self)
@@ -210,21 +205,23 @@ function Player.new(player)
 	return self
 end
 
+--> Public Methods
+
 function Player:GetKey(keyName: string)
 	return self._keys[keyName]
 end
 
 function Player:GetData(key: string)
 	local keep = self.Keep:expect()
-
 	return keep.Data[key]
 end
 
 function Player:Destroy()
 	-- do cleaning, this should generally include releasing the keep
-end
 
---> Public Methods
+	local keep = self.Keep:expect()
+	keep:Release()
+end
 
 return Player
 ```
