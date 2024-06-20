@@ -49,8 +49,6 @@ local Store = {
 }
 Store.__index = Store
 
-Keep._assumeDeadLock = Store._assumeDeadLock
-
 local GlobalUpdates = {}
 GlobalUpdates.__index = GlobalUpdates
 
@@ -256,13 +254,6 @@ local function deepCopy<T>(t: T): T
 end
 
 local function canLoad(keep: Keep.KeepStruct)
-	--[[
-		return not keep.MetaData
-		or not keep.MetaData.ActiveSession -- no active session, so we can load (most likely a new Keep)
-		or keep.MetaData.ActiveSession.PlaceID == PlaceID and keep.MetaData.ActiveSession.JobID == JobID
-		or os.time() - keep.MetaData.LastUpdate < Store._assumeDeadLock
-	]]
-
 	local metaData = keep.MetaData
 
 	if not metaData then
@@ -275,7 +266,7 @@ local function canLoad(keep: Keep.KeepStruct)
 		return true
 	end
 
-	if Keep.IsThisSession(activeSession) then
+	if Keep._isThisSession(activeSession) then
 		return true
 	end
 
@@ -514,12 +505,12 @@ function Store:LoadKeep(key: string, unreleasedHandler: unreleasedHandler?): Pro
 			if Keeps[id] then
 				releaseKeepInternally(Keeps[id]) -- additional cleanup to prevent memory leaks
 			end
-
-			-- keep released so we can load new keep
 		elseif self._cachedKeepPromises[id] and self._cachedKeepPromises[id].Status ~= Promise.Status.Rejected and self._cachedKeepPromises[id].Status ~= Promise.Status.Cancelled then
 			-- already loading keep
 			return self._cachedKeepPromises[id]
 		end
+
+		-- keep released so we can load new keep
 
 		return nil
 	end):andThen(function(cachedKeep)
@@ -534,7 +525,9 @@ function Store:LoadKeep(key: string, unreleasedHandler: unreleasedHandler?): Pro
 			local forceLoad = nil
 			local shouldStealSession = false
 
-			if (not canLoad(keep) or isInDeadLock) and keep.MetaData.ActiveSession then
+			if isInDeadLock then
+				shouldStealSession = true
+			elseif not canLoad(keep) and keep.MetaData.ActiveSession then
 				local loadMethod = unreleasedHandler(keep.MetaData.ActiveSession)
 
 				if not Store.LoadMethods[loadMethod] then
@@ -581,7 +574,7 @@ function Store:LoadKeep(key: string, unreleasedHandler: unreleasedHandler?): Pro
 
 			Keeps[keepClass:Identify()] = keepClass
 
-			if keepClass._forceLoadRequested and not Keep.IsThisSession(keepClass.MetaData.ActiveSession) then
+			if keepClass._forceLoadRequested and not Keep._isThisSession(keepClass.MetaData.ActiveSession) then
 				-- wait for previous :Release() to finish (teleporting between places, etc.)
 
 				local attemptsLeft = Store._forceLoadMaxAttempts
@@ -593,13 +586,13 @@ function Store:LoadKeep(key: string, unreleasedHandler: unreleasedHandler?): Pro
 
 					keepClass:Save():await()
 
-					if keepClass.MetaData.ForceLoad and not Keep.IsThisSession(keepClass.MetaData.ForceLoad) then
+					if keepClass._releasing or keepClass._released then
 						resolve(nil) -- ForceLoad interrupted by another server
 						return
 					end
-				until Keep.IsThisSession(keepClass.MetaData.ActiveSession) or attemptsLeft == 0
+				until Keep._isThisSession(keepClass.MetaData.ActiveSession) or attemptsLeft == 0
 
-				if keepClass.MetaData.ActiveSession and not Keep.IsThisSession(keepClass.MetaData.ActiveSession) and attemptsLeft == 0 then
+				if keepClass.MetaData.ActiveSession and not Keep._isThisSession(keepClass.MetaData.ActiveSession) and attemptsLeft == 0 then
 					keepClass._stealSession = true
 
 					keepClass:Save():await()
@@ -642,6 +635,10 @@ end
 		print(`Viewing {viewOnlyKeep:Identify()}!`)
 	end)
 	```
+
+	:::warning
+	[Keep:Destroy()](Keep#Destroy) must be called when view-only Keep is not needed anymore
+	:::warning
 ]=]
 
 function Store:ViewKeep(key: string, version: string?): Promise
@@ -1107,7 +1104,7 @@ end
 
 local function runKeepCleanup(deltaTime: number)
 	-- view-only Keeps are not saved in the Keeps table!
-	-- dev needs to clenup them manually by calling keep:Destroy()
+	-- dev needs to cleanup them manually by calling keep:Destroy()
 
 	internalKeepCleanupCycle += deltaTime
 

@@ -10,7 +10,6 @@
 ]=]
 
 local Keep = {
-	_assumeDeadLock = 0, -- it will be set from KeepStore
 	_activeSaveJobs = 0, -- number of active saving jobs
 }
 Keep.__index = Keep
@@ -303,42 +302,18 @@ export type Keep = typeof(Keep.new({
 	UserIds = DefaultKeep.UserIds,
 }, {})) -- the actual Keep class type
 
-function Keep.IsThisSession(session: Session)
+--> Private Functions
+
+function Keep._isThisSession(session: Session)
 	return session.PlaceID == game.PlaceId and session.JobID == game.JobId
 end
 
-function Keep.isSessionLocked(session: Session?)
+function Keep._isSessionLocked(session: Session?)
 	if session == nil then
 		return false
 	end
 
-	return Keep.IsThisSession(session) == false
-end
-
---> Private Functions
-
-local function isForceLoadingKeepRemotely(metaData: MetaData) -- I know it's a weird name
-	if metaData.ForceLoad == nil then
-		return false
-	end
-
-	if metaData.ForceLoad.PlaceID == game.PlaceId and metaData.ForceLoad.JobID == game.JobId then
-		return false
-	end
-
-	return true
-end
-
-local function isKeepLocked(metaData: MetaData)
-	if metaData.ActiveSession == nil then
-		return false
-	end
-
-	if metaData.ActiveSession.PlaceID ~= game.PlaceId or metaData.ActiveSession.JobID ~= game.JobId then
-		return true
-	end
-
-	return false
+	return Keep._isThisSession(session) == false
 end
 
 local function isDataEmpty(newestData: KeepStruct)
@@ -470,12 +445,13 @@ local function transformUpdate(keep: Keep, newestData: KeepStruct, isReleasing: 
 			-- save data only if this server owns session lock
 			-- if keep._overwriting is true, data will not be saved to prevent servers overwriting each other
 
-			local isKeepAvailable = if not Keep.isSessionLocked(newestData.MetaData.ActiveSession) and not newestData.MetaData.IsOverwriting then true else false
+			local keepStore = keep._keep_store
+			local isKeepAvailable = if not Keep._isSessionLocked(newestData.MetaData.ActiveSession) and not newestData.MetaData.IsOverwriting then true else false
 
-			if (isKeepAvailable or keep._overwriting) and keep._keep_store then
-				local keepStore = keep._keep_store
+			if (isKeepAvailable or keep._overwriting) and keepStore then
+				if newestData.MetaData.ForceLoad and Keep._isThisSession(newestData.MetaData.ForceLoad) then
+					-- update keep on this server when ForceLoad is successful
 
-				if newestData.MetaData.ForceLoad and Keep.IsThisSession(newestData.MetaData.ForceLoad) then -- update keep on this server when ForceLoad is successful
 					keep.Data = newestData.Data
 					keep.MetaData = newestData.MetaData
 					keep.GlobalUpdates = newestData.GlobalUpdates
@@ -487,11 +463,11 @@ local function transformUpdate(keep: Keep, newestData: KeepStruct, isReleasing: 
 						newestData.Data = keep.Data
 						newestData.UserIds = keep.UserIds
 					else
-						if not keep._keep_store then
-							return newestData
+						if keepStore then
+							keepStore._processError(err, 0)
 						end
 
-						keep._keep_store._processError(err, 0)
+						return newestData
 					end
 				end
 			end
@@ -537,7 +513,7 @@ local function transformUpdate(keep: Keep, newestData: KeepStruct, isReleasing: 
 		keep.MetaData.ActiveSession = { PlaceID = 0, JobID = "" } -- set session on this server to not active just in case?
 
 		newestData.MetaData.LoadCount = keep.MetaData.LoadCount
-	elseif not Keep.isSessionLocked(newestData.MetaData.ActiveSession) then -- keep is available for this server
+	elseif not Keep._isSessionLocked(newestData.MetaData.ActiveSession) then -- keep is available for this server
 		local activeSession = DefaultMetaData.ActiveSession -- give the session to the new keep
 		local isOverwriting = newestData.MetaData.IsOverwriting
 		local shouldReleaseSessionOnOverwrite = newestData.MetaData.ReleaseSessionOnOverwrite
@@ -597,7 +573,7 @@ function Keep:_release(updater: Promise): Promise
 	end
 
 	if self._released then
-		return
+		return Promise.resolve(self)
 	end
 
 	Keep._activeSaveJobs += 1
@@ -607,8 +583,6 @@ function Keep:_release(updater: Promise): Promise
 
 	updater
 		:andThen(function()
-			self.OnGlobalUpdate:Destroy()
-
 			self._keep_store._cachedKeepPromises[self:Identify()] = nil
 			self._released = true
 
@@ -637,27 +611,17 @@ function Keep:_save(newestData: KeepStruct, isReleasing: boolean): Promise -- us
 
 	if self._stealSession then
 		newestData.MetaData.ActiveSession = DefaultMetaData.ActiveSession
-	elseif not self:IsActive() and not self._overwriting then -- session released or locked on different server. It will not save data until session lock is released on different server. Used with "ForceLoad"
-		-- look for dead session and clear it, allowing "ForceLoad" to claim this session (ForceLoad started before session assumed as dead lock)
-		local forceLoad = newestData and newestData.MetaData and newestData.MetaData.ForceLoad
-		local isInDeadLock = os.time() - newestData.MetaData.LastUpdate > Keep._assumeDeadLock
+	elseif not self:IsActive() and not self._overwriting and not self.MetaData.ForceLoad then -- session locked on a different server
+		self._keep_store._processError(`{self:Identify()}'s session is no longer owned by this server and it will be marked for release.`, 0)
 
-		if forceLoad and Keep.IsThisSession(forceLoad) and isInDeadLock then
-			-- claim session
-			newestData.MetaData.ActiveSession = DefaultMetaData.ActiveSession
-		elseif not self.MetaData.ForceLoad then
-			self._keep_store._processError(`{self:Identify()}'s session is no longer owned by this server and it will be marked for release.`, 2)
-
-			self:_release(Promise.resolve(self))
-
-			return nil -- cancel :UpdateAsync() operation
-		end
+		self:_release(Promise.resolve(self))
+		return nil -- cancel :UpdateAsync() operation
 	end
 
 	local remoteForceLoadRequest = false
 
-	if newestData and newestData.MetaData then -- release session on this server on ForceLoad request
-		if isForceLoadingKeepRemotely(newestData.MetaData) then
+	if newestData and newestData.MetaData and newestData.MetaData.ForceLoad then -- release session on this server on ForceLoad request
+		if not Keep._isThisSession(newestData.MetaData.ForceLoad) then
 			remoteForceLoadRequest = true
 		end
 	end
@@ -929,6 +893,7 @@ function Keep:Destroy(): ()
 	self.Releasing:Destroy()
 	self.Saving:Destroy()
 	self.Overwritten:Destroy()
+	self.OnGlobalUpdate:Destroy()
 end
 
 --[=[
@@ -941,7 +906,7 @@ end
 ]=]
 
 function Keep:IsActive(): boolean
-	return not isKeepLocked(self.MetaData)
+	return not Keep._isSessionLocked(self.MetaData.ActiveSession)
 end
 
 --[=[
