@@ -8,9 +8,8 @@ local RunService = game:GetService("RunService")
 local Promise = require(script.Parent.Promise)
 local Signal = require(script.Parent.Signal)
 
-local MockStore = require(script.MockStore)
-
 local Keep = require(script.Keep)
+local MockStore = require(script.MockStore)
 
 --> Structure
 
@@ -33,7 +32,7 @@ local Store = {
 	_internalKeepCleanupInterval = 2, -- used to clean up released keeps
 	_assumeDeadLock = 10 * 60, -- how long without updates to assume the session is dead
 	-- according to clv2, os.time is synced roblox responded in a bug report. I don't see why it would in the first place anyways
-	_forceLoadMaxAttempts = 5, -- attempts taken before ForceLoad request steals the active session for a keep
+	_forceLoadMaxAttempts = 6, -- attempts taken before ForceLoad request steals the active session for a keep
 
 	ServiceDone = false, -- is shutting down?
 
@@ -189,7 +188,7 @@ export type GlobalUpdates = typeof(setmetatable({}, GlobalUpdates))
 
 	### "ForceLoad" (default)
 
-	Attempts to load the Keep. If the Keep is session-locked, it will either be released for that remote server or "stolen" if it's not responding.
+	Attempts to load the Keep. If the Keep is session-locked, it will either be released for that remote server or "stolen" if it's not responding (possibly in dead lock).
 
 
 	### "Steal"
@@ -452,7 +451,7 @@ end
 	@param key string
 	@param unreleasedHandler unreleasedHandler?
 
-	@return Promise<Keep>
+	@return Promise<Keep?>
 
 	Loads a Keep from the store and returns a Keep object
 
@@ -460,6 +459,11 @@ end
 	keepStore:LoadKeep(`Player_{player.UserId}`, function()
 		return keepStore.LoadMethods.ForceLoad
 	end)):andThen(function(keep)
+		if not keep then
+			player:Kick("Session lock interrupted")
+			return
+		end
+
 		print(`Loaded {keep:Identify()}!`)
 	end)
 	```
@@ -490,7 +494,7 @@ function Store:LoadKeep(key: string, unreleasedHandler: unreleasedHandler?): Pro
 
 	local promise = Promise.try(function()
 		if Keeps[id] then
-			if not Keeps[id]._releasing then
+			if not Keeps[id]._releasing and not Keeps[id]._released then
 				return Keeps[id]
 			end
 
@@ -544,6 +548,9 @@ function Store:LoadKeep(key: string, unreleasedHandler: unreleasedHandler?): Pro
 				elseif loadMethod == Store.LoadMethods.ForceLoad then
 					forceLoad = { PlaceID = PlaceID, JobID = JobID }
 				end
+			elseif keep.MetaData and keep.MetaData.ForceLoad then
+				-- in case of .ForceLoad left in MetaData and no .ActiveSession
+				forceLoad = { PlaceID = PlaceID, JobID = JobID }
 			end
 
 			if self._preLoad and keep.Data and len(keep.Data) > 0 then
@@ -574,13 +581,13 @@ function Store:LoadKeep(key: string, unreleasedHandler: unreleasedHandler?): Pro
 
 			Keeps[keepClass:Identify()] = keepClass
 
-			if keepClass._forceLoadRequested and not Keep._isThisSession(keepClass.MetaData.ActiveSession) then
+			if keepClass._forceLoadRequested and (not keepClass.MetaData.ActiveSession or not Keep._isThisSession(keepClass.MetaData.ActiveSession)) then
 				-- wait for previous :Release() to finish (teleporting between places, etc.)
 
 				local attemptsLeft = Store._forceLoadMaxAttempts
 
 				repeat
-					task.wait(2 * (Store._forceLoadMaxAttempts - attemptsLeft))
+					task.wait(2 ^ (Store._forceLoadMaxAttempts - attemptsLeft)) -- don't ask why, it just works :)
 
 					attemptsLeft -= 1
 
@@ -594,7 +601,6 @@ function Store:LoadKeep(key: string, unreleasedHandler: unreleasedHandler?): Pro
 
 				if keepClass.MetaData.ActiveSession and not Keep._isThisSession(keepClass.MetaData.ActiveSession) and attemptsLeft == 0 then
 					keepClass._stealSession = true
-
 					keepClass:Save():await()
 				end
 			else

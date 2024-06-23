@@ -1,5 +1,10 @@
 --!strict
 
+--> Includes
+
+local Promise = require(script.Parent.Parent.Promise)
+local Signal = require(script.Parent.Parent.Signal)
+
 --> Structure
 
 --[=[
@@ -13,11 +18,6 @@ local Keep = {
 	_activeSaveJobs = 0, -- number of active saving jobs
 }
 Keep.__index = Keep
-
---> Includes
-
-local Promise = require(script.Parent.Parent.Promise)
-local Signal = require(script.Parent.Parent.Signal)
 
 --> Types
 
@@ -609,9 +609,15 @@ function Keep:_save(newestData: KeepStruct, isReleasing: boolean): Promise -- us
 		return nil -- cancel :UpdateAsync() operation
 	end
 
+	if Keep._isSessionLocked(newestData.MetaData.ActiveSession) and not self._overwriting and not self.MetaData.ForceLoad then
+		-- update session on this server on remote ForceLoad request
+		self.MetaData.ActiveSession = newestData.MetaData.ActiveSession
+	end
+
 	if self._stealSession then
 		newestData.MetaData.ActiveSession = DefaultMetaData.ActiveSession
-	elseif not self:IsActive() and not self._overwriting and not self.MetaData.ForceLoad then -- session locked on a different server
+	elseif not self:IsActive() and not self._overwriting and not self.MetaData.ForceLoad then
+		-- session locked on a different server, data will not be saved
 		self._keep_store._processError(`{self:Identify()}'s session is no longer owned by this server and it will be marked for release.`, 0)
 
 		self:_release(Promise.resolve(self))
@@ -620,9 +626,17 @@ function Keep:_save(newestData: KeepStruct, isReleasing: boolean): Promise -- us
 
 	local remoteForceLoadRequest = false
 
-	if newestData and newestData.MetaData and newestData.MetaData.ForceLoad then -- release session on this server on ForceLoad request
+	if not self._forceLoadRequested and newestData and newestData.MetaData and newestData.MetaData.ForceLoad then
+		-- release session on this server on remote ForceLoad request
+
 		if not Keep._isThisSession(newestData.MetaData.ForceLoad) then
-			remoteForceLoadRequest = true
+			if self:IsActive() then
+				remoteForceLoadRequest = true
+			else
+				-- ForceLoad interrupted by another server
+				self:_release(Promise.resolve(self))
+				return nil -- cancel :UpdateAsync() operation
+			end
 		end
 	end
 

@@ -24,7 +24,7 @@ local keepStore = DataKeep.GetStore("PlayerData", defaultData) -- generally you 
 local function onPlayerJoin(player)
     keepStore:LoadKeep("Player_" .. player.UserId):andThen(function(keep)
         if keep == nil then
-            player:Kick("Session locked")
+            player:Kick("Session lock interrupted")
         end
 
         keep:Reconcile()
@@ -162,7 +162,7 @@ local function loadKeep(playerClass)
 
 	keep:andThen(function(dataKeep)
 		if dataKeep == nil then
-			player:Kick("Session locked")
+			player:Kick("Session lock interrupted")
 		end
 
 		dataKeep:Reconcile()
