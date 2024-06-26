@@ -609,7 +609,7 @@ function Keep:_save(newestData: KeepStruct, isReleasing: boolean): Promise -- us
 		return nil -- cancel :UpdateAsync() operation
 	end
 
-	if Keep._isSessionLocked(newestData.MetaData.ActiveSession) and not self._overwriting and not self.MetaData.ForceLoad then
+	if newestData and newestData.MetaData and Keep._isSessionLocked(newestData.MetaData.ActiveSession) and not self._overwriting and not self.MetaData.ForceLoad then
 		-- update session on this server on remote ForceLoad request
 		self.MetaData.ActiveSession = newestData.MetaData.ActiveSession
 	end
