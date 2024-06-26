@@ -48,7 +48,8 @@ return function()
 
 	describe("testKeep", function()
 		it("should own session lock", function()
-			expect(testKeep.MetaData.ActiveSession == { PlaceID = game.PlaceId, JobID = game.JobId })
+			local thisSession = { PlaceID = game.PlaceId, JobID = game.JobId }
+			expect(testKeep.MetaData.ActiveSession == thisSession)
 		end)
 
 		it("should add userids", function()
@@ -118,7 +119,7 @@ return function()
 
 		it("should remove an active update", function()
 			testStore:PostGlobalUpdate("Data", function(globalUpdates)
-				for i, globalUpdate in globalUpdates:GetActiveUpdates() do
+				for _, globalUpdate in globalUpdates:GetActiveUpdates() do
 					globalUpdates:RemoveActiveUpdate(globalUpdate.ID)
 
 					expect(#globalUpdates:GetActiveUpdates() == 0).to.be.ok()
