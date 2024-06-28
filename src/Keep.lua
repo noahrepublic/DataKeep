@@ -16,6 +16,8 @@ local Signal = require(script.Parent.Parent.Signal)
 
 local Keep = {
 	_activeSaveJobs = 0, -- number of active saving jobs
+
+	_releaseRetryMaxAttempts = 0, -- it will be set from the main file
 }
 Keep.__index = Keep
 
@@ -582,19 +584,18 @@ function Keep:_release(updater: Promise): Promise
 	self.Releasing:Fire(updater) -- unlocked, but not removed internally
 
 	updater
-		:andThen(function()
+		:catch(function(err)
+			local keepStore = self._keep_store
+			keepStore._processError("Failed to release keep: " .. err, 2)
+		end)
+		:finally(function()
+			-- mark the keep as released
+
 			self._keep_store._cachedKeepPromises[self:Identify()] = nil
 			self._released = true
 
 			releaseCache[self:Identify()] = nil
-		end)
-		:catch(function(err)
-			local keepStore = self._keep_store
-			keepStore._processError("Failed to release keep: " .. err, 2)
 
-			error(`[DataKeep] {err}`) -- don't want to silence the error
-		end)
-		:finally(function()
 			Keep._activeSaveJobs -= 1
 		end)
 
@@ -756,7 +757,7 @@ end
 function Keep:Save(): Promise
 	Keep._activeSaveJobs += 1
 
-	local savingState = Promise.new(function(resolve)
+	local savingState = Promise.try(function()
 		local isOverwritten = false
 		local isReleasingSession = false
 
@@ -781,7 +782,7 @@ function Keep:Save(): Promise
 			self.Overwritten:Fire(isReleasingSession)
 		end
 
-		resolve(self)
+		return self
 	end)
 		:catch(function(err)
 			local keepStore = self._keep_store
@@ -814,7 +815,7 @@ function Keep:Overwrite(releaseExistingSession: boolean?): Promise
 
 	Keep._activeSaveJobs += 1
 
-	local savingState = Promise.new(function(resolve)
+	local savingState = Promise.try(function()
 		self._overwriting = true
 		self._releaseSessionOnOverwrite = releaseExistingSession
 
@@ -830,7 +831,7 @@ function Keep:Overwrite(releaseExistingSession: boolean?): Promise
 			Version = dataKeyInfo.Version,
 		}
 
-		resolve(self)
+		return self
 	end)
 		:catch(function(err)
 			local keepStore = self._keep_store
@@ -867,23 +868,25 @@ function Keep:Release(): Promise
 		return Promise.resolve(self)
 	end
 
-	local updater = Promise.new(function(resolve)
-		local _, dataKeyInfo: DataStoreKeyInfo = self._store:UpdateAsync(self._key, function(newestData: KeepStruct)
-			return self:_save(newestData, true)
+	local updater = Promise.retry(function()
+		return Promise.try(function()
+			local _, dataKeyInfo: DataStoreKeyInfo = self._store:UpdateAsync(self._key, function(newestData: KeepStruct)
+				return self:_save(newestData, true)
+			end)
+
+			self._last_save = os.clock() -- reset the auto save timer
+
+			if dataKeyInfo then
+				self._keyInfo = { -- have to map the tuple to a table for type checking (even though tuples are arrays in lua)
+					CreatedTime = dataKeyInfo.CreatedTime,
+					UpdatedTime = dataKeyInfo.UpdatedTime,
+					Version = dataKeyInfo.Version,
+				}
+			end
+
+			return self
 		end)
-
-		self._last_save = os.clock() -- reset the auto save timer
-
-		if dataKeyInfo then
-			self._keyInfo = { -- have to map the tuple to a table for type checking (even though tuples are arrays in lua)
-				CreatedTime = dataKeyInfo.CreatedTime,
-				UpdatedTime = dataKeyInfo.UpdatedTime,
-				Version = dataKeyInfo.Version,
-			}
-		end
-
-		resolve(self)
-	end)
+	end, Keep._releaseRetryMaxAttempts)
 
 	self.Saving:Fire(updater)
 

@@ -33,6 +33,7 @@ local Store = {
 	_assumeDeadLock = 10 * 60, -- how long without updates to assume the session is dead
 	-- according to clv2, os.time is synced roblox responded in a bug report. I don't see why it would in the first place anyways
 	_forceLoadMaxAttempts = 6, -- attempts taken before ForceLoad request steals the active session for a keep
+	_releaseRetryMaxAttempts = 5, -- retry attempts taken before keep:Release() will be marked as failed
 
 	ServiceDone = false, -- is shutting down?
 
@@ -47,6 +48,8 @@ local Store = {
 	_storeQueue = {}, -- list of stores that are currently loaded
 }
 Store.__index = Store
+
+Keep._releaseRetryMaxAttempts = Store._releaseRetryMaxAttempts
 
 local GlobalUpdates = {}
 GlobalUpdates.__index = GlobalUpdates
@@ -216,7 +219,7 @@ export type unreleasedHandler = (Keep.Session) -> string -- use a function for a
 
 --> Private Variables
 
-local Keeps: { [string]: Keep.Keep } = {} -- queues to save
+local Keeps: { [string]: Keep } = {} -- queues to save
 
 local JobID = game.JobId
 local PlaceID = game.PlaceId
@@ -293,7 +296,7 @@ local function createMockStore(storeInfo: StoreInfo, dataTemplate) -- complete m
 	}, Store)
 end
 
-local function releaseKeepInternally(keep: Keep.Keep)
+local function releaseKeepInternally(keep: Keep)
 	Keeps[keep:Identify()] = nil
 
 	local keepStore = keep._keep_store
@@ -500,7 +503,7 @@ function Store:LoadKeep(key: string, unreleasedHandler: unreleasedHandler?): Pro
 
 			-- wait for keep to be released on the same server: https://github.com/noahrepublic/DataKeep/issues/21
 
-			local timer = Store._assumeDeadLock -- in normal condition there is no way to hit that
+			local timer = Store._assumeDeadLock -- in normal conditions there is no way to hit that
 
 			repeat
 				timer -= task.wait()
@@ -1061,9 +1064,10 @@ game:BindToClose(function()
 	local saveSize = len(Keeps)
 
 	if saveSize > 0 then
-		for _, keep in Keeps do
+		Promise.each(Keeps, function(keep: Keep)
+			-- we don't want to return new promise
 			keep:Release()
-		end
+		end)
 	end
 
 	-- delay server closing process until all save jobs are completed
@@ -1096,6 +1100,9 @@ local function runAutoSave(deltaTime: number)
 	local keeps = {}
 
 	for _, keep in Keeps do
+		if keep._releasing or keep._released then
+			continue
+		end
 		if clock - keep._last_save < Store._saveInterval then
 			continue
 		end
@@ -1103,8 +1110,9 @@ local function runAutoSave(deltaTime: number)
 		table.insert(keeps, keep)
 	end
 
-	Promise.each(keeps, function(keep: Keep.Keep)
-		return keep:Save():timeout(Store._saveInterval)
+	Promise.each(keeps, function(keep: Keep)
+		-- we don't want to return new promise
+		keep:Save():timeout(Store._saveInterval)
 	end)
 end
 
