@@ -29,10 +29,12 @@ export type MockStore = typeof(MockStore.new()) & {
 function didyield(f, ...)
 	local finished = false
 	local data
+
 	coroutine.wrap(function(...)
 		data = f(...)
 		finished = true
 	end)(...)
+
 	return not finished, data
 end
 
@@ -127,7 +129,7 @@ function MockStore:ListVersionsAsync(key: string, sortDirection: Enum.SortDirect
 	return MockStorePages(filteredVersions, sortDirection == Enum.SortDirection.Ascending, limit)
 end
 
-function MockStore:GetVersionAsync(key, version)
+function MockStore:GetVersionAsync(key: string, version)
 	local versions = self._dataVersions[key]
 
 	if not versions then

@@ -491,10 +491,6 @@ function Store:LoadKeep(key: string, unreleasedHandler: unreleasedHandler?): Pro
 
 	local id = `{self._store_info.Name}/{self._store_info.Scope or ""}{self._store_info.Scope and "/" or ""}{key}`
 
-	if self._isMockEnabled then
-		print(`[DataKeep] Using mock store on {id}`)
-	end
-
 	local promise = Promise.try(function()
 		if Keeps[id] then
 			if not Keeps[id]._releasing and not Keeps[id]._released then
@@ -507,14 +503,18 @@ function Store:LoadKeep(key: string, unreleasedHandler: unreleasedHandler?): Pro
 
 			repeat
 				timer -= task.wait()
-			until (Keeps[id]._released and not Keeps[id]) or timer < 0
+			until Keeps[id] == nil or timer < 0
 
 			if Keeps[id] then
 				releaseKeepInternally(Keeps[id]) -- additional cleanup to prevent memory leaks
 			end
-		elseif self._cachedKeepPromises[id] and self._cachedKeepPromises[id].Status ~= Promise.Status.Rejected and self._cachedKeepPromises[id].Status ~= Promise.Status.Cancelled then
-			-- already loading keep
-			return self._cachedKeepPromises[id]
+		elseif self._cachedKeepPromises[id] then
+			local promiseStatus = self._cachedKeepPromises[id]:getStatus()
+
+			if promiseStatus ~= Promise.Status.Rejected and promiseStatus ~= Promise.Status.Cancelled then
+				-- already loading keep
+				return self._cachedKeepPromises[id]
+			end
 		end
 
 		-- keep released so we can load new keep
@@ -523,6 +523,10 @@ function Store:LoadKeep(key: string, unreleasedHandler: unreleasedHandler?): Pro
 	end):andThen(function(cachedKeep)
 		if cachedKeep then
 			return cachedKeep
+		end
+
+		if self._isMockEnabled then
+			print(`[DataKeep] Using mock store on {id}`)
 		end
 
 		return Promise.new(function(resolve, reject)
@@ -661,8 +665,10 @@ function Store:ViewKeep(key: string, version: string?): Promise
 
 		local keep
 
-		if not isFoundLoadedKeep then
-			keep = self._store:GetAsync(key, version) or {}
+		if not (version == nil) then
+			keep = self._store:GetVersionAsync(key, version) or {}
+		elseif not isFoundLoadedKeep then
+			keep = self._store:GetAsync(key) or {}
 		else
 			keep = {
 				Data = deepCopy(Keeps[id].Data),
@@ -810,7 +816,7 @@ end
 ]=]
 
 function Store:PostGlobalUpdate(key: string, updateHandler: (GlobalUpdates) -> nil): Promise -- gets passed add, lock & change functions
-	return Promise.new(function(resolve)
+	return Promise.try(function()
 		if Store.ServiceDone then
 			error("[DataKeep] Server is closing, can't post global update")
 		end
@@ -818,8 +824,9 @@ function Store:PostGlobalUpdate(key: string, updateHandler: (GlobalUpdates) -> n
 		local id = `{self._store_info.Name}/{self._store_info.Scope or ""}{self._store_info.Scope and "/" or ""}{key}`
 
 		local keep = Keeps[id]
+		local foundKeep = not (Keeps[id] == nil) -- in case of upcoming :LoadKeep()
 
-		if not keep then
+		if not foundKeep then
 			keep = self:ViewKeep(key):expect()
 			keep._global_updates_only = true
 		end
@@ -835,13 +842,19 @@ function Store:PostGlobalUpdate(key: string, updateHandler: (GlobalUpdates) -> n
 
 		updateHandler(globalUpdateObject)
 
-		if not keep:IsActive() then
-			keep:Release()
+		if not foundKeep then
+			keep.MetaData.LoadCount = (keep.MetaData.LoadCount or 0) + 1
 		end
 
-		keep.MetaData.LoadCount = (keep.MetaData.LoadCount or 0) + 1
+		local isActive = keep:IsActive()
 
-		return resolve()
+		if not isActive or (isActive and not foundKeep) then
+			keep:Release():await()
+		end
+
+		if not foundKeep then
+			keep:Destroy()
+		end
 	end)
 end
 

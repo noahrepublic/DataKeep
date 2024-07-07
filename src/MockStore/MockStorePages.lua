@@ -24,7 +24,7 @@ function MockStorePages:GetCurrentPage()
 	local maximumIndex = math.min(currentPage * pageSize, #self._data)
 
 	for i = minimumIndex, maximumIndex do
-		table.insert(retValue, { key = self._data[i].key, value = self._data[i].value })
+		table.insert(retValue, self._data[i].value) -- I'm not sure what to do with self._data[i].key
 	end
 
 	return retValue
