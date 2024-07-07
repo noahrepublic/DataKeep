@@ -1244,7 +1244,7 @@ function Keep:GetActiveGlobalUpdates()
 
 	for _, update in ipairs(self.GlobalUpdates.Updates) do
 		if not update.Locked then
-			table.insert(activeUpdates, { Data = update.Data, ID = update.ID })
+			table.insert(activeUpdates, deepCopy(update))
 		end
 	end
 
@@ -1269,7 +1269,7 @@ function Keep:GetLockedGlobalUpdates()
 
 	for _, update in ipairs(self.GlobalUpdates.Updates) do
 		if update.Locked then
-			table.insert(lockedUpdates, { Data = update.Data, ID = update.ID })
+			table.insert(lockedUpdates, deepCopy(update))
 		end
 	end
 

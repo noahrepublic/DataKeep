@@ -626,7 +626,11 @@ function Store:ViewKeep(key: string, version: string?): Promise
 		local data
 
 		if not isFoundLoadedKeep then
-			data = self._store:GetAsync(key, version) or {}
+			if version then
+				data = self._store:GetVersionAsync(key, version) or {}
+			else
+				data = self._store:GetAsync(key) or {}
+			end
 		else
 			data = { -- copy only data and basic metaData
 				Data = deepCopy(Keeps[id].Data),
