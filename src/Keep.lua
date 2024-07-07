@@ -9,7 +9,9 @@
 	Keep class holds the data for a specific key in a store, and methods to manipulate data
 ]=]
 
-local Keep = {
+local Types = require(script.Parent.Types)
+
+local Keep: Types.Keep = {
 	assumeDeadLock = 0, -- it will be set from KeepStore
 
 	ServiceDone = false, -- set to true when server shutdown
@@ -25,60 +27,25 @@ local Signal = require(script.Parent.Parent.Signal)
 
 --> Types
 
-export type KeepStruct = {
-	Data: any,
-
-	MetaData: MetaData,
-	GlobalUpdates: GlobalUpdates,
-
-	UserIds: { [number]: number },
-}
-
 --[=[
 	@type Session {PlaceID: number, JobID: string}
 	@within Keep
 ]=]
-
-export type Session = {
-	PlaceID: number,
-	JobID: string,
-}
 
 --[=[
 	@type MetaData {ActiveSession: Session?, ForceLoad: Session?, LastUpdate: number, Created: number, LoadCount: number}
 	@within Keep
 ]=]
 
-type MetaData = {
-	ActiveSession: Session?,
-
-	ForceLoad: Session?, -- the session stealing the session lock, if any
-
-	IsOverwriting: boolean?, -- true if .ActiveSession is found during :Overwrite()
-	ReleaseSessionOnOverwrite: boolean?,
-
-	LastUpdate: number,
-	Created: number,
-	LoadCount: number,
-}
-
 --[=[
 	@type GlobalUpdateData { [any]: any }
 	@within Keep
 ]=]
 
-type GlobalUpdateData = { [any]: any }
-
 --[=[
 	@type GlobalUpdate {ID: number, Locked: boolean, Data: GlobalUpdateData}
 	@within Keep
 ]=]
-
-export type GlobalUpdate = {
-	ID: number,
-	Locked: boolean,
-	Data: GlobalUpdateData,
-}
 
 --[=[
 	@type GlobalUpdates {ID: number, Updates: { GlobalUpdate }}
@@ -87,14 +54,9 @@ export type GlobalUpdate = {
 	```ID``` is the most recent update index
 ]=]
 
-type GlobalUpdates = {
-	ID: number,
-	Updates: { GlobalUpdate },
-}
-
 export type Promise = typeof(Promise.new(function() end))
 
-local DefaultMetaData: MetaData = {
+local DefaultMetaData: Types.MetaData = {
 	ActiveSession = { PlaceID = game.PlaceId, JobID = game.JobId }, -- we can change to number indexes for speed, but worse for types
 
 	LastUpdate = 0,
@@ -103,7 +65,7 @@ local DefaultMetaData: MetaData = {
 	LoadCount = 0,
 }
 
-local DefaultGlobalUpdates = {
+local DefaultGlobalUpdates: Types.GlobalUpdates = {
 	ID = 0, -- [recentUpdateId] newest global update id to process in order
 
 	--[[
@@ -113,7 +75,7 @@ local DefaultGlobalUpdates = {
 	Updates = {},
 }
 
-local DefaultKeep: KeepStruct = {
+local DefaultKeep: Types.KeepStruct = {
 	Data = {},
 	-- can future add metatags or whateva
 	MetaData = DefaultMetaData,
@@ -237,7 +199,7 @@ end
 	```
 ]=]
 
-function Keep.new(structure: KeepStruct, dataTemplate: {}): Keep
+function Keep.new(structure: KeepStruct, dataTemplate: {}): Types.Keep<T>
 	return setmetatable({
 		Data = structure.Data or deepCopy(dataTemplate),
 		MetaData = structure.MetaData or DefaultKeep.MetaData, -- auto locks the session too if new keep
@@ -294,18 +256,9 @@ end
 	@within Keep
 ]=]
 
-export type Keep = typeof(Keep.new({
-	Data = DefaultKeep.Data,
-
-	MetaData = DefaultMetaData,
-	GlobalUpdates = DefaultGlobalUpdates,
-
-	UserIds = DefaultKeep.UserIds,
-}, {})) -- the actual Keep class type
-
 --> Private Functions
 
-local function isForceLoadingKeepRemotely(metaData: MetaData) -- I know it's a weird name
+local function isForceLoadingKeepRemotely(metaData: Types.MetaData) -- I know it's a weird name
 	if metaData.ForceLoad == nil then
 		return false
 	end
@@ -317,7 +270,7 @@ local function isForceLoadingKeepRemotely(metaData: MetaData) -- I know it's a w
 	return true
 end
 
-local function isKeepLocked(metaData: MetaData)
+local function isKeepLocked(metaData: Types.MetaData)
 	if metaData.ActiveSession == nil then
 		return false
 	end
@@ -329,7 +282,7 @@ local function isKeepLocked(metaData: MetaData)
 	return false
 end
 
-local function isDataEmpty(newestData: KeepStruct)
+local function isDataEmpty(newestData: Types.KeepStruct)
 	-- someone wants to fix this mess??
 
 	return newestData == nil
@@ -338,7 +291,7 @@ local function isDataEmpty(newestData: KeepStruct)
 		or type(newestData.MetaData) ~= "table"
 end
 
-local function isDataCorrupted(newestData: KeepStruct)
+local function isDataCorrupted(newestData: Types.KeepStruct)
 	if newestData == nil then
 		return false
 	end
@@ -358,7 +311,7 @@ local function isDataCorrupted(newestData: KeepStruct)
 	return false
 end
 
-local function transformUpdate(keep: Keep, newestData: KeepStruct, isReleasing: boolean)
+local function transformUpdate(keep: Types.Keep<T>, newestData: Types.KeepStruct, isReleasing: boolean)
 	local empty = isDataEmpty(newestData)
 	local corrupted = isDataCorrupted(newestData)
 
@@ -592,7 +545,7 @@ function Keep:_release(updater)
 	return updater
 end
 
-function Keep:_save(newestData: KeepStruct, isReleasing: boolean) -- used to internally save, so we can better reveal :Save()
+function Keep:_save(newestData: Types.KeepStruct, isReleasing: boolean) -- used to internally save, so we can better reveal :Save()
 	if newestData and newestData.MetaData and not isKeepLocked(newestData.MetaData) then
 		if newestData.MetaData.ActiveSession then -- reassign session to this server when different server releases session. Used with "ForceLoad"
 			self.MetaData.ActiveSession = newestData.MetaData.ActiveSession
@@ -1066,7 +1019,7 @@ function Keep:GetVersions(minDate: number?, maxDate: number?): Promise
 		local iteratorIndex = 1
 		local iteratorPage = 1
 
-		local iterator = {
+		local iterator: Types.Iterator = {
 			Current = function()
 				return versionMap[iteratorPage][iteratorIndex]
 			end,

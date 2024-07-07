@@ -1,9 +1,14 @@
+--!strict
+
 --> Services
 
 local DataStoreService = game:GetService("DataStoreService")
 local RunService = game:GetService("RunService")
 
 --> Includes
+
+local PromiseTypes = require(script.PromiseTypes)
+local Types = require(script.Types)
 
 local Promise = require(script.Parent.Promise)
 local Signal = require(script.Parent.Signal)
@@ -164,20 +169,6 @@ export type Promise = typeof(Promise.new(function() end))
 	```
 ]=]
 
-export type Store = typeof(Store) & {
-	_store_info: StoreInfo,
-	_data_template: any,
-
-	_store: DataStore?,
-	_mock_store: MockStore?,
-
-	_mock: boolean,
-
-	_keeps: { [string]: Keep.Keep },
-
-	Wrapper: { [string]: (any) -> any },
-}
-
 export type GlobalUpdates = typeof(setmetatable({}, GlobalUpdates))
 
 --[=[
@@ -205,7 +196,7 @@ export type GlobalUpdates = typeof(setmetatable({}, GlobalUpdates))
 	:::info
 ]=]
 
-export type unreleasedHandler = (Keep.Session) -> string -- use a function for any purposes, logging, whitelist only certain places, etc
+export type unreleasedHandler = (Types.Session) -> string -- use a function for any purposes, logging, whitelist only certain places, etc
 
 --> Private Variables
 
@@ -242,7 +233,7 @@ local function deepCopy(tbl: { [any]: any })
 	return copy
 end
 
-local function canLoad(keep: Keep.KeepStruct)
+local function canLoad(keep: Types.KeepStruct)
 	--[[
 		return not keep.MetaData
 		or not keep.MetaData.ActiveSession -- no active session, so we can load (most likely a new Keep)
@@ -389,7 +380,7 @@ end)
 	```
 ]=]
 
-function Store.GetStore(storeInfo: StoreInfo | string, dataTemplate): Promise
+function Store.GetStore(storeInfo: Types.StoreInfo | string, dataTemplate): PromiseTypes.TypedPromise<Types.Store<any>>
 	local info: StoreInfo
 
 	if type(storeInfo) == "string" then
@@ -500,7 +491,7 @@ end
 	:::info
 ]=]
 
-function Store:LoadKeep(key: string, unreleasedHandler: unreleasedHandler?): Promise
+function Store:LoadKeep(key: string, unreleasedHandler: Types.UnReleasedHandler?)
 	local store = self._store
 
 	if unreleasedHandler == nil then
@@ -614,7 +605,7 @@ end
 	```
 ]=]
 
-function Store:ViewKeep(key: string, version: string?): Promise
+function Store:ViewKeep(key: string, version: string?)
 	return Promise.new(function(resolve)
 		local id = `{self._store_info.Name}/{self._store_info.Scope or ""}{self._store_info.Scope and "/" or ""}{key}`
 		local isFoundLoadedKeep = false
@@ -776,7 +767,7 @@ end
 	```
 ]=]
 
-function Store:PostGlobalUpdate(key: string, updateHandler: (GlobalUpdates) -> nil) -- gets passed add, lock & change functions
+function Store:PostGlobalUpdate(key: string, updateHandler: (Types.GlobalUpdatesClass) -> nil) -- gets passed add, lock & change functions
 	return Promise.new(function(resolve)
 		if Store.ServiceDone then
 			error("[DataKeep] Server is closing, can't post global update")
@@ -791,7 +782,7 @@ function Store:PostGlobalUpdate(key: string, updateHandler: (GlobalUpdates) -> n
 			keep._global_updates_only = true
 		end
 
-		local globalUpdateObject = {
+		local globalUpdateObject: Types.GlobalUpdatesClass = {
 			_updates = keep.GlobalUpdates,
 			_pending_removal = keep._pending_global_lock_removes,
 			_view_only = keep._view_only,
@@ -992,7 +983,7 @@ end
 	Useful for stacking updates to save space for Keeps that maybe receiving lots of globals. Ex. a content creator receiving gifts
 ]=]
 
-function GlobalUpdates:ChangeActiveUpdate(updateId: number, globalData: {}): Promise
+function GlobalUpdates:ChangeActiveUpdate(updateId: number, globalData: {})
 	return Promise.new(function(resolve, reject)
 		if Store.ServiceDone then
 			return reject()
