@@ -45,23 +45,26 @@ return function()
 			end
 		end)
 
-		it("should wait for previous keep to release before loading again", function()
+		it("should wait for previous keep to release before loading again and loads it's data", function()
 			local keep = store:LoadKeep("awaitReleaseTest"):expect()
+			keep.Data.Money = 50
 
-			keep._releasing = true -- tell future :LoadKeep() that this keep is in releasing process. The only way to check if it's working
+			keep._releasing = true -- tell future :LoadKeep() that this keep is in releasing process. This is the only way to check if it's working
 
 			local start = os.clock()
 
 			task.delay(2, function()
 				keep:Release()
 					:andThen(function()
-						print("Time passed:", os.clock() - start)
+						print("[DataKeep Tests] Time passed while waiting for keep to release:", os.clock() - start)
 					end)
 					:await()
 			end)
 
 			keep = store:LoadKeep("awaitReleaseTest"):expect()
+
 			expect(keep ~= nil).to.be.ok()
+			expect(keep.Data.Money).to.equal(50)
 		end)
 	end)
 
@@ -170,6 +173,42 @@ return function()
 	end)
 
 	describe("globalUpdates", function()
+		it("should add an global update to new keep", function()
+			store
+				:PostGlobalUpdate("NewKeep", function(globalUpdates)
+					globalUpdates:AddGlobalUpdate({
+						Message = "World",
+					})
+
+					expect(#globalUpdates:GetActiveUpdates()).to.equal(1)
+				end)
+				:await()
+
+			local testDataStoreRaw = store._store:GetAsync("NewKeep")
+			expect(testDataStoreRaw.GlobalUpdates.Updates[1].Data.Message).to.equal("World")
+		end)
+
+		it("should add an global update to offline keep", function()
+			local keep = store:LoadKeep("OfflineKeep"):expect()
+			keep:Release():await()
+
+			local dataStoreRaw = store._store:GetAsync("OfflineKeep")
+			expect(#dataStoreRaw.GlobalUpdates.Updates).to.equal(0)
+
+			store
+				:PostGlobalUpdate("OfflineKeep", function(globalUpdates)
+					globalUpdates:AddGlobalUpdate({
+						Message = "HelloWorld",
+					})
+
+					expect(#globalUpdates:GetActiveUpdates()).to.equal(1)
+				end)
+				:await()
+
+			dataStoreRaw = store._store:GetAsync("OfflineKeep")
+			expect(dataStoreRaw.GlobalUpdates.Updates[1].Data.Message).to.equal("HelloWorld")
+		end)
+
 		it("should add an global update to already loaded keep", function()
 			local keep = store:LoadKeep("Data"):expect()
 
@@ -187,21 +226,6 @@ return function()
 
 			local testDataStoreRaw = store._store:GetAsync("Data")
 			expect(testDataStoreRaw.GlobalUpdates.Updates[1].Data.Message).to.equal("Hello")
-		end)
-
-		it("should add an global update to offline keep", function()
-			store
-				:PostGlobalUpdate("OfflineKeep", function(globalUpdates)
-					globalUpdates:AddGlobalUpdate({
-						Message = "World",
-					})
-
-					expect(#globalUpdates:GetActiveUpdates()).to.equal(1)
-				end)
-				:await()
-
-			local testDataStoreRaw = store._store:GetAsync("OfflineKeep")
-			expect(testDataStoreRaw.GlobalUpdates.Updates[1].Data.Message).to.equal("World")
 		end)
 
 		it("should change and add to an active update", function()

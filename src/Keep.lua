@@ -235,14 +235,14 @@ end
 function Keep.new(structure: KeepStruct, dataTemplate: { [string]: any }): Keep
 	return setmetatable({
 		Data = structure.Data or deepCopy(dataTemplate),
-		MetaData = structure.MetaData or DefaultKeep.MetaData, -- auto locks the session too if new keep
+		MetaData = structure.MetaData or deepCopy(DefaultKeep.MetaData), -- auto locks the session too if new keep
 
-		GlobalUpdates = structure.GlobalUpdates or DefaultKeep.GlobalUpdates,
+		GlobalUpdates = structure.GlobalUpdates or deepCopy(DefaultKeep.GlobalUpdates),
 
 		_pending_global_lock_removes = {},
 		_pending_global_locks = {},
 
-		UserIds = structure.UserIds or DefaultKeep.UserIds,
+		UserIds = structure.UserIds or deepCopy(DefaultKeep.UserIds),
 
 		LatestKeep = {
 			Data = deepCopy(structure.Data or dataTemplate),
@@ -497,7 +497,6 @@ local function transformUpdate(keep: Keep, newestData: KeepStruct, isReleasing: 
 		newestData = {
 			Data = keep.Data, -- should we .validate()?
 			MetaData = keep.MetaData,
-
 			GlobalUpdates = keep.GlobalUpdates,
 			UserIds = keep.UserIds,
 		}
@@ -506,10 +505,9 @@ local function transformUpdate(keep: Keep, newestData: KeepStruct, isReleasing: 
 	if isCorrupted then -- fix keep if corrupted
 		newestData = {
 			Data = newestData.Data,
-			MetaData = newestData.MetaData or DefaultKeep.MetaData, -- auto locks the session too if new keep
-
-			GlobalUpdates = newestData.GlobalUpdates or DefaultKeep.GlobalUpdates,
-			UserIds = newestData.UserIds or DefaultKeep.UserIds,
+			MetaData = newestData.MetaData or deepCopy(DefaultKeep.MetaData), -- auto locks the session too if new keep
+			GlobalUpdates = newestData.GlobalUpdates or deepCopy(DefaultKeep.GlobalUpdates),
+			UserIds = newestData.UserIds or deepCopy(DefaultKeep.UserIds),
 		}
 	end
 
@@ -528,7 +526,7 @@ local function transformUpdate(keep: Keep, newestData: KeepStruct, isReleasing: 
 
 		newestData.MetaData.LoadCount = keep.MetaData.LoadCount
 	elseif not Keep._isSessionLocked(newestData.MetaData.ActiveSession) then -- keep is available for this server
-		local activeSession = DefaultMetaData.ActiveSession -- give the session to the new keep
+		local activeSession = deepCopy(DefaultMetaData.ActiveSession) -- give the session to the new keep
 		local isOverwriting = newestData.MetaData.IsOverwriting
 		local shouldReleaseSessionOnOverwrite = newestData.MetaData.ReleaseSessionOnOverwrite
 
@@ -567,12 +565,12 @@ local function transformUpdate(keep: Keep, newestData: KeepStruct, isReleasing: 
 		keep.MetaData.ActiveSession = activeSession or { PlaceID = 0, JobID = "" }
 		newestData.MetaData.LastUpdate = os.time()
 
-		if not empty then
+		if not isEmpty then
 			keep.LatestKeep = deepCopy(newestData)
 		end
 	else -- keep is not available for this server
 		if keep._forceLoadRequested then -- tell other server to release the session
-			keep.MetaData.ForceLoad = table.clone(DefaultMetaData.ActiveSession :: Session)
+			keep.MetaData.ForceLoad = deepCopy(DefaultMetaData.ActiveSession :: Session)
 			newestData.MetaData.ForceLoad = keep.MetaData.ForceLoad
 			keep._forceLoadRequested = false
 		end
@@ -631,7 +629,7 @@ function Keep:_save(newestData: KeepStruct, isReleasing: boolean): Promise -- us
 		end
 
 		if self._stealSession then
-			newestData.MetaData.ActiveSession = DefaultMetaData.ActiveSession
+			newestData.MetaData.ActiveSession = deepCopy(DefaultMetaData.ActiveSession)
 		elseif not self:IsActive() and not self._overwriting and not self.MetaData.ForceLoad then
 			-- session locked on a different server, data will not be saved
 			self._keep_store._processError(`{self:Identify()}'s session is no longer owned by this server and it will be marked for release.`, 0)
@@ -721,7 +719,7 @@ function Keep:_save(newestData: KeepStruct, isReleasing: boolean): Promise -- us
 			end
 		end
 	else
-		self.GlobalUpdates = DefaultGlobalUpdates
+		self.GlobalUpdates = deepCopy(DefaultGlobalUpdates)
 	end
 
 	for _, updateProcessor in processUpdates do
@@ -769,6 +767,10 @@ end
 ]=]
 
 function Keep:Save(): Promise
+	if self._releasing or self._released then
+		return Promise.resolve(self)
+	end
+
 	Keep._activeSaveJobs += 1
 
 	local savingState = Promise.try(function()
@@ -990,8 +992,8 @@ function Keep:Reconcile(): ()
 		return data
 	end
 
-	self.Data = reconcileData(self.Data, self._data_template)
-	self.MetaData = reconcileData(self.MetaData, DefaultKeep.MetaData)
+	self.Data = reconcileData(self.Data, deepCopy(self._data_template))
+	self.MetaData = reconcileData(self.MetaData, deepCopy(DefaultKeep.MetaData))
 end
 
 --[=[

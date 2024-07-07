@@ -659,7 +659,7 @@ function Store:ViewKeep(key: string, version: string?): Promise
 		local id = `{self._store_info.Name}/{self._store_info.Scope or ""}{self._store_info.Scope and "/" or ""}{key}`
 		local isFoundLoadedKeep = false
 
-		if Keeps[id] and not Keeps[id]._released then
+		if Keeps[id] and not Keeps[id]._releasing and not Keeps[id]._released then
 			isFoundLoadedKeep = true
 		end
 
@@ -796,7 +796,7 @@ end
 	@within Store
 
 	@param key string
-	@param updateHandler (GlobalUpdates) -> nil
+	@param updateHandler (GlobalUpdates) -> ()
 
 	@return Promise<void>
 
@@ -815,7 +815,7 @@ end
 	```
 ]=]
 
-function Store:PostGlobalUpdate(key: string, updateHandler: (GlobalUpdates) -> nil): Promise -- gets passed add, lock & change functions
+function Store:PostGlobalUpdate(key: string, updateHandler: (GlobalUpdates) -> ()): Promise -- gets passed add, lock & change functions
 	return Promise.try(function()
 		if Store.ServiceDone then
 			error("[DataKeep] Server is closing, can't post global update")
@@ -824,7 +824,7 @@ function Store:PostGlobalUpdate(key: string, updateHandler: (GlobalUpdates) -> n
 		local id = `{self._store_info.Name}/{self._store_info.Scope or ""}{self._store_info.Scope and "/" or ""}{key}`
 
 		local keep = Keeps[id]
-		local foundKeep = not (Keeps[id] == nil) -- in case of upcoming :LoadKeep()
+		local foundKeep = if keep and not keep._releasing and not keep._released then true else false -- in case of upcoming :LoadKeep()
 
 		if not foundKeep then
 			keep = self:ViewKeep(key):expect()
