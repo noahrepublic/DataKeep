@@ -25,7 +25,7 @@ return function()
 					local dataTempVersion = dataTemplate[key]
 
 					if typeof(data[key]) ~= typeof(dataTempVersion) then
-						return false, "Invalid type for key " .. key
+						return false, `Invalid type for key: {key}`
 					end
 				end
 
@@ -233,7 +233,7 @@ return function()
 				:PostGlobalUpdate("Data", function(globalUpdates)
 					for i, globalUpdate in globalUpdates:GetActiveUpdates() do
 						globalUpdates:ChangeActiveUpdate(globalUpdate.ID, {
-							Message = globalUpdate.Data.Message .. "Goodbye",
+							Message = `{globalUpdate.Data.Message}Goodbye`,
 						})
 
 						expect(#globalUpdates:GetActiveUpdates()).to.equal(1)

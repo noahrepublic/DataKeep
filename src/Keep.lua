@@ -596,7 +596,7 @@ function Keep:_release(updater: Promise): Promise
 	updater
 		:catch(function(err)
 			local keepStore = self._keep_store
-			keepStore._processError("Failed to release keep: " .. err, 2)
+			keepStore._processError(`Failed to release keep: {err}`, 2)
 		end)
 		:finally(function()
 			-- mark the keep as released

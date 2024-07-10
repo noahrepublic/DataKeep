@@ -158,7 +158,7 @@ export type Keep = Keep.Keep
 			local dataTempVersion = dataTemplate[key]
 
 			if typeof(data[key]) ~= typeof(dataTempVersion) then
-				return false, "Invalid type for key " .. key
+				return false, `Invalid type for key: {key}`
 			end
 		end
 

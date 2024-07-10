@@ -21,8 +21,8 @@ local loadedKeeps = {}
 
 local keepStore = DataKeep.GetStore("PlayerData", defaultData) -- generally you can just :expect() I just want to showcase Promises to those unfamiliar
 
-local function onPlayerJoin(player)
-    keepStore:LoadKeep("Player_" .. player.UserId):andThen(function(keep)
+local function onPlayerJoin(player: Player)
+    keepStore:LoadKeep(`Player_{player.UserId}`):andThen(function(keep)
         if keep == nil then
             player:Kick("Session lock interrupted")
         end
@@ -158,7 +158,7 @@ end
 local function loadKeep(playerClass)
 	local player = playerClass.Player
 
-	local keep = keepStore:LoadKeep("Player_" .. player.UserId)
+	local keep = keepStore:LoadKeep(`Player_{player.UserId}`)
 
 	keep:andThen(function(dataKeep)
 		if dataKeep == nil then
