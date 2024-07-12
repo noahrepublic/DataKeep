@@ -1077,10 +1077,9 @@ game:BindToClose(function()
 	local saveSize = len(Keeps)
 
 	if saveSize > 0 then
-		Promise.each(Keeps, function(keep: Keep)
-			-- we don't want to return new promise
+		for _, keep in Keeps do
 			keep:Release()
-		end)
+		end
 	end
 
 	-- delay server closing process until all save jobs are completed
@@ -1108,25 +1107,20 @@ local function runAutoSave(deltaTime: number)
 		return
 	end
 
-	local clock = os.clock() -- offset the saves so not all at once
-
-	local keeps = {}
+	local clock = os.clock()
 
 	for _, keep in Keeps do
 		if keep._releasing or keep._released then
 			continue
 		end
-		if clock - keep._last_save < Store._saveInterval then
+		if clock - keep._last_save < Store._saveInterval then -- keep already saved within the Store._saveInterval
 			continue
 		end
 
-		table.insert(keeps, keep)
+		keep:Save():timeout(Store._saveInterval):catch(function(err)
+			warn(`[DataKeep] Auto save failed for {keep:Identify()}. {err}`)
+		end)
 	end
-
-	Promise.each(keeps, function(keep: Keep)
-		-- we don't want to return new promise
-		keep:Save():timeout(Store._saveInterval)
-	end)
 end
 
 local function runKeepCleanup(deltaTime: number)
