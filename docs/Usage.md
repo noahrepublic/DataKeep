@@ -2,7 +2,9 @@
 sidebar_position: 3
 ---
 
-# Basic Usage
+# Usage
+
+## Basic Approach
 
 DataKeep will lift everything, the only thing you need to do is load data. DataKeep does not use getter / setter functions allowing for customizable experience like, make your own wrapper.
 
@@ -13,13 +15,13 @@ local Players = game:GetService("Players")
 
 local DataKeep = require(path_to_datakeep)
 
-local defaultData = {
+local dataTemplate = {
     Coins = 0,
 }
 
 local loadedKeeps = {}
 
-local keepStore = DataKeep.GetStore("PlayerData", defaultData) -- generally you can just :expect() I just want to showcase Promises to those unfamiliar
+local keepStore = DataKeep.GetStore("PlayerData", dataTemplate) -- generally you can just :expect() I just want to showcase Promises to those unfamiliar
 
 local function onPlayerJoin(player: Player)
     keepStore:LoadKeep(`Player_{player.UserId}`):andThen(function(keep)
@@ -35,7 +37,9 @@ local function onPlayerJoin(player: Player)
 
             state:andThen(function()
                 print(`{player.Name}'s Keep has been released!`)
+
                 player:Kick("Session Release")
+				loadedKeeps[player] = nil
             end):catch(function(err)
                 warn(`{player.Name}'s Keep failed to release!`, err)
             end)
@@ -64,7 +68,9 @@ end
 Players.PlayerRemoving:Connect(function(player)
     local keep = loadedKeeps[player]
 
-    if not keep then return end
+    if not keep then
+		return
+	end
 
     keep:Release()
 end)
@@ -80,7 +86,7 @@ keepStore:andThen(function(store)
 end)
 ```
 
-# Class Approach
+## Class Approach
 
 For more experienced developers I personally opt in to create a service that returns a "Player" OOP class that holds it own cleaner and a Keep inside.
 
@@ -172,6 +178,7 @@ local function loadKeep(playerClass)
 			releaseState
 				:andThen(function()
 					player:Kick("Session released")
+					playerClass:Destroy()
 				end)
 				:catch(function(err)
 					warn(err)
@@ -195,7 +202,7 @@ function Player.new(player)
 	local self = setmetatable({
 		Player = player,
 
-		Keep = {},
+		Keep = nil,
 
 		_keys = {}, -- stored attribute / leaderstats keys for changing to automatically change the datakeep. **MUST USE THESE FOR ANY ATTRIBUTES / LEADERSTATS BINDED**
 	}, Player)
@@ -219,8 +226,16 @@ end
 function Player:Destroy()
 	-- do cleaning, this should generally include releasing the keep
 
-	local keep = self.Keep:expect()
-	keep:Release()
+	if self._destroyed then
+		return
+	end
+
+	self._destroyed = true
+
+	if self.Keep then
+		local keep = self.Keep:expect()
+		keep:Release()
+	end
 end
 
 return Player

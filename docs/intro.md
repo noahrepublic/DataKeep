@@ -19,7 +19,6 @@ A Keep Datastore (Holds datastore saving information & methods) automatically sa
 - Promised base for control over exactly when things complete
 - Actively maintained, and accepting contributions
 
-
 ### Ready to get started?
 
 - [**Installation**](/docs/Installation)

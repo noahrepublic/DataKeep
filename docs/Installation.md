@@ -2,7 +2,9 @@
 sidebar_position: 2
 ---
 
-## Manual installation
+# Installation
+
+## Manual
 
 Install through the rbxm file in the [releases](https://github.com/noahrepublic/DataKeep/releases) tab.
 
