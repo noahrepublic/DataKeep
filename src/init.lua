@@ -583,12 +583,12 @@ function Store:LoadKeep(key: string, unreleasedHandler: unreleasedHandler?): Pro
 			keepClass.MetaData.LoadCount = (keepClass.MetaData.LoadCount or 0) + 1
 			keepClass.MetaData.ForceLoad = forceLoad
 
-			keepClass._forceLoadRequested = forceLoad ~= nil
+			keepClass._requestForceLoad = forceLoad ~= nil
 			keepClass._stealSession = shouldStealSession
 
 			Keeps[keepClass:Identify()] = keepClass
 
-			if keepClass._forceLoadRequested and (not keepClass.MetaData.ActiveSession or not Keep._isThisSession(keepClass.MetaData.ActiveSession)) then
+			if keepClass._requestForceLoad and (not keepClass.MetaData.ActiveSession or not Keep._isThisSession(keepClass.MetaData.ActiveSession)) then
 				-- wait for previous :Release() to finish (teleporting between places, etc.)
 
 				local attemptsLeft = Store._forceLoadMaxAttempts

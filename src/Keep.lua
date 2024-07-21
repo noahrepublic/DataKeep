@@ -253,7 +253,7 @@ function Keep.new(structure: KeepStruct, dataTemplate: { [string]: any }): Keep
 			UserIds = deepCopy(structure.UserIds or DefaultKeep.UserIds),
 		},
 
-		_forceLoadRequested = false,
+		_requestForceLoad = false,
 		_stealSession = false,
 
 		_destroyed = false,
@@ -569,10 +569,11 @@ local function transformUpdate(keep: Keep, newestData: KeepStruct, isReleasing: 
 			keep.LatestKeep = deepCopy(newestData)
 		end
 	else -- keep is not available for this server
-		if keep._forceLoadRequested then -- tell other server to release the session
+		if keep._requestForceLoad then -- tell other server to release the session
+			keep._requestForceLoad = false
+
 			keep.MetaData.ForceLoad = deepCopy(DefaultMetaData.ActiveSession :: Session)
 			newestData.MetaData.ForceLoad = keep.MetaData.ForceLoad
-			keep._forceLoadRequested = false
 		end
 	end
 
@@ -615,7 +616,7 @@ function Keep:_release(updater: Promise): Promise
 end
 
 function Keep:_save(newestData: KeepStruct, isReleasing: boolean): Promise -- used to internally save, so we can better reveal :Save()
-	local remoteForceLoadRequest = false
+	local forceLoadRequested = false
 
 	if not self._global_updates_only then
 		if self._view_only and not self._overwriting then
@@ -629,6 +630,8 @@ function Keep:_save(newestData: KeepStruct, isReleasing: boolean): Promise -- us
 		end
 
 		if self._stealSession then
+			self._stealSession = false
+
 			newestData.MetaData.ActiveSession = deepCopy(DefaultMetaData.ActiveSession)
 		elseif not self:IsActive() and not self._overwriting and not self.MetaData.ForceLoad then
 			-- session locked on a different server, data will not be saved
@@ -638,12 +641,12 @@ function Keep:_save(newestData: KeepStruct, isReleasing: boolean): Promise -- us
 			return nil -- cancel :UpdateAsync() operation
 		end
 
-		if not self._forceLoadRequested and newestData and newestData.MetaData and newestData.MetaData.ForceLoad then
+		if not self._requestForceLoad and newestData and newestData.MetaData and newestData.MetaData.ForceLoad then
 			-- release session on this server on remote ForceLoad request
 
 			if not Keep._isThisSession(newestData.MetaData.ForceLoad) then
 				if self:IsActive() then
-					remoteForceLoadRequest = true
+					forceLoadRequested = true
 				else
 					-- ForceLoad interrupted by another server
 					self:_release(Promise.resolve(self))
@@ -653,7 +656,7 @@ function Keep:_save(newestData: KeepStruct, isReleasing: boolean): Promise -- us
 		end
 	end
 
-	isReleasing = isReleasing or remoteForceLoadRequest
+	isReleasing = isReleasing or forceLoadRequested
 
 	local latestGlobals = self.GlobalUpdates
 
