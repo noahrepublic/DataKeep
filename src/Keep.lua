@@ -1356,7 +1356,7 @@ function Keep:ClearLockedUpdate(id: number): Promise
 			return resolve()
 		end
 
-		error("[DataKeep] Can't clear locked update on an active update")
+		error("[DataKeep] Unable to clear locked update on an active update")
 	end)
 end
 

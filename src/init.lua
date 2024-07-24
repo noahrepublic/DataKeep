@@ -491,6 +491,11 @@ function Store:LoadKeep(key: string, unreleasedHandler: unreleasedHandler?): Pro
 
 	local id = `{self._store_info.Name}/{self._store_info.Scope or ""}{self._store_info.Scope and "/" or ""}{key}`
 
+	if not Keeps[id] and Store.ServiceDone then
+		warn(`[DataKeep] Server is closing, unable to load new keep for {id}`)
+		return Promise.resolve(nil)
+	end
+
 	local promise = Promise.try(function()
 		if Keeps[id] then
 			if not Keeps[id]._releasing and not Keeps[id]._released then
@@ -650,11 +655,17 @@ end
 	```
 
 	:::warning
+	View-only Keeps are not cached!
+	:::warning
+
+	:::warning
 	[Keep:Destroy()](Keep#Destroy) must be called when view-only Keep is not needed anymore
 	:::warning
 ]=]
 
 function Store:ViewKeep(key: string, version: string?): Promise
+	-- do we need to check for Store.ServiceDone here?
+
 	return Promise.new(function(resolve)
 		local id = `{self._store_info.Name}/{self._store_info.Scope or ""}{self._store_info.Scope and "/" or ""}{key}`
 		local isFoundLoadedKeep = false
@@ -818,7 +829,7 @@ end
 function Store:PostGlobalUpdate(key: string, updateHandler: (GlobalUpdates) -> ()): Promise -- gets passed add, lock & change functions
 	return Promise.try(function()
 		if Store.ServiceDone then
-			error("[DataKeep] Server is closing, can't post global update")
+			error("[DataKeep] Server is closing, unable to post global update")
 		end
 
 		local id = `{self._store_info.Name}/{self._store_info.Scope or ""}{self._store_info.Scope and "/" or ""}{key}`
@@ -902,7 +913,7 @@ function GlobalUpdates:AddGlobalUpdate(globalData: {}): Promise
 		end
 
 		if self._view_only and not self._global_updates_only then -- shouldn't happen, fail safe for anyone trying to break the API
-			error("[DataKeep] Can't add global update to a view-only Keep")
+			error("[DataKeep] Unable to add global update to a view-only Keep")
 			return reject()
 		end
 
@@ -942,11 +953,11 @@ end
 
 function GlobalUpdates:GetActiveUpdates(): { Keep.GlobalUpdate }
 	if Store.ServiceDone then
-		warn("[DataKeep] Server is closing, can't get active updates") -- maybe shouldn't error incase they don't :catch()?
+		warn("[DataKeep] Server is closing, unable to get active updates") -- maybe shouldn't error incase they don't :catch()?
 	end
 
 	if self._view_only and not self._global_updates_only then
-		error("[DataKeep] Can't get active updates from a view-only Keep")
+		error("[DataKeep] Unable to get active updates from a view-only Keep")
 		return {}
 	end
 
@@ -991,7 +1002,7 @@ function GlobalUpdates:RemoveActiveUpdate(updateId: number): Promise
 		end
 
 		if self._view_only and not self._global_updates_only then
-			error("[DataKeep] Can't remove active update from a view-only Keep")
+			error("[DataKeep] Unable to remove active update from a view-only Keep")
 			return {}
 		end
 
@@ -1015,7 +1026,7 @@ function GlobalUpdates:RemoveActiveUpdate(updateId: number): Promise
 		end
 
 		if globalUpdates.Updates[globalUpdateIndex].Locked then
-			error("[DataKeep] Can't remove active update on a locked update")
+			error("[DataKeep] Unable to remove active update on a locked update")
 			return reject()
 		end
 
@@ -1045,7 +1056,7 @@ function GlobalUpdates:ChangeActiveUpdate(updateId: number, globalData: {}): Pro
 		end
 
 		if self._view_only and not self._global_updates_only then
-			error("[DataKeep] Can't change active update from a view-only Keep")
+			error("[DataKeep] Unable to change active update from a view-only Keep")
 			return {}
 		end
 
@@ -1070,7 +1081,7 @@ end
 game:BindToClose(function()
 	Store.ServiceDone = true
 
-	Store._mockStore = true -- mock any new store
+	Store._mockStore = true -- mock any new stores
 
 	-- loop through and release (release saves too)
 
