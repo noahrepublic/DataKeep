@@ -143,6 +143,9 @@ return function()
 			viewKeep:Overwrite():await()
 
 			expect(viewKeep.Data.Coins).to.equal(100)
+
+			local testDataStoreRaw = store._store:GetAsync("Data")
+			expect(testDataStoreRaw.Data.Coins).to.equal(100)
 		end)
 
 		it("should be able to rollback versions", function()
@@ -152,6 +155,9 @@ return function()
 			keep:Save():await()
 
 			expect(keep.Data.Coins).to.equal(100)
+
+			local testDataStoreRaw = store._store:GetAsync("Data5")
+			expect(testDataStoreRaw.Data.Coins).to.equal(100)
 
 			local versions = keep:GetVersions()
 			local iterator = versions:expect()
