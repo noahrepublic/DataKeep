@@ -780,7 +780,7 @@ function Keep:Save(): Promise
 		local isOverwritten = false
 		local isReleasingSession = false
 
-		local _, dataKeyInfo: DataStoreKeyInfo = self._store:UpdateAsync(self._key, function(newestData)
+		local _, dataKeyInfo: DataStoreKeyInfo? = self._store:UpdateAsync(self._key, function(newestData)
 			isOverwritten = newestData and newestData.MetaData and newestData.MetaData.IsOverwriting == true
 			isReleasingSession = newestData and newestData.MetaData and newestData.MetaData.ReleaseSessionOnOverwrite == true
 
@@ -835,20 +835,22 @@ function Keep:Overwrite(ignoreExistingSession: boolean?): Promise
 	Keep._activeSaveJobs += 1
 
 	local savingState = Promise.try(function()
-		self._overwriting = true
-		self._releaseSessionOnOverwrite = ignoreExistingSession == false
+		local _, dataKeyInfo: DataStoreKeyInfo? = self._store:UpdateAsync(self._key, function(newestData)
+			self._overwriting = true
+			self._releaseSessionOnOverwrite = ignoreExistingSession == false
 
-		local _, dataKeyInfo: DataStoreKeyInfo = self._store:UpdateAsync(self._key, function(newestData)
 			return self:_save(newestData, false)
 		end)
 
 		self._last_save = os.clock() -- reset the auto save timer
 
-		self._keyInfo = { -- have to map the tuple to a table for type checking (even though tuples are arrays in lua)
-			CreatedTime = dataKeyInfo.CreatedTime,
-			UpdatedTime = dataKeyInfo.UpdatedTime,
-			Version = dataKeyInfo.Version,
-		}
+		if dataKeyInfo then
+			self._keyInfo = { -- have to map the tuple to a table for type checking (even though tuples are arrays in lua)
+				CreatedTime = dataKeyInfo.CreatedTime,
+				UpdatedTime = dataKeyInfo.UpdatedTime,
+				Version = dataKeyInfo.Version,
+			}
+		end
 
 		return self
 	end)
@@ -889,7 +891,7 @@ function Keep:Release(): Promise
 
 	local updater = Promise.retry(function()
 		return Promise.try(function()
-			local _, dataKeyInfo: DataStoreKeyInfo = self._store:UpdateAsync(self._key, function(newestData: KeepStruct)
+			local _, dataKeyInfo: DataStoreKeyInfo? = self._store:UpdateAsync(self._key, function(newestData: KeepStruct)
 				return self:_save(newestData, true)
 			end)
 
