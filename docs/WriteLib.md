@@ -4,7 +4,7 @@ sidebar_position: 5
 
 # WriteLib
 
-WriteLib provides a way to give Keeps custom mutating functions. A [prebuilt WriteLib](https://github.com/noahrepublic/DataKeep/blob/main/src/Wrapper.lua) is provided in the module, but you can make your own, Keeps will inherit functions from the WriteLib
+WriteLib provides a way to give Keeps custom mutating functions. A [prebuilt WriteLib](https://github.com/noahrepublic/DataKeep/blob/main/src/Wrapper.lua) is provided in the module, but you can make your own, Keeps will inherit functions from the WriteLib.
 
 ## Defining a custom WriteLib
 

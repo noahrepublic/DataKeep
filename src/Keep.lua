@@ -162,7 +162,7 @@ end
 	The function reveals the lock and remove global update function through the parameters.
 
 	:::caution
-	Updates **must** be locked eventually in order for [.OnGlobalUpdate](#OnGlobalUpdate) to get fired
+	Updates **must** be locked eventually in order for [.OnGlobalUpdate](#OnGlobalUpdate) to get fired.
 	:::caution
 
 	:::warning
@@ -177,7 +177,7 @@ end
 	Fired when a new global update is locked and ready to be processed
 
 	:::caution
-	**ONLY** locked globals are fired
+	**ONLY** locked globals are fired.
 	:::caution
 ]=]
 
@@ -223,7 +223,7 @@ end
 	@prop Overwritten Signal<boolean>
 	@within Keep
 
-	Fired when the Keep has been overwritten. Keep will be released if ```isReleasingSession``` is true
+	Fired when the Keep has been overwritten. Keep will be released if ```isReleasingSession``` is set to ```true```
 
 	```lua
 	keep.Overwritten:Connect(function(isReleasingSession)
@@ -246,10 +246,8 @@ function Keep.new(structure: KeepStruct, dataTemplate: { [string]: any }): Keep
 
 		LatestKeep = {
 			Data = deepCopy(structure.Data or dataTemplate),
-			GlobalUpdates = deepCopy(structure.GlobalUpdates or DefaultKeep.GlobalUpdates),
-
 			MetaData = deepCopy(structure.MetaData or DefaultKeep.MetaData),
-
+			GlobalUpdates = deepCopy(structure.GlobalUpdates or DefaultKeep.GlobalUpdates),
 			UserIds = deepCopy(structure.UserIds or DefaultKeep.UserIds),
 		},
 
@@ -625,7 +623,7 @@ function Keep:_save(newestData: KeepStruct, isReleasing: boolean): Promise -- us
 		end
 
 		if newestData and newestData.MetaData and Keep._isSessionLocked(newestData.MetaData.ActiveSession) and not self._overwriting and not self.MetaData.ForceLoad then
-			-- update session on this server on remote ForceLoad request
+			-- update session on this server to the new owner on remote ForceLoad / Steal request. Used for releasing session without saving
 			self.MetaData.ActiveSession = newestData.MetaData.ActiveSession
 		end
 
@@ -761,11 +759,11 @@ end
 	Manually Saves a Keep. Commonly useful for speeding up global updates
 
 	:::caution
-	Calling ```:Save()``` manually will reset the auto save timer on the Keep
+	Calling ```:Save()``` manually will reset the auto save timer on the Keep.
 	:::caution
 
 	:::warning
-	Using ```:Save()``` on a **view-only Keep** will error. Use [:Overwrite()](#Overwrite) instead
+	Using ```:Save()``` on a **view-only Keep** will error. Use [:Overwrite()](#Overwrite) instead.
 	:::warning
 ]=]
 
@@ -876,7 +874,7 @@ end
 	Releases the session lock to allow other servers to access the Keep
 
 	:::warning
-	This is called before internal release, but after session release, no edits can be made after this point
+	This is called before internal release, but after session release, no edits can be made after this point.
 	:::warning
 ]=]
 
@@ -1221,11 +1219,11 @@ end
 	Returns a Promise that resolves to the old Keep (before the migration) This is the **last** time the old Keep's GlobalUpdates will be accessible before **permanently** being removed
 
 	:::warning
-	Will not save until the next loop unless otherwise called using [:Save()](#Save) or [:Overwrite()](#Overwrite) for view-only Keeps
+	Will not save until the next loop unless otherwise called using [:Save()](#Save) or [:Overwrite()](#Overwrite) for view-only Keeps.
 	:::warning
 
 	:::caution
-	Any global updates not taken care of in ```migrateProcessor``` will be lost
+	Any global updates not taken care of in ```migrateProcessor``` will be lost.
 	:::caution
 ]=]
 

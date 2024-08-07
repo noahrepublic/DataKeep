@@ -75,7 +75,7 @@ export type Promise = typeof(Promise.new(function() end))
 export type Keep = Keep.Keep
 
 --[=[
-	@type Store { LoadMethods: LoadMethods, Mock: MockStore, LoadKeep: (string, unreleasedHandler?) -> Promise<Keep>, ViewKeep: (string) -> Promise<Keep>, PreSave: (({ any }) -> { any }) -> nil, PreLoad: (({ any }) -> { any }) -> nil, PostGlobalUpdate: (string, (GlobalUpdates) -> nil) -> Promise<void>, IssueSignal: Signal, CriticalStateSignal: Signal, CriticalState: boolean }
+	@type Store { LoadMethods: LoadMethods, Mock: MockStore, LoadKeep: (string, unreleasedHandler?) -> Promise<Keep>, ViewKeep: (string) -> Promise<Keep>, PreSave: (({ any }) -> { any }) -> (), PreLoad: (({ any }) -> { any }) -> (), PostGlobalUpdate: (string, (GlobalUpdates) -> ()) -> Promise<void>, IssueSignal: Signal, CriticalStateSignal: Signal, CriticalState: boolean }
 	@within Store
 
 	Stores are used to load and save Keeps from a [DataStoreService:GetDataStore()](https://create.roblox.com/docs/reference/engine/classes/DataStoreService#GetDataStore)
@@ -211,7 +211,7 @@ export type GlobalUpdates = typeof(setmetatable({}, GlobalUpdates))
 	Used to determine how to handle an session locked Keep.
 
 	:::info
-	Check [LoadMethods] for more info
+	Check [LoadMethods] for more info.
 	:::info
 ]=]
 
@@ -463,7 +463,7 @@ end
 		return keepStore.LoadMethods.ForceLoad
 	end)):andThen(function(keep)
 		if not keep then
-			player:Kick("Session lock interrupted")
+			player:Kick("Session lock interrupted!")
 			return
 		end
 
@@ -472,7 +472,7 @@ end
 	```
 
 	:::info
-	Stores can be loaded multiple times as they are cached, that way you can call [:LoadKeep()](#LoadKeep) and get the same cached Keeps
+	Stores can be loaded multiple times as they are cached, that way you can call [:LoadKeep()](#LoadKeep) and get the same cached Keeps.
 	:::info
 ]=]
 
@@ -659,7 +659,7 @@ end
 	:::warning
 
 	:::warning
-	[Keep:Destroy()](Keep#Destroy) must be called when view-only Keep is not needed anymore
+	[Keep:Destroy()](Keep#Destroy) must be called when view-only Keep is not needed anymore.
 	:::warning
 ]=]
 
@@ -739,7 +739,7 @@ end
 	:::caution
 
 	:::warning
-	```:PreSave()``` can only be set once
+	```:PreSave()``` can only be set once.
 	:::warning
 
 	Compression example:
@@ -777,7 +777,7 @@ end
 	:::caution
 
 	:::warning
-	```:PreLoad()``` can only be set once
+	```:PreLoad()``` can only be set once.
 	:::warning
 
 	Decompression example:

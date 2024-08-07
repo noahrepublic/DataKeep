@@ -14,4 +14,4 @@ Download the module through Wally by adding [this](https://wally.run/package/noa
 
 ## Git Submodule
 
-Add this Repository as a git [submodule](https://gist.github.com/gitaarik/8735255)
+Add this Repository as a git [submodule](https://gist.github.com/gitaarik/8735255).

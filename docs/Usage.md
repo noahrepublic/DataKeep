@@ -26,7 +26,7 @@ local keepStore = DataKeep.GetStore("PlayerData", dataTemplate) -- generally you
 local function onPlayerAdded(player: Player)
     keepStore:LoadKeep(`Player_{player.UserId}`):andThen(function(keep)
         if keep == nil then
-            player:Kick("Session lock interrupted")
+            player:Kick("Session lock interrupted!")
         end
 
         keep:Reconcile()
@@ -38,7 +38,7 @@ local function onPlayerAdded(player: Player)
             state:andThen(function()
                 print(`{player.Name}'s Keep has been released!`)
 
-                player:Kick("Session Release")
+                player:Kick("Session released!")
 				loadedKeeps[player] = nil
             end):catch(function(err)
                 warn(`{player.Name}'s Keep failed to release!`, err)
@@ -50,8 +50,6 @@ local function onPlayerAdded(player: Player)
             return
         end
 
-        print(`Loaded {player.Name}'s Keep!`)
-
         loadedKeeps[player] = keep
 
         local leaderstats = Instance.new("Folder")
@@ -62,18 +60,10 @@ local function onPlayerAdded(player: Player)
         coins.Value = keep.Data.Coins
 
         leaderstats.Parent = player
+
+        print(`Loaded {player.Name}'s Keep!`)
     end)
 end
-
-Players.PlayerRemoving:Connect(function(player)
-    local keep = loadedKeeps[player]
-
-    if not keep then
-		return
-	end
-
-    keep:Release()
-end)
 
 keepStore:andThen(function(store)
     keepStore = store
@@ -84,6 +74,16 @@ keepStore:andThen(function(store)
     end
 
     Players.PlayerAdded:Connect(onPlayerAdded)
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+    local keep = loadedKeeps[player]
+
+    if not keep then
+		return
+	end
+
+    keep:Release()
 end)
 ```
 
@@ -169,7 +169,7 @@ local function loadKeep(playerClass)
 
 	keep:andThen(function(dataKeep)
 		if dataKeep == nil then
-			player:Kick("Session lock interrupted")
+			player:Kick("Session lock interrupted!")
 		end
 
 		dataKeep:Reconcile()
@@ -178,7 +178,7 @@ local function loadKeep(playerClass)
 		dataKeep.Releasing:Connect(function(releaseState) -- don't have to clean up, it cleans up internally
 			releaseState
 				:andThen(function()
-					player:Kick("Session released")
+					player:Kick("Session released!")
 					playerClass:Destroy()
 				end)
 				:catch(function(err)
