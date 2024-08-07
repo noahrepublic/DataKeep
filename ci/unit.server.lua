@@ -8,6 +8,7 @@ local TestEZ = require(ReplicatedStorage.Test.TestEZ)
 -- Clear out package test files
 
 local tests = {}
+
 for _, module in ipairs(ServerScriptService.ServerPackages:GetDescendants()) do
 	if module.Name:match("%.spec$") and module:IsA("ModuleScript") then
 		table.insert(tests, module)
