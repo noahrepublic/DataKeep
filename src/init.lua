@@ -831,9 +831,9 @@ function Store:PostGlobalUpdate(key: string, updateHandler: (GlobalUpdates) -> (
 		local id = `{self._store_info.Name}/{self._store_info.Scope or ""}{self._store_info.Scope and "/" or ""}{key}`
 
 		local keep = Keeps[id]
-		local foundKeep = if keep and not keep._releasing and not keep._released then true else false -- in case of upcoming :LoadKeep()
+		local isFoundLoadedKeep = if keep and not keep._releasing and not keep._released then true else false -- in case of upcoming :LoadKeep()
 
-		if not foundKeep then
+		if not isFoundLoadedKeep then
 			keep = self:ViewKeep(key):expect()
 			keep._global_updates_only = true
 		end
@@ -849,17 +849,17 @@ function Store:PostGlobalUpdate(key: string, updateHandler: (GlobalUpdates) -> (
 
 		updateHandler(globalUpdateObject)
 
-		if not foundKeep then
+		if not isFoundLoadedKeep then
 			keep.MetaData.LoadCount = (keep.MetaData.LoadCount or 0) + 1
 		end
 
 		local isActive = keep:IsActive()
 
-		if not isActive or (isActive and not foundKeep) then
+		if not isActive or (isActive and not isFoundLoadedKeep) then
 			keep:Release():await()
 		end
 
-		if not foundKeep then
+		if not isFoundLoadedKeep then
 			keep:Destroy()
 		end
 	end)

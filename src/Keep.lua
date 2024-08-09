@@ -638,7 +638,8 @@ function Keep:_save(newestData: KeepStruct, isReleasing: boolean): Promise -- us
 			self._stealSession = false
 
 			newestData.MetaData.ActiveSession = deepCopy(DefaultMetaData.ActiveSession)
-		elseif not self:IsActive() and not self._overwriting and not self.MetaData.ForceLoad then
+		elseif Keep._isSessionLocked(self.MetaData.ActiveSession) and not self._overwriting and not self.MetaData.ForceLoad then
+			print(self.MetaData)
 			-- session locked on a different server, data will not be saved
 			self._keep_store._processError(`{self:Identify()}'s session is no longer owned by this server and it will be marked for release.`, 0)
 
@@ -678,9 +679,9 @@ function Keep:_save(newestData: KeepStruct, isReleasing: boolean): Promise -- us
 
 	local globalUpdates = self.GlobalUpdates.Updates -- do we deep copy here..?
 
-	local function lockGlobalUpdate(index: number) -- we take index instead, why take updateid just to loop through? we aren't doing any removing, all removals are on locked globals and will be passed to _pending_global_lock_removes
+	local function lockGlobalUpdate(index: number) -- we take index instead, why take updateId just to loop through? we aren't doing any removing, all removals are on locked globals and will be passed to _pending_global_lock_removes
 		return Promise.new(function(resolve, reject)
-			if not self:IsActive() then
+			if Keep._isSessionLocked(self.MetaData.ActiveSession) then
 				return reject()
 			end
 
@@ -692,7 +693,7 @@ function Keep:_save(newestData: KeepStruct, isReleasing: boolean): Promise -- us
 
 	local function removeLockedUpdate(index: number, updateId: number)
 		return Promise.new(function(resolve, reject)
-			if not self:IsActive() then
+			if Keep._isSessionLocked(self.MetaData.ActiveSession) then
 				return reject()
 			end
 
@@ -1020,10 +1021,6 @@ end
 ]=]
 
 function Keep:AddUserId(userId: number): ()
-	if not self:IsActive() then
-		return
-	end
-
 	if table.find(self.UserIds, userId) then
 		return
 	end
@@ -1043,9 +1040,11 @@ end
 function Keep:RemoveUserId(userId: number): ()
 	local index = table.find(self.UserIds, userId)
 
-	if index then
-		table.remove(self.UserIds, index)
+	if not index then
+		return
 	end
+
+		table.remove(self.UserIds, index)
 end
 
 --> Version API
