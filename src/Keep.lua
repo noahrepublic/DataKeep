@@ -232,10 +232,19 @@ end
 	```
 ]=]
 
-function Keep.new(structure: KeepStruct, dataTemplate: { [string]: any }): Keep
+function Keep.new(structure: KeepStruct, dataTemplate: { [string]: any }, viewOnly: boolean?): Keep
+	local metaData: MetaData = structure.MetaData or deepCopy(DefaultKeep.MetaData)
+
+	if viewOnly then -- :ViewKeep() should not be :IsActive()
+		metaData.ActiveSession = nil
+		metaData.ForceLoad = nil
+		metaData.IsOverwriting = nil
+		metaData.ReleaseSessionOnOverwrite = nil
+	end
+
 	return setmetatable({
 		Data = structure.Data or deepCopy(dataTemplate),
-		MetaData = structure.MetaData or deepCopy(DefaultKeep.MetaData), -- auto locks the session too if new keep
+		MetaData = metaData, -- auto locks the session too if new keep and not viewOnly
 
 		GlobalUpdates = structure.GlobalUpdates or deepCopy(DefaultKeep.GlobalUpdates),
 
@@ -359,8 +368,6 @@ local function processGlobalUpdates(keep: Keep, newestData: KeepStruct)
 	end
 
 	-- this handles full profiles and if there is just global updates but no data (globals posted with never loaded)
-
-	-- support globals
 
 	local latestKeep = keep.LatestKeep -- "old" to other servers
 
@@ -942,7 +949,11 @@ end
 ]=]
 
 function Keep:IsActive(): boolean
-	return not Keep._isSessionLocked(self.MetaData.ActiveSession)
+	if not self.MetaData.ActiveSession then
+		return false
+	end
+
+	return Keep._isThisSession(self.MetaData.ActiveSession)
 end
 
 --[=[

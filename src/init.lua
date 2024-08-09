@@ -683,11 +683,7 @@ function Store:ViewKeep(key: string, version: string?): Promise
 		else
 			keep = {
 				Data = deepCopy(Keeps[id].Data),
-				MetaData = {
-					Created = Keeps[id].MetaData.Created,
-					LastUpdate = Keeps[id].MetaData.LastUpdate,
-					LoadCount = Keeps[id].MetaData.LoadCount,
-				},
+				MetaData = deepCopy(Keeps[id].MetaData),
 				-- I think we don't want global updates here
 				UserIds = deepCopy(Keeps[id].UserIds),
 			}
@@ -704,7 +700,7 @@ function Store:ViewKeep(key: string, version: string?): Promise
 			keep.Data = processedData
 		end
 
-		local keepObject = Keep.new(keep, self._data_template)
+		local keepObject = Keep.new(keep, self._data_template, true)
 
 		keepObject._view_only = true
 		keepObject._released = true -- incase they call :Release() and it tries to save
