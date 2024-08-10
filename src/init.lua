@@ -10,6 +10,8 @@ local Signal = require(script.Parent.Signal)
 
 local Keep = require(script.Keep)
 local MockStore = require(script.MockStore)
+local deepCopy = require(script.deepCopy)
+local updateKeepAsync = require(script.updateKeepAsync)
 
 --> Structure
 
@@ -239,22 +241,6 @@ local function len(tbl: { [any]: any })
 	return count
 end
 
-local function deepCopy<T>(t: T): T
-	local function copyDeep(tbl: { any })
-		local tCopy = table.clone(tbl)
-
-		for k, v in tCopy do
-			if type(v) == "table" then
-				tCopy[k] = copyDeep(v)
-			end
-		end
-
-		return tCopy
-	end
-
-	return copyDeep(t :: any) :: T
-end
-
 local function canLoad(keep: Keep.KeepStruct)
 	local metaData = keep.MetaData
 
@@ -428,7 +414,7 @@ function Store.GetStore(storeInfo: StoreInfo | string, dataTemplate: { [string]:
 
 			local issueCount = 0
 
-			for _, issueTime in ipairs(Store._issueQueue) do
+			for _, issueTime in Store._issueQueue do
 				if clock - issueTime < Store._maxIssueTime then
 					issueCount += 1
 				end
@@ -684,7 +670,7 @@ function Store:ViewKeep(key: string, version: string?): Promise
 			keep = {
 				Data = deepCopy(Keeps[id].Data),
 				MetaData = deepCopy(Keeps[id].MetaData),
-				-- I think we don't want global updates here
+				GlobalUpdates = deepCopy(Keeps[id].GlobalUpdates),
 				UserIds = deepCopy(Keeps[id].UserIds),
 			}
 		end
@@ -805,7 +791,7 @@ end
 	@param key string
 	@param updateHandler (GlobalUpdates) -> ()
 
-	@return Promise<void>
+	@return Promise<updatedData,DataStoreKeyInfo>
 
 	Posts a global update to a Keep
 
@@ -828,40 +814,21 @@ function Store:PostGlobalUpdate(key: string, updateHandler: (GlobalUpdates) -> (
 			error("[DataKeep] Server is closing, unable to post global update")
 		end
 
-		local id = `{self._store_info.Name}/{self._store_info.Scope or ""}{self._store_info.Scope and "/" or ""}{key}`
+		local store = self._store
 
-		local keep = Keeps[id]
-		local isFoundLoadedKeep = if keep and not keep._releasing and not keep._released then true else false -- in case of upcoming :LoadKeep()
+		return updateKeepAsync(key, store, {
+			edit = function(newestData)
+				local globalUpdateObject = {
+					_updates = newestData.GlobalUpdates,
+				}
 
-		if not isFoundLoadedKeep then
-			keep = self:ViewKeep(key):expect()
-			keep._global_updates_only = true
-		end
+				setmetatable(globalUpdateObject, GlobalUpdates)
 
-		local globalUpdateObject = {
-			_updates = keep.GlobalUpdates,
-			_pending_removal = keep._pending_global_lock_removes,
-			_view_only = keep._view_only,
-			_global_updates_only = keep._global_updates_only,
-		}
+				updateHandler(globalUpdateObject)
 
-		setmetatable(globalUpdateObject, GlobalUpdates)
-
-		updateHandler(globalUpdateObject)
-
-		if not isFoundLoadedKeep then
-			keep.MetaData.LoadCount = (keep.MetaData.LoadCount or 0) + 1
-		end
-
-		local isActive = keep:IsActive()
-
-		if not isActive or (isActive and not isFoundLoadedKeep) then
-			keep:Release():await()
-		end
-
-		if not isFoundLoadedKeep then
-			keep:Destroy()
-		end
+				return newestData
+			end,
+		})
 	end)
 end
 
@@ -908,11 +875,6 @@ function GlobalUpdates:AddGlobalUpdate(globalData: {}): Promise
 			return reject()
 		end
 
-		if self._view_only and not self._global_updates_only then -- shouldn't happen, fail safe for anyone trying to break the API
-			error("[DataKeep] Unable to add global update to a view-only Keep")
-			return reject()
-		end
-
 		local globalUpdates = self._updates
 
 		local updateId: number = globalUpdates.ID
@@ -941,8 +903,8 @@ end
 	```lua
 	local updates = globalUpdates:GetActiveUpdates()
 
-	for _, update in ipairs(updates) do
-		print(update.Data)
+	for _, update in updates do
+		print("ActiveUpdate data:", update.Data)
 	end
 	```
 ]=]
@@ -952,16 +914,11 @@ function GlobalUpdates:GetActiveUpdates(): { Keep.GlobalUpdate }
 		warn("[DataKeep] Server is closing, unable to get active updates") -- maybe shouldn't error incase they don't :catch()?
 	end
 
-	if self._view_only and not self._global_updates_only then
-		error("[DataKeep] Unable to get active updates from a view-only Keep")
-		return {}
-	end
-
 	local globalUpdates = self._updates
 
 	local updates = {}
 
-	for _, update in ipairs(globalUpdates.Updates) do
+	for _, update in globalUpdates.Updates do
 		if not update.Locked then
 			table.insert(updates, update)
 		end
@@ -983,7 +940,7 @@ end
 	```lua
 	local updates = globalUpdates:GetActiveUpdates()
 
-	for _, update in ipairs(updates) do
+	for _, update in updates do
 		globalUpdates:RemoveActiveUpdate(update.ID):andThen(function()
 			print("Removed Global Update!")
 		end)
@@ -997,11 +954,6 @@ function GlobalUpdates:RemoveActiveUpdate(updateId: number): Promise
 			return reject()
 		end
 
-		if self._view_only and not self._global_updates_only then
-			error("[DataKeep] Unable to remove active update from a view-only Keep")
-			return {}
-		end
-
 		local globalUpdates = self._updates
 
 		if globalUpdates.ID < updateId then
@@ -1011,7 +963,7 @@ function GlobalUpdates:RemoveActiveUpdate(updateId: number): Promise
 		local globalUpdateIndex = nil
 
 		for i = 1, #globalUpdates.Updates do
-			if globalUpdates.Updates[i].ID == updateId and not globalUpdates.Updates[i].ID then
+			if globalUpdates.Updates[i].ID == updateId then
 				globalUpdateIndex = i
 				break
 			end
@@ -1051,18 +1003,13 @@ function GlobalUpdates:ChangeActiveUpdate(updateId: number, globalData: {}): Pro
 			return reject()
 		end
 
-		if self._view_only and not self._global_updates_only then
-			error("[DataKeep] Unable to change active update from a view-only Keep")
-			return {}
-		end
-
 		local globalUpdates = self._updates
 
 		if globalUpdates.ID < updateId then
 			return reject()
 		end
 
-		for _, update in ipairs(globalUpdates.Updates) do
+		for _, update in globalUpdates.Updates do
 			if update.ID == updateId and not update.Locked then
 				update.Data = globalData
 

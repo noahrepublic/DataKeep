@@ -151,11 +151,11 @@ local function initKeep(playerClass, keep)
     -- "attributes" and "leaderstats" are folders in the script parent
 	-- which contains numberValues / stringValues / boolValues
 
-	for _, attribute in ipairs(script.Parent.attributes:GetChildren()) do
+	for _, attribute in script.Parent.attributes:GetChildren() do
 		bindData(attribute, attributes)
 	end
 
-	for _, leaderstat in ipairs(script.Parent.leaderstats:GetChildren()) do
+	for _, leaderstat in script.Parent.leaderstats:GetChildren() do
 		bindData(leaderstat, leaderstats)
 	end
 

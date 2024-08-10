@@ -216,7 +216,7 @@ return function()
 		end)
 
 		it("should add an global update to already loaded keep", function()
-			local keep = store:LoadKeep("Data"):expect()
+			store:LoadKeep("Data"):expect()
 
 			store
 				:PostGlobalUpdate("Data", function(globalUpdates)
@@ -227,8 +227,6 @@ return function()
 					expect(#globalUpdates:GetActiveUpdates()).to.equal(1)
 				end)
 				:await()
-
-			keep:Save():await()
 
 			local testDataStoreRaw = store._store:GetAsync("Data")
 			expect(testDataStoreRaw.GlobalUpdates.Updates[1].Data.Message).to.equal("Hello")
@@ -247,6 +245,10 @@ return function()
 					end
 				end)
 				:await()
+
+			local testDataStoreRaw = store._store:GetAsync("Data")
+			expect(#testDataStoreRaw.GlobalUpdates.Updates).to.equal(1)
+			expect(testDataStoreRaw.GlobalUpdates.Updates[1].Data.Message).to.equal("HelloGoodbye")
 		end)
 
 		it("should get active updates", function()
@@ -255,11 +257,16 @@ return function()
 					expect(#globalUpdates:GetActiveUpdates()).to.equal(1)
 				end)
 				:await()
+
+			local keep = store:LoadKeep("Data"):expect()
+			expect(#keep:GetActiveGlobalUpdates()).to.equal(0)
 		end)
 
 		it("should remove an active update", function()
 			store
 				:PostGlobalUpdate("Data", function(globalUpdates)
+					expect(#globalUpdates:GetActiveUpdates()).to.equal(1)
+
 					for _, globalUpdate in globalUpdates:GetActiveUpdates() do
 						globalUpdates:RemoveActiveUpdate(globalUpdate.ID)
 
@@ -267,10 +274,26 @@ return function()
 					end
 				end)
 				:await()
+
+			local testDataStoreRaw = store._store:GetAsync("Data")
+			expect(#testDataStoreRaw.GlobalUpdates.Updates).to.equal(0)
 		end)
 
 		it("should clear locked updates", function()
 			local keep = store:LoadKeep("Data"):expect()
+
+			store
+				:PostGlobalUpdate("Data", function(globalUpdates)
+					globalUpdates:AddGlobalUpdate({
+						Message = "ClearLockTest",
+					})
+
+					expect(#globalUpdates:GetActiveUpdates()).to.equal(1)
+				end)
+				:await()
+
+			keep:Save():await() -- get new and lock old globalUpdates
+			keep:Save():await() -- lock globalUpdates
 
 			expect(#keep:GetLockedGlobalUpdates()).to.equal(1)
 

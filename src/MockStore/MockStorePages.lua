@@ -49,7 +49,7 @@ end
 return function(unparsedData, isAscending: boolean, pageSize: number)
 	local data = {}
 
-	for key, value in pairs(unparsedData) do
+	for key, value in unparsedData do
 		table.insert(data, if not isAscending then math.max(#data, 1) else 1, { key = key, value = value })
 	end
 

@@ -3,6 +3,7 @@
 --> Includes
 
 local MockStorePages = require(script.MockStorePages)
+local deepCopy = require(script.Parent.deepCopy)
 
 --> Structure
 
@@ -36,22 +37,6 @@ function didyield(f, ...)
 	end)(...)
 
 	return not finished, data
-end
-
-local function deepCopy<T>(t: T): T
-	local function copyDeep(tbl: { any })
-		local tCopy = table.clone(tbl)
-
-		for k, v in tCopy do
-			if type(v) == "table" then
-				tCopy[k] = copyDeep(v)
-			end
-		end
-
-		return tCopy
-	end
-
-	return copyDeep(t :: any) :: T
 end
 
 local function createNewVersion(self, key, data: any)
@@ -111,7 +96,7 @@ function MockStore:ListVersionsAsync(key: string, sortDirection: Enum.SortDirect
 
 	local filteredVersions = {}
 
-	for _, versionData in ipairs(versions) do
+	for _, versionData in versions do
 		local createdTime = versionData[1].CreatedTime
 
 		minDate = minDate or 0
@@ -136,7 +121,7 @@ function MockStore:GetVersionAsync(key: string, version)
 		return
 	end
 
-	for _, versionData in ipairs(versions) do
+	for _, versionData in versions do
 		if versionData[1].Version == version then
 			return versionData[2]
 		end

@@ -5,6 +5,8 @@
 local Promise = require(script.Parent.Parent.Promise)
 local Signal = require(script.Parent.Parent.Signal)
 
+local deepCopy = require(script.Parent.deepCopy)
+
 --> Structure
 
 --[=[
@@ -117,29 +119,13 @@ local DefaultKeep: KeepStruct = {
 
 local releaseCache = {} -- used to cache promises, saves dead coroutine
 
-local function deepCopy<T>(t: T): T
-	local function copyDeep(tbl: { any })
-		local tCopy = table.clone(tbl)
-
-		for k, v in tCopy do
-			if type(v) == "table" then
-				tCopy[k] = copyDeep(v)
-			end
-		end
-
-		return tCopy
-	end
-
-	return copyDeep(t :: any) :: T
-end
-
 local function isType(value: any, reference: any): boolean
 	if typeof(reference) == "table" then
 		if typeof(value) ~= "table" then
 			return false
 		end
 
-		for key, _ in pairs(reference) do
+		for key in reference do
 			if not isType(value[key], reference[key]) then
 				return false
 			end
@@ -154,7 +140,7 @@ end
 --> Constructor
 
 --[=[
-	@prop GlobalStateProcessor (updateData: GlobalUpdateData, lock: () -> boolean, remove: () -> boolean) -> ()
+	@prop GlobalStateProcessor (updateData: GlobalUpdateData, lock: () -> (), remove: () -> ()) -> ()
 	@within Keep
 
 	Define how to process global updates, by default just locks the global update (this is only ran if the Keep is online)
@@ -278,7 +264,7 @@ function Keep.new(structure: KeepStruct, dataTemplate: { [string]: any }, viewOn
 		_global_updates_only = false, -- if true, can access global updates but nothing else (used for global updates)
 
 		OnGlobalUpdate = Signal.new(), -- fires on a new locked global update (ready to be processed)
-		GlobalStateProcessor = function(_: GlobalUpdate, lock: () -> boolean, _: () -> boolean) -- by default just locks the global update (this is only ran if the keep is online)
+		GlobalStateProcessor = function(_: GlobalUpdate, lock: () -> (), _remove: () -> ()) -- by default just locks the global update (this is only ran if the keep is online)
 			lock()
 		end,
 
@@ -287,7 +273,7 @@ function Keep.new(structure: KeepStruct, dataTemplate: { [string]: any }, viewOn
 		_store = nil,
 		_key = "", -- the scope of the keep, used for the store class to know where to save it
 
-		_keep_store = nil, -- the store class that created the keep
+		_keep_store = nil :: any, -- the store class that created the keep
 
 		_last_save = os.clock(),
 		Saving = Signal.new(),
@@ -298,7 +284,7 @@ function Keep.new(structure: KeepStruct, dataTemplate: { [string]: any }, viewOn
 end
 
 --[=[
-	@type Keep { Data: { [string]: any }, MetaData: MetaData, GlobalUpdates: GlobalUpdates, UserIds: { number }, OnGlobalUpdate: Signal<GlobalUpdateData, number>, GlobalStateProcessor: (update: GlobalUpdateData, lock: () -> boolean, remove: () -> boolean) -> (), Releasing: Signal<Promise>, Saving: Signal<Promise>, Overwritten: Signal<boolean> }
+	@type Keep { Data: { [string]: any }, MetaData: MetaData, GlobalUpdates: GlobalUpdates, UserIds: { number }, OnGlobalUpdate: Signal<GlobalUpdateData, number>, GlobalStateProcessor: (update: GlobalUpdateData, lock: () -> (), remove: () -> ()) -> (), Releasing: Signal<Promise>, Saving: Signal<Promise>, Overwritten: Signal<boolean> }
 	@within Keep
 ]=]
 
@@ -372,7 +358,7 @@ local function processGlobalUpdates(keep: Keep, newestData: KeepStruct)
 	local latestKeep = keep.LatestKeep -- "old" to other servers
 
 	local currentGlobals = latestKeep.GlobalUpdates
-	local newGlobals = keep.GlobalUpdates
+	local newGlobals = newestData.GlobalUpdates
 
 	local finalGlobals = { ID = 0, Updates = {} } -- the final global updates to save
 
@@ -382,7 +368,7 @@ local function processGlobalUpdates(keep: Keep, newestData: KeepStruct)
 		id += 1
 		finalGlobals.ID = id
 
-		-- lets check if it was active, and now locked.
+		-- let's check if it was active and then lock it
 
 		local oldGlobal = nil
 
@@ -395,7 +381,9 @@ local function processGlobalUpdates(keep: Keep, newestData: KeepStruct)
 			end
 		end
 
-		local isNewGlobal = oldGlobal == nil or newUpdate.Locked ~= oldGlobal.Locked
+		-- maybe choose something different because .OnGlobalUpdate will fire too many times.
+		-- Maybe split .OnGlobalUpdate into .OnActiveGlobalUpdate and .OnLockedGlobalUpdate?
+		local isNewGlobal = oldGlobal == nil or newUpdate.Locked ~= oldGlobal.Locked or table.find(keep._pending_global_locks, id)
 
 		if not isNewGlobal then
 			oldGlobal.ID = id
@@ -406,11 +394,10 @@ local function processGlobalUpdates(keep: Keep, newestData: KeepStruct)
 		newUpdate.ID = id
 
 		if not newUpdate.Locked then
-			-- lets check if it is unlocked, but is being locked
-
+			-- let's check if it is unlocked, but has pending lock
 			local isPendingLock = false
 
-			for _, pendingLock in ipairs(keep._pending_global_locks) do
+			for _, pendingLock in keep._pending_global_locks do
 				if pendingLock == newUpdate.ID then
 					isPendingLock = true
 
@@ -419,17 +406,16 @@ local function processGlobalUpdates(keep: Keep, newestData: KeepStruct)
 			end
 
 			if isPendingLock then
-				-- we are locking it, so lets add it to the final globals
-
+				-- we are locking it, so let's add it to the final globals
 				newUpdate.Locked = true
 			end
 		end
 
-		-- ok it is locked, lets see if it is being removed
+		-- ok it is locked, let's see if it is being removed
 
 		local isPendingRemoval = false
 
-		for _, pendingRemoval in ipairs(keep._pending_global_lock_removes) do
+		for _, pendingRemoval in keep._pending_global_lock_removes do
 			if pendingRemoval == newUpdate.ID then
 				isPendingRemoval = true
 				break
@@ -437,15 +423,102 @@ local function processGlobalUpdates(keep: Keep, newestData: KeepStruct)
 		end
 
 		if isPendingRemoval then
-			-- we are removing it, so lets not add it to the final globals
+			-- we are removing it, so let's not add it to the final globals
 			continue
 		end
 
-		-- ok it is not being removed, lets add it to the final globals
+		-- ok it is not being removed, let's add it to the final globals
 
 		keep.OnGlobalUpdate:Fire(newUpdate.Data, newUpdate.ID) -- fire the global update event
 
 		table.insert(finalGlobals.Updates, newUpdate)
+	end
+
+	local latestGlobals = finalGlobals
+
+	for _, updateId in keep._pending_global_lock_removes do
+		for i = 1, #latestGlobals.Updates do
+			if latestGlobals.Updates[i].ID == updateId and latestGlobals.Updates[i].Locked then
+				table.remove(latestGlobals.Updates, i)
+				break
+			end
+		end
+	end
+
+	local pending_global_locks_left = {}
+
+	for _, updateId in keep._pending_global_locks do
+		if table.find(keep._pending_global_lock_removes, updateId) then
+			continue
+		end
+
+		table.insert(pending_global_locks_left, updateId)
+	end
+
+	keep._pending_global_locks = pending_global_locks_left
+	table.clear(keep._pending_global_lock_removes)
+
+	local globalUpdates = latestGlobals.Updates -- do we deep copy here..?
+
+	local function lockGlobalUpdate(index: number) -- we take index instead, why take updateId just to loop through? we aren't doing any removing, all removals are on locked globals and will be passed to _pending_global_lock_removes
+		return Promise.new(function(resolve, reject)
+			if Keep._isSessionLocked(keep.MetaData.ActiveSession) then
+				return reject()
+			end
+
+			if table.find(keep._pending_global_locks, index) then
+				return resolve()
+			end
+
+			table.insert(keep._pending_global_locks, index) -- locked queue
+			return resolve()
+		end)
+	end
+
+	local function removeLockedUpdate(index: number, updateId: number)
+		return Promise.new(function(resolve, reject)
+			if Keep._isSessionLocked(keep.MetaData.ActiveSession) then
+				return reject()
+			end
+
+			if globalUpdates[index].ID ~= updateId then -- shouldn't happen, but
+				return reject()
+			end
+
+			if not globalUpdates[index].Locked and not keep._pending_global_locks[index] then
+				keep._keep_store._processError("Attempted to remove a global update that was not locked", 2)
+				return reject()
+			end
+
+			if table.find(keep._pending_global_lock_removes, updateId) then
+				return resolve()
+			end
+
+			table.insert(keep._pending_global_lock_removes, updateId) -- locked removal queue
+			return resolve()
+		end)
+	end
+
+	local processUpdates = {} -- we want to run them in batch, so half are saved and half aren't incase of specific needs
+
+	for i = 1, #globalUpdates do
+		if globalUpdates[i].Locked then
+			continue
+		end
+
+		keep.GlobalStateProcessor(globalUpdates[i].Data, function()
+			table.insert(processUpdates, function()
+				lockGlobalUpdate(i)
+			end)
+		end, function()
+			table.insert(processUpdates, function()
+				removeLockedUpdate(i, globalUpdates[i].ID)
+			end)
+		end)
+	end
+
+	for _, updateProcessor in processUpdates do
+		updateProcessor()
 	end
 
 	newestData.GlobalUpdates = finalGlobals
@@ -488,10 +561,8 @@ local function transformUpdate(keep: Keep, newestData: KeepStruct, isReleasing: 
 			end
 		end
 
-		-- save global updates only if this server is not being released on overwriting
-		local isCanUpdateGlobalUpdates = if typeof(newestData.MetaData) == "table" then not newestData.MetaData.IsOverwriting else true
-
-		if isCanUpdateGlobalUpdates then
+		-- process global updates only if this server has the session lock
+		if keep:IsActive() then
 			processGlobalUpdates(keep, newestData)
 		end
 	end
@@ -568,6 +639,7 @@ local function transformUpdate(keep: Keep, newestData: KeepStruct, isReleasing: 
 
 		newestData.MetaData.ActiveSession = activeSession
 		keep.MetaData.ActiveSession = activeSession or { PlaceID = 0, JobID = "" }
+		keep.GlobalUpdates = newestData.GlobalUpdates
 		newestData.MetaData.LastUpdate = os.time()
 
 		if not isEmpty then
@@ -639,7 +711,6 @@ function Keep:_save(newestData: KeepStruct, isReleasing: boolean): Promise -- us
 
 			newestData.MetaData.ActiveSession = deepCopy(DefaultMetaData.ActiveSession)
 		elseif Keep._isSessionLocked(self.MetaData.ActiveSession) and not self._overwriting and not self.MetaData.ForceLoad then
-			print(self.MetaData)
 			-- session locked on a different server, data will not be saved
 			self._keep_store._processError(`{self:Identify()}'s session is no longer owned by this server and it will be marked for release.`, 0)
 
@@ -663,77 +734,6 @@ function Keep:_save(newestData: KeepStruct, isReleasing: boolean): Promise -- us
 	end
 
 	isReleasing = isReleasing or forceLoadRequested
-
-	local latestGlobals = self.GlobalUpdates
-
-	local globalClears = self._pending_global_lock_removes
-
-	for _, updateId in ipairs(globalClears) do
-		for i = 1, #latestGlobals.Updates do
-			if latestGlobals.Updates[i].ID == updateId and latestGlobals.Updates[i].Locked then
-				table.remove(latestGlobals.Updates, i)
-				break
-			end
-		end
-	end
-
-	local globalUpdates = self.GlobalUpdates.Updates -- do we deep copy here..?
-
-	local function lockGlobalUpdate(index: number) -- we take index instead, why take updateId just to loop through? we aren't doing any removing, all removals are on locked globals and will be passed to _pending_global_lock_removes
-		return Promise.new(function(resolve, reject)
-			if Keep._isSessionLocked(self.MetaData.ActiveSession) then
-				return reject()
-			end
-
-			table.insert(self._pending_global_locks, globalUpdates[index].ID, index) -- locked queue
-
-			return resolve()
-		end)
-	end
-
-	local function removeLockedUpdate(index: number, updateId: number)
-		return Promise.new(function(resolve, reject)
-			if Keep._isSessionLocked(self.MetaData.ActiveSession) then
-				return reject()
-			end
-
-			if globalUpdates[index].ID ~= updateId then -- shouldn't happen, but
-				return reject()
-			end
-
-			if not globalUpdates[index].Locked and not self._pending_global_locks[index] then
-				self._keep_store._processError("Attempted to remove a global update that was not locked", 2)
-				return reject()
-			end
-
-			table.insert(self._pending_global_lock_removes, updateId) -- locked removal queue
-			return resolve()
-		end)
-	end
-
-	local processUpdates = {} -- we want to run them in batch, so half are saved and half aren't incase of specific needs
-
-	if globalUpdates then
-		for i = 1, #globalUpdates do
-			if not globalUpdates[i].Locked then
-				self.GlobalStateProcessor(globalUpdates[i].Data, function()
-					table.insert(processUpdates, function()
-						lockGlobalUpdate(i)
-					end)
-				end, function()
-					table.insert(processUpdates, function()
-						removeLockedUpdate(i, globalUpdates[i].ID)
-					end)
-				end)
-			end
-		end
-	else
-		self.GlobalUpdates = deepCopy(DefaultGlobalUpdates)
-	end
-
-	for _, updateProcessor in processUpdates do
-		updateProcessor()
-	end
 
 	local transformedData = transformUpdate(self, newestData, isReleasing)
 
@@ -996,7 +996,7 @@ function Keep:Reconcile(): ()
 			return template
 		end
 
-		for key, value in pairs(template) do
+		for key, value in template do
 			if data[key] == nil then
 				data[key] = value
 			elseif type(data[key]) == "table" then
@@ -1044,7 +1044,7 @@ function Keep:RemoveUserId(userId: number): ()
 		return
 	end
 
-		table.remove(self.UserIds, index)
+	table.remove(self.UserIds, index)
 end
 
 --> Version API
@@ -1294,10 +1294,12 @@ end
 function Keep:GetActiveGlobalUpdates(): { GlobalUpdate }
 	local activeUpdates = {}
 
-	for _, update in ipairs(self.GlobalUpdates.Updates) do
-		if not update.Locked then
-			table.insert(activeUpdates, { Data = update.Data, ID = update.ID, Locked = update.Locked })
+	for _, update in self.GlobalUpdates.Updates do
+		if update.Locked then
+			continue
 		end
+
+		table.insert(activeUpdates, { Data = update.Data, ID = update.ID, Locked = update.Locked })
 	end
 
 	return activeUpdates
@@ -1319,10 +1321,12 @@ end
 function Keep:GetLockedGlobalUpdates(): { GlobalUpdate }
 	local lockedUpdates = {}
 
-	for _, update in ipairs(self.GlobalUpdates.Updates) do
-		if update.Locked then
-			table.insert(lockedUpdates, { Data = update.Data, ID = update.ID, Locked = update.Locked })
+	for _, update in self.GlobalUpdates.Updates do
+		if not update.Locked then
+			continue
 		end
+
+		table.insert(lockedUpdates, { Data = update.Data, ID = update.ID, Locked = update.Locked })
 	end
 
 	return lockedUpdates
@@ -1345,9 +1349,10 @@ end
 
 function Keep:ClearLockedUpdate(id: number): Promise
 	return Promise.new(function(resolve, reject)
-		if not self:IsActive() then
+		if Keep._isSessionLocked(self.MetaData.ActiveSession) then
 			return reject()
 		end
+
 		local globalUpdates = self.GlobalUpdates
 
 		if id > globalUpdates.ID then
