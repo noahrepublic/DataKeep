@@ -74,7 +74,9 @@ type GlobalUpdates = {
 
 export type Promise = typeof(Promise.new(function() end))
 
-local releaseCache = {} -- used to cache promises, saves dead coroutine
+local saveCache = {} -- used to cache in progress save promises
+local releaseCache = {} -- used to cache in progress release promises
+local overwriteCache = {} -- used to cache in progress overwrite promises
 
 local function isType(value: any, reference: any): boolean
 	if typeof(reference) == "table" then
@@ -542,6 +544,10 @@ end
 ]=]
 
 function Keep:Save(): Promise
+	if saveCache[self:Identify()] then -- already saving
+		return saveCache[self:Identify()]
+	end
+
 	if self._releasing or self._released then
 		return Promise.resolve()
 	end
@@ -551,12 +557,55 @@ function Keep:Save(): Promise
 	local savingState = save(self, false):catch(function(err)
 		self._keep_store._processError(err, 1)
 	end):finally(function()
+		saveCache[self:Identify()] = nil
+
 		Keep._activeSaveJobs -= 1
 	end)
 
 	self.Saving:Fire(savingState)
 
+	saveCache[self:Identify()] = savingState
+
 	return savingState
+end
+
+--[=[
+	@method Release
+	@within Keep
+
+	@return Promise
+
+	Releases the session lock to allow other servers to access the Keep
+
+	:::warning
+	This is called before internal release, but after session release, no edits can be made after this point.
+	:::warning
+]=]
+
+function Keep:Release(): Promise
+	if releaseCache[self:Identify()] then -- already releasing
+		return releaseCache[self:Identify()]
+	end
+
+	if self._released and not self._global_updates_only then
+		return Promise.resolve()
+	end
+
+	Keep._activeSaveJobs += 1
+
+	local updater = Promise.retry(function()
+		return save(self, true)
+	end, Keep._releaseRetryMaxAttempts)
+		:catch(function(err)
+			self._keep_store._processError(err, 1)
+		end)
+		:finally(function()
+			Keep._activeSaveJobs -= 1
+		end)
+
+	self.Saving:Fire(updater)
+
+	return self:_release(updater)
 end
 
 --[=[
@@ -573,6 +622,10 @@ end
 ]=]
 
 function Keep:Overwrite(shouldKeepExistingSession: boolean?): Promise
+	if overwriteCache[self:Identify()] then -- already overwriting
+		return overwriteCache[self:Identify()]
+	end
+
 	shouldKeepExistingSession = if typeof(shouldKeepExistingSession) == "boolean" then shouldKeepExistingSession else false
 
 	local shouldReleaseSession = shouldKeepExistingSession == false
@@ -581,7 +634,7 @@ function Keep:Overwrite(shouldKeepExistingSession: boolean?): Promise
 
 	Keep._activeSaveJobs += 1
 
-	return Promise.try(function()
+	local overwritingState = Promise.try(function()
 		return UpdateKeepAsync(self._key, self._store, {
 			edit = function(latestData)
 				if typeof(latestData.Data) == "table" and typeof(latestData.MetaData) == "table" then -- full profile
@@ -636,47 +689,14 @@ function Keep:Overwrite(shouldKeepExistingSession: boolean?): Promise
 			keepStore._processError(err, 1)
 		end)
 		:finally(function()
-			Keep._activeSaveJobs -= 1
-		end)
-end
+			overwriteCache[self:Identify()] = nil
 
---[=[
-	@method Release
-	@within Keep
-
-	@return Promise
-
-	Releases the session lock to allow other servers to access the Keep
-
-	:::warning
-	This is called before internal release, but after session release, no edits can be made after this point.
-	:::warning
-]=]
-
-function Keep:Release(): Promise
-	if releaseCache[self:Identify()] then -- already releasing
-		return releaseCache[self:Identify()]
-	end
-
-	if self._released and not self._global_updates_only then
-		return Promise.resolve()
-	end
-
-	Keep._activeSaveJobs += 1
-
-	local updater = Promise.retry(function()
-		return save(self, true)
-	end, Keep._releaseRetryMaxAttempts)
-		:catch(function(err)
-			self._keep_store._processError(err, 1)
-		end)
-		:finally(function()
 			Keep._activeSaveJobs -= 1
 		end)
 
-	self.Saving:Fire(updater)
+	overwriteCache[self:Identify()] = overwritingState
 
-	return self:_release(updater)
+	return overwritingState
 end
 
 --[=[
