@@ -1,6 +1,10 @@
+--!strict
+
+local DeepFreeze = require(script.Parent.Utils.DeepFreeze)
+
 type Session = {
-	PlaceID: number,
-	JobID: string,
+	PlaceId: number,
+	JobId: string,
 }
 
 type MetaData = {
@@ -19,13 +23,13 @@ type MetaData = {
 type GlobalUpdateData = { [string]: any }
 
 type GlobalUpdate = {
-	ID: number,
+	Id: number,
 	Locked: boolean,
 	Data: GlobalUpdateData,
 }
 
 type GlobalUpdates = {
-	ID: number,
+	Id: number,
 	Updates: { GlobalUpdate },
 }
 
@@ -39,7 +43,7 @@ type Data = {
 }
 
 local defaultMetaData: MetaData = {
-	ActiveSession = { PlaceID = game.PlaceId, JobID = game.JobId }, -- we can change to number indexes for speed, but worse for types
+	ActiveSession = { PlaceId = game.PlaceId, JobId = game.JobId }, -- we can change to number indexes for speed, but worse for types
 
 	LastUpdate = 0,
 
@@ -48,7 +52,7 @@ local defaultMetaData: MetaData = {
 }
 
 local defaultGlobalUpdates: GlobalUpdates = {
-	ID = 0, -- [recentUpdateId] newest global update id to process in order
+	Id = 0, -- [recentUpdateId] newest global update id to process in order
 	Updates = {},
 }
 
@@ -61,4 +65,6 @@ local defaultData: Data = {
 	UserIds = {},
 }
 
-return table.freeze(defaultData)
+DeepFreeze(defaultData)
+
+return defaultData

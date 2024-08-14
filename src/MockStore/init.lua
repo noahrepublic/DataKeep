@@ -2,8 +2,8 @@
 
 --> Includes
 
+local DeepCopy = require(script.Parent.Utils.DeepCopy)
 local MockStorePages = require(script.MockStorePages)
-local deepCopy = require(script.Parent.deepCopy)
 
 --> Structure
 
@@ -51,7 +51,7 @@ local function createNewVersion(self, key, data: any)
 		Deleted = false,
 	}
 
-	table.insert(self._dataVersions[key], { versionData, deepCopy(data) })
+	table.insert(self._dataVersions[key], { versionData, DeepCopy(data) })
 
 	return versionData
 end
@@ -59,17 +59,17 @@ end
 --> Public Methods
 
 function MockStore:GetAsync(key: string)
-	return self._data[key]
+	return DeepCopy(self._data[key])
 end
 
 function MockStore:SetAsync(key: string, value: any)
-	self._data[key] = deepCopy(value)
+	self._data[key] = DeepCopy(value)
 
 	return createNewVersion(self, key, value)
 end
 
 function MockStore:UpdateAsync(key: string, callback: (any) -> any)
-	local value = self._data[key]
+	local value = DeepCopy(self._data[key])
 	local yielded, newValue = didyield(callback, value)
 
 	if yielded then
@@ -82,7 +82,7 @@ function MockStore:UpdateAsync(key: string, callback: (any) -> any)
 	end
 
 	local newVersion = self:SetAsync(key, newValue)
-	return self._data[key], newVersion
+	return DeepCopy(self._data[key]), newVersion
 end
 
 function MockStore:ListVersionsAsync(key: string, sortDirection: Enum.SortDirection, minDate: number, maxDate: number, limit: number)
@@ -103,7 +103,7 @@ function MockStore:ListVersionsAsync(key: string, sortDirection: Enum.SortDirect
 		maxDate = maxDate or math.huge
 
 		if createdTime >= minDate and createdTime <= maxDate then
-			table.insert(filteredVersions, 1, versionData[1])
+			table.insert(filteredVersions, 1, DeepCopy(versionData[1]))
 		end
 	end
 
@@ -123,7 +123,7 @@ function MockStore:GetVersionAsync(key: string, version)
 
 	for _, versionData in versions do
 		if versionData[1].Version == version then
-			return versionData[2]
+			return DeepCopy(versionData[2])
 		end
 	end
 

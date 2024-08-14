@@ -100,7 +100,7 @@ return function()
 		end)
 
 		it("should own session lock", function()
-			local thisSession = { PlaceID = game.PlaceId, JobID = game.JobId }
+			local thisSession = { PlaceId = game.PlaceId, JobId = game.JobId }
 
 			local keep = store:LoadKeep("Data"):expect()
 			expect(keep.MetaData.ActiveSession == thisSession).to.be.ok()
@@ -111,7 +111,7 @@ return function()
 			expect(keep:IsActive()).to.equal(true)
 		end)
 
-		it("should add userIds", function()
+		it("should add userId", function()
 			local keep = store:LoadKeep("Data"):expect()
 
 			keep:AddUserId(0)
@@ -119,7 +119,7 @@ return function()
 			expect(table.find(keep.UserIds, 0)).to.be.ok()
 		end)
 
-		it("should remove userIds", function()
+		it("should remove userId", function()
 			local keep = store:LoadKeep("Data"):expect()
 
 			keep:RemoveUserId(0)
@@ -236,7 +236,7 @@ return function()
 			store
 				:PostGlobalUpdate("Data", function(globalUpdates)
 					for i, globalUpdate in globalUpdates:GetActiveUpdates() do
-						globalUpdates:ChangeActiveUpdate(globalUpdate.ID, {
+						globalUpdates:ChangeActiveUpdate(globalUpdate.Id, {
 							Message = `{globalUpdate.Data.Message}Goodbye`,
 						})
 
@@ -268,7 +268,7 @@ return function()
 					expect(#globalUpdates:GetActiveUpdates()).to.equal(1)
 
 					for _, globalUpdate in globalUpdates:GetActiveUpdates() do
-						globalUpdates:RemoveActiveUpdate(globalUpdate.ID)
+						globalUpdates:RemoveActiveUpdate(globalUpdate.Id)
 
 						expect(#globalUpdates:GetActiveUpdates()).to.equal(0)
 					end
@@ -298,7 +298,7 @@ return function()
 			expect(#keep:GetLockedGlobalUpdates()).to.equal(1)
 
 			for _, update in keep:GetLockedGlobalUpdates() do
-				keep:ClearLockedUpdate(update.ID):await()
+				keep:ClearLockedUpdate(update.Id):await()
 			end
 
 			keep:Save():await()

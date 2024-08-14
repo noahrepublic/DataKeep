@@ -1,5 +1,11 @@
 --!strict
 
+--> Includes
+
+local DeepCopy = require(script.Parent.Parent.Utils.DeepCopy)
+
+--> Structure
+
 local MockStorePages = {}
 MockStorePages.__index = MockStorePages
 
@@ -24,7 +30,7 @@ function MockStorePages:GetCurrentPage()
 	local maximumIndex = math.min(currentPage * pageSize, #self._data)
 
 	for i = minimumIndex, maximumIndex do
-		table.insert(retValue, self._data[i].value) -- I'm not sure what to do with self._data[i].key
+		table.insert(retValue, DeepCopy(self._data[i].value)) -- I'm not sure what to do with self._data[i].key
 	end
 
 	return retValue

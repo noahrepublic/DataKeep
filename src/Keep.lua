@@ -1,11 +1,11 @@
---!strict
-
 --> Includes
 
 local Promise = require(script.Parent.Parent.Promise)
 local Signal = require(script.Parent.Parent.Signal)
 
-local deepCopy = require(script.Parent.deepCopy)
+local DeepCopy = require(script.Parent.Utils.DeepCopy)
+local DefaultData = require(script.Parent.DefaultData)
+local UpdateKeepAsync = require(script.Parent.UpdateKeepAsync)
 
 --> Structure
 
@@ -25,42 +25,22 @@ Keep.__index = Keep
 
 --> Types
 
-export type KeepStruct = {
-	Data: { [string]: any },
-
-	MetaData: MetaData,
-	GlobalUpdates: GlobalUpdates,
-
-	UserIds: { [number]: number },
-}
+export type KeepStruct = typeof(DefaultData)
 
 --[=[
-	@type Session { PlaceID: number, JobID: string }
+	@type Session { PlaceId: number, JobId: string }
 	@within Keep
 ]=]
 
 export type Session = {
-	PlaceID: number,
-	JobID: string,
+	PlaceId: number,
+	JobId: string,
 }
 
 --[=[
 	@type MetaData { ActiveSession: Session?, ForceLoad: Session?, LastUpdate: number, Created: number, LoadCount: number }
 	@within Keep
 ]=]
-
-type MetaData = {
-	ActiveSession: Session?,
-
-	ForceLoad: Session?, -- the session stealing the session lock, if any
-
-	IsOverwriting: boolean?, -- true if .ActiveSession is found during :Overwrite()
-	ReleaseSessionOnOverwrite: boolean?,
-
-	LastUpdate: number,
-	Created: number,
-	LoadCount: number,
-}
 
 --[=[
 	@type GlobalUpdateData { [any]: any }
@@ -70,52 +50,29 @@ type MetaData = {
 type GlobalUpdateData = { [any]: any }
 
 --[=[
-	@type GlobalUpdate { ID: number, Locked: boolean, Data: GlobalUpdateData }
+	@type GlobalUpdate { Id: number, Locked: boolean, Data: GlobalUpdateData }
 	@within Keep
 ]=]
 
 export type GlobalUpdate = {
-	ID: number,
+	Id: number,
 	Locked: boolean,
 	Data: GlobalUpdateData,
 }
 
 --[=[
-	@type GlobalUpdates { ID: number, Updates: { GlobalUpdate } }
+	@type GlobalUpdates { Id: number, Updates: { GlobalUpdate } }
 	@within Keep
 
-	```ID``` is the most recent update index
+	```Id``` is the most recent update index
 ]=]
 
 type GlobalUpdates = {
-	ID: number,
+	Id: number,
 	Updates: { GlobalUpdate },
 }
 
 export type Promise = typeof(Promise.new(function() end))
-
-local DefaultMetaData: MetaData = {
-	ActiveSession = { PlaceID = game.PlaceId, JobID = game.JobId }, -- we can change to number indexes for speed, but worse for types
-
-	LastUpdate = 0,
-
-	Created = 0,
-	LoadCount = 0,
-}
-
-local DefaultGlobalUpdates: GlobalUpdates = {
-	ID = 0, -- [recentUpdateId] newest global update id to process in order
-	Updates = {},
-}
-
-local DefaultKeep: KeepStruct = {
-	Data = {},
-	-- can future add metatags or whateva
-	MetaData = DefaultMetaData,
-	GlobalUpdates = DefaultGlobalUpdates, -- really like how profile service supports these, so adding to this module as I use them lots.
-
-	UserIds = {},
-}
 
 local releaseCache = {} -- used to cache promises, saves dead coroutine
 
@@ -160,7 +117,7 @@ end
 	@prop OnGlobalUpdate Signal<GlobalUpdateData, number>
 	@within Keep
 
-	Fired when a new global update is locked and ready to be processed
+	Fired when a new global update is locked and ready to be processed, which can happen only during save
 
 	:::caution
 	**ONLY** locked globals are fired.
@@ -218,33 +175,15 @@ end
 	```
 ]=]
 
-function Keep.new(structure: KeepStruct, dataTemplate: { [string]: any }, viewOnly: boolean?): Keep
-	local metaData: MetaData = structure.MetaData or deepCopy(DefaultKeep.MetaData)
-
-	if viewOnly then -- :ViewKeep() should not be :IsActive()
-		metaData.ActiveSession = nil
-		metaData.ForceLoad = nil
-		metaData.IsOverwriting = nil
-		metaData.ReleaseSessionOnOverwrite = nil
-	end
-
+function Keep.new(structure: KeepStruct, dataTemplate: { [string]: any }): Keep
 	return setmetatable({
-		Data = structure.Data or deepCopy(dataTemplate),
-		MetaData = metaData, -- auto locks the session too if new keep and not viewOnly
-
-		GlobalUpdates = structure.GlobalUpdates or deepCopy(DefaultKeep.GlobalUpdates),
+		Data = structure.Data,
+		MetaData = structure.MetaData,
+		GlobalUpdates = structure.GlobalUpdates,
+		UserIds = structure.UserIds or DeepCopy(DefaultData.UserIds),
 
 		_pending_global_lock_removes = {},
 		_pending_global_locks = {},
-
-		UserIds = structure.UserIds or deepCopy(DefaultKeep.UserIds),
-
-		LatestKeep = {
-			Data = deepCopy(structure.Data or dataTemplate),
-			MetaData = deepCopy(structure.MetaData or DefaultKeep.MetaData),
-			GlobalUpdates = deepCopy(structure.GlobalUpdates or DefaultKeep.GlobalUpdates),
-			UserIds = deepCopy(structure.UserIds or DefaultKeep.UserIds),
-		},
 
 		_requestForceLoad = false,
 		_stealSession = false,
@@ -257,8 +196,6 @@ function Keep.new(structure: KeepStruct, dataTemplate: { [string]: any }, viewOn
 
 		_view_only = false,
 
-		_overwriting = false,
-		_releaseSessionOnOverwrite = nil,
 		Overwritten = Signal.new(),
 
 		_global_updates_only = false, -- if true, can access global updates but nothing else (used for global updates)
@@ -270,14 +207,13 @@ function Keep.new(structure: KeepStruct, dataTemplate: { [string]: any }, viewOn
 
 		_keyInfo = {},
 
-		_store = nil,
-		_key = "", -- the scope of the keep, used for the store class to know where to save it
-
-		_keep_store = nil :: any, -- the store class that created the keep
-
 		_last_save = os.clock(),
 		Saving = Signal.new(),
+
 		_store_info = { Name = "", Scope = "" },
+		_keep_store = nil :: any, -- the store class that created the keep
+		_store = nil :: any,
+		_key = "", -- the scope of the keep, used for the store class to know where to save it
 
 		_data_template = dataTemplate,
 	}, Keep)
@@ -288,158 +224,116 @@ end
 	@within Keep
 ]=]
 
-export type Keep = typeof(Keep.new({
-	Data = DefaultKeep.Data,
-
-	MetaData = DefaultMetaData,
-	GlobalUpdates = DefaultGlobalUpdates,
-
-	UserIds = DefaultKeep.UserIds,
-}, {})) -- the actual Keep class type
+export type Keep = typeof(Keep.new(DeepCopy(DefaultData), {})) -- the actual Keep class type
 
 --> Private Functions
 
 function Keep._isThisSession(session: Session)
-	return session.PlaceID == game.PlaceId and session.JobID == game.JobId
+	return session.PlaceId == game.PlaceId and session.JobId == game.JobId
 end
 
-function Keep._isSessionLocked(session: Session?)
-	if session == nil then
-		return false
-	end
+local function processGlobalUpdates(keep: Keep, latestData: KeepStruct)
+	-- this handles full profiles and if there are only global updates (globals posted with never loaded)
 
-	return Keep._isThisSession(session) == false
-end
-
-local function isDataEmpty(newestData: KeepStruct)
-	-- someone wants to fix this mess??
-
-	return newestData == nil
-		or type(newestData) ~= "table"
-		or type(newestData.Data) ~= "table" and newestData.Data == nil and newestData.MetaData == nil and newestData.GlobalUpdates == nil -- might be global updates there
-		or type(newestData.MetaData) ~= "table"
-end
-
-local function isDataCorrupted(newestData: KeepStruct)
-	if newestData == nil then
-		return false
-	end
-
-	if type(newestData) ~= "table" then
-		return true
-	end
-
-	if type(newestData.Data) ~= "table" then
-		return true
-	end
-
-	if type(newestData.MetaData) ~= "table" then
-		return true
-	end
-
-	if type(newestData.GlobalUpdates) ~= "table" then
-		return true
-	end
-
-	if type(newestData.UserIds) ~= "table" then
-		return true
-	end
-
-	return false
-end
-
-local function processGlobalUpdates(keep: Keep, newestData: KeepStruct)
-	if not (type(newestData.GlobalUpdates) == "table") then
-		return
-	end
-
-	-- this handles full profiles and if there is just global updates but no data (globals posted with never loaded)
-
-	local latestKeep = keep.LatestKeep -- "old" to other servers
-
-	local currentGlobals = latestKeep.GlobalUpdates
-	local newGlobals = newestData.GlobalUpdates
-
-	local finalGlobals = { ID = 0, Updates = {} } -- the final global updates to save
+	local finalGlobals = DeepCopy(DefaultData.GlobalUpdates) -- the final global updates to save
+	local recentlyLockedGlobalUpdates = {} -- list of locked GlobalUpdates for .OnGlobalUpdate
 
 	local id = 0 -- used to fix any missing ids
 
+	local newGlobals = latestData.GlobalUpdates
+
 	for _, newUpdate in newGlobals.Updates do
 		id += 1
-		finalGlobals.ID = id
+		finalGlobals.Id = id
 
-		-- let's check if it was active and then lock it
-
-		local oldGlobal = nil
-
-		local updates: { [number]: GlobalUpdate } = currentGlobals.Updates
-
-		for _, oldUpdate in updates do
-			if oldUpdate.ID == newUpdate.ID then
-				oldGlobal = oldUpdate
-				break
-			end
-		end
-
-		-- maybe choose something different because .OnGlobalUpdate will fire too many times.
-		-- Maybe split .OnGlobalUpdate into .OnActiveGlobalUpdate and .OnLockedGlobalUpdate?
-		local isNewGlobal = oldGlobal == nil or newUpdate.Locked ~= oldGlobal.Locked or table.find(keep._pending_global_locks, id)
-
-		if not isNewGlobal then
-			oldGlobal.ID = id
-			table.insert(finalGlobals.Updates, oldGlobal)
-			continue
-		end
-
-		newUpdate.ID = id
-
-		if not newUpdate.Locked then
-			-- let's check if it is unlocked, but has pending lock
-			local isPendingLock = false
-
-			for _, pendingLock in keep._pending_global_locks do
-				if pendingLock == newUpdate.ID then
-					isPendingLock = true
-
-					break
-				end
-			end
-
-			if isPendingLock then
-				-- we are locking it, so let's add it to the final globals
-				newUpdate.Locked = true
-			end
-		end
-
-		-- ok it is locked, let's see if it is being removed
-
-		local isPendingRemoval = false
-
-		for _, pendingRemoval in keep._pending_global_lock_removes do
-			if pendingRemoval == newUpdate.ID then
-				isPendingRemoval = true
-				break
-			end
-		end
-
-		if isPendingRemoval then
-			-- we are removing it, so let's not add it to the final globals
-			continue
-		end
-
-		-- ok it is not being removed, let's add it to the final globals
-
-		keep.OnGlobalUpdate:Fire(newUpdate.Data, newUpdate.ID) -- fire the global update event
-
+		newUpdate.Id = id
 		table.insert(finalGlobals.Updates, newUpdate)
 	end
 
-	local latestGlobals = finalGlobals
+	local globalUpdates = finalGlobals.Updates -- do we deep copy here..?
+
+	local function lockGlobalUpdate(index: number) -- we take index instead, why take updateId just to loop through? we aren't doing any removing, all removals are on locked globals and will be passed to _pending_global_lock_removes
+		return Promise.new(function(resolve, reject)
+			if not keep:IsActive() then
+				return reject()
+			end
+
+			if table.find(keep._pending_global_locks, index) then
+				return resolve()
+			end
+
+			table.insert(keep._pending_global_locks, index) -- locked queue
+			return resolve()
+		end)
+	end
+
+	local function removeLockedUpdate(index: number, updateId: number)
+		return Promise.new(function(resolve, reject)
+			if not keep:IsActive() then
+				return reject()
+			end
+
+			if globalUpdates[index].Id ~= updateId then -- shouldn't happen, but
+				return reject()
+			end
+
+			if not globalUpdates[index].Locked and not keep._pending_global_locks[index] then
+				keep._keep_store._processError("Attempted to remove a global update that was not locked", 2)
+				return reject()
+			end
+
+			if table.find(keep._pending_global_lock_removes, updateId) then
+				return resolve()
+			end
+
+			table.insert(keep._pending_global_lock_removes, updateId) -- locked removal queue
+			return resolve()
+		end)
+	end
+
+	local processUpdates = {}
+
+	for i = 1, #globalUpdates do
+		if globalUpdates[i].Locked then
+			continue
+		end
+
+		keep.GlobalStateProcessor(globalUpdates[i].Data, function()
+			table.insert(processUpdates, function()
+				lockGlobalUpdate(i)
+			end)
+		end, function()
+			table.insert(processUpdates, function()
+				removeLockedUpdate(i, globalUpdates[i].Id)
+			end)
+		end)
+	end
+
+	for _, updateProcessor in processUpdates do
+		updateProcessor()
+	end
+
+	for _, update in finalGlobals.Updates do
+		if update.Locked then
+			continue
+		end
+
+		for _, pendingLock in keep._pending_global_locks do
+			if not (pendingLock == update.Id) then
+				continue
+			end
+
+			update.Locked = true
+
+			table.insert(recentlyLockedGlobalUpdates, DeepCopy(update))
+			break
+		end
+	end
 
 	for _, updateId in keep._pending_global_lock_removes do
-		for i = 1, #latestGlobals.Updates do
-			if latestGlobals.Updates[i].ID == updateId and latestGlobals.Updates[i].Locked then
-				table.remove(latestGlobals.Updates, i)
+		for i = 1, #finalGlobals.Updates do
+			if finalGlobals.Updates[i].Id == updateId and finalGlobals.Updates[i].Locked then
+				table.remove(finalGlobals.Updates, i)
 				break
 			end
 		end
@@ -458,203 +352,9 @@ local function processGlobalUpdates(keep: Keep, newestData: KeepStruct)
 	keep._pending_global_locks = pending_global_locks_left
 	table.clear(keep._pending_global_lock_removes)
 
-	local globalUpdates = latestGlobals.Updates -- do we deep copy here..?
+	latestData.GlobalUpdates = finalGlobals
 
-	local function lockGlobalUpdate(index: number) -- we take index instead, why take updateId just to loop through? we aren't doing any removing, all removals are on locked globals and will be passed to _pending_global_lock_removes
-		return Promise.new(function(resolve, reject)
-			if Keep._isSessionLocked(keep.MetaData.ActiveSession) then
-				return reject()
-			end
-
-			if table.find(keep._pending_global_locks, index) then
-				return resolve()
-			end
-
-			table.insert(keep._pending_global_locks, index) -- locked queue
-			return resolve()
-		end)
-	end
-
-	local function removeLockedUpdate(index: number, updateId: number)
-		return Promise.new(function(resolve, reject)
-			if Keep._isSessionLocked(keep.MetaData.ActiveSession) then
-				return reject()
-			end
-
-			if globalUpdates[index].ID ~= updateId then -- shouldn't happen, but
-				return reject()
-			end
-
-			if not globalUpdates[index].Locked and not keep._pending_global_locks[index] then
-				keep._keep_store._processError("Attempted to remove a global update that was not locked", 2)
-				return reject()
-			end
-
-			if table.find(keep._pending_global_lock_removes, updateId) then
-				return resolve()
-			end
-
-			table.insert(keep._pending_global_lock_removes, updateId) -- locked removal queue
-			return resolve()
-		end)
-	end
-
-	local processUpdates = {} -- we want to run them in batch, so half are saved and half aren't incase of specific needs
-
-	for i = 1, #globalUpdates do
-		if globalUpdates[i].Locked then
-			continue
-		end
-
-		keep.GlobalStateProcessor(globalUpdates[i].Data, function()
-			table.insert(processUpdates, function()
-				lockGlobalUpdate(i)
-			end)
-		end, function()
-			table.insert(processUpdates, function()
-				removeLockedUpdate(i, globalUpdates[i].ID)
-			end)
-		end)
-	end
-
-	for _, updateProcessor in processUpdates do
-		updateProcessor()
-	end
-
-	newestData.GlobalUpdates = finalGlobals
-end
-
-local function transformUpdate(keep: Keep, newestData: KeepStruct, isReleasing: boolean): KeepStruct
-	local isEmpty = isDataEmpty(newestData)
-	local isCorrupted = isDataCorrupted(newestData)
-
-	if type(newestData) == "table" then
-		if type(newestData.Data) == "table" and typeof(newestData.MetaData) == "table" and not keep._global_updates_only then -- full profile
-			-- save data only if this server owns session lock
-			-- if keep._overwriting is true, data will not be saved to prevent servers overwriting each other
-
-			local keepStore = keep._keep_store
-			local isKeepAvailable = if not Keep._isSessionLocked(newestData.MetaData.ActiveSession) and not newestData.MetaData.IsOverwriting then true else false
-
-			if (isKeepAvailable or keep._overwriting) and keepStore then
-				if newestData.MetaData.ForceLoad and Keep._isThisSession(newestData.MetaData.ForceLoad) then
-					-- update keep on this server when ForceLoad is successful
-
-					keep.Data = newestData.Data
-					keep.MetaData = newestData.MetaData
-					keep.GlobalUpdates = newestData.GlobalUpdates
-					keep.UserIds = newestData.UserIds
-				else
-					local valid, err = keepStore.validate(keep.Data) -- validate data before saving
-
-					if valid then
-						newestData.Data = keep.Data
-						newestData.UserIds = keep.UserIds
-					else
-						if keepStore then
-							keepStore._processError(err, 0)
-						end
-
-						return newestData
-					end
-				end
-			end
-		end
-
-		-- process global updates only if this server has the session lock
-		if keep:IsActive() then
-			processGlobalUpdates(keep, newestData)
-		end
-	end
-
-	if isEmpty then -- create new keep if empty
-		keep.MetaData.Created = os.time()
-
-		newestData = {
-			Data = keep.Data, -- should we .validate()?
-			MetaData = keep.MetaData,
-			GlobalUpdates = keep.GlobalUpdates,
-			UserIds = keep.UserIds,
-		}
-	end
-
-	if isCorrupted then -- fix keep if corrupted
-		newestData = {
-			Data = newestData.Data,
-			MetaData = newestData.MetaData or deepCopy(DefaultKeep.MetaData), -- auto locks the session too if new keep
-			GlobalUpdates = newestData.GlobalUpdates or deepCopy(DefaultKeep.GlobalUpdates),
-			UserIds = newestData.UserIds or deepCopy(DefaultKeep.UserIds),
-		}
-	end
-
-	if keep._global_updates_only then
-		return newestData, newestData.UserIds
-	end
-
-	if keep._overwriting then -- :Overwrite() called on this server
-		if newestData.MetaData.ActiveSession then
-			newestData.MetaData.IsOverwriting = true -- tell the other server to release session
-			newestData.MetaData.ReleaseSessionOnOverwrite = keep._releaseSessionOnOverwrite
-		end
-
-		keep.MetaData.LoadCount += 1
-		keep.MetaData.ActiveSession = { PlaceID = 0, JobID = "" } -- set session on this server to not active just in case?
-
-		newestData.MetaData.LoadCount = keep.MetaData.LoadCount
-	elseif not Keep._isSessionLocked(newestData.MetaData.ActiveSession) then -- keep is available for this server
-		local activeSession = deepCopy(DefaultMetaData.ActiveSession) -- give the session to the new keep
-		local isOverwriting = newestData.MetaData.IsOverwriting
-		local shouldReleaseSessionOnOverwrite = newestData.MetaData.ReleaseSessionOnOverwrite
-
-		if isReleasing or (isOverwriting and shouldReleaseSessionOnOverwrite) then
-			activeSession = nil -- clear active session on this server
-
-			keep.MetaData.ActiveSession = { PlaceID = 0, JobID = "" } -- set session on this server to not active just in case?
-
-			if isOverwriting then
-				newestData.MetaData.IsOverwriting = nil
-				newestData.MetaData.ReleaseSessionOnOverwrite = nil
-			end
-
-			if newestData.MetaData.ForceLoad or isOverwriting then
-				-- mark server as ready for cleanup
-				keep:_release(Promise.resolve(keep))
-			end
-		elseif isOverwriting and not shouldReleaseSessionOnOverwrite then
-			-- keep active session on this server
-			newestData.MetaData.IsOverwriting = nil
-			newestData.MetaData.ReleaseSessionOnOverwrite = nil
-
-			keep.Data = newestData.Data
-			keep.MetaData = newestData.MetaData
-			keep.GlobalUpdates = newestData.GlobalUpdates
-			keep.UserIds = newestData.UserIds
-		else
-			newestData.MetaData.LoadCount = keep.MetaData.LoadCount
-
-			-- session claimed, we can clear that
-			newestData.MetaData.ForceLoad = nil
-			keep.MetaData.ForceLoad = nil
-		end
-
-		newestData.MetaData.ActiveSession = activeSession
-		keep.MetaData.ActiveSession = activeSession or { PlaceID = 0, JobID = "" }
-		keep.GlobalUpdates = newestData.GlobalUpdates
-		newestData.MetaData.LastUpdate = os.time()
-
-		if not isEmpty then
-			keep.LatestKeep = deepCopy(newestData)
-		end
-	else -- keep is not available for this server
-		if keep._requestForceLoad then -- tell other server to release the session
-			keep._requestForceLoad = false
-
-			keep.MetaData.ForceLoad = deepCopy(DefaultMetaData.ActiveSession :: Session)
-			newestData.MetaData.ForceLoad = keep.MetaData.ForceLoad
-		end
-	end
-
-	return newestData, newestData.UserIds
+	return recentlyLockedGlobalUpdates
 end
 
 function Keep:_release(updater: Promise): Promise
@@ -673,8 +373,7 @@ function Keep:_release(updater: Promise): Promise
 
 	updater
 		:catch(function(err)
-			local keepStore = self._keep_store
-			keepStore._processError(`Failed to release keep: {err}`, 2)
+			self._keep_store._processError(`Failed to release keep: {err}`, 2)
 		end)
 		:finally(function()
 			-- mark the keep as released
@@ -692,68 +391,135 @@ function Keep:_release(updater: Promise): Promise
 	return updater
 end
 
-function Keep:_save(newestData: KeepStruct, isReleasing: boolean): Promise -- used to internally save, so we can better reveal :Save()
-	local forceLoadRequested = false
+local function save(keep: Keep, isReleasing: boolean): Promise
+	local keepStore = keep._keep_store
 
-	if not self._global_updates_only then
-		if self._view_only and not self._overwriting then
-			self._keep_store._processError(`Attempted to save {self:Identify()} which is a view-only keep, do you mean :Overwrite()?`, 2)
-			return nil -- cancel :UpdateAsync() operation
-		end
+	if keep._view_only then
+		keepStore._processError(`Attempted to save {keep:Identify()} which is a view-only keep, do you mean :Overwrite()?`, 2)
+		return Promise.resolve()
+	end
 
-		if newestData and newestData.MetaData and Keep._isSessionLocked(newestData.MetaData.ActiveSession) and not self._overwriting and not self.MetaData.ForceLoad then
-			-- update session on this server to the new owner on remote ForceLoad / Steal request. Used for releasing session without saving
-			self.MetaData.ActiveSession = newestData.MetaData.ActiveSession
-		end
+	local isOverwritten = false
+	local isReleasingOnOverwrite = false
 
-		if self._stealSession then
-			self._stealSession = false
+	return Promise.try(function()
+		return UpdateKeepAsync(keep._key, keep._store, {
+			edit = function(latestData)
+				isOverwritten = latestData.MetaData.IsOverwriting == true
+				isReleasingOnOverwrite = latestData.MetaData.ReleaseSessionOnOverwrite == true
 
-			newestData.MetaData.ActiveSession = deepCopy(DefaultMetaData.ActiveSession)
-		elseif Keep._isSessionLocked(self.MetaData.ActiveSession) and not self._overwriting and not self.MetaData.ForceLoad then
-			-- session locked on a different server, data will not be saved
-			self._keep_store._processError(`{self:Identify()}'s session is no longer owned by this server and it will be marked for release.`, 0)
+				local isForceLoadRequested = false
 
-			self:_release(Promise.resolve(self))
-			return nil -- cancel :UpdateAsync() operation
-		end
+				keep.MetaData.ActiveSession = latestData.MetaData.ActiveSession
 
-		if not self._requestForceLoad and newestData and newestData.MetaData and newestData.MetaData.ForceLoad then
-			-- release session on this server on remote ForceLoad request
+				if not keep:IsActive() then
+					-- session locked on a different server, data will not be saved
+					keepStore._processError(`{keep:Identify()}'s session is no longer owned by this server and it will be marked for release.`, 0)
 
-			if not Keep._isThisSession(newestData.MetaData.ForceLoad) then
-				if self:IsActive() then
-					forceLoadRequested = true
-				else
-					-- ForceLoad interrupted by another server
-					self:_release(Promise.resolve(self))
-					return nil -- cancel :UpdateAsync() operation
+					keep:_release(Promise.resolve(keep))
+					return true -- cancel :UpdateAsync() operation
 				end
-			end
+
+				if latestData.MetaData.ForceLoad and not Keep._isThisSession(latestData.MetaData.ForceLoad) then
+					-- release session on this server on remote ForceLoad request
+
+					if keep:IsActive() then
+						isForceLoadRequested = true
+					else
+						-- ForceLoad interrupted by another server
+						keep:_release(Promise.resolve(keep))
+						return true -- cancel :UpdateAsync() operation
+					end
+				end
+
+				isReleasing = isReleasing or isForceLoadRequested
+
+				-- process global updates only if this server has the session lock and is not releasing
+				if keep:IsActive() and not isReleasing then
+					if typeof(latestData.GlobalUpdates) == "table" then
+						local recentlyLockedGlobalUpdates = processGlobalUpdates(keep, latestData)
+
+						keep.GlobalUpdates = latestData.GlobalUpdates
+
+						for _, recentUpdate in recentlyLockedGlobalUpdates do
+							-- fire the global update event
+							keep.OnGlobalUpdate:Fire(recentUpdate.Data, recentUpdate.Id)
+						end
+					end
+				end
+
+				if keep:IsActive() then
+					local isOverwriting = latestData.MetaData.IsOverwriting
+					local shouldReleaseSessionOnOverwrite = latestData.MetaData.ReleaseSessionOnOverwrite
+
+					if not isOverwriting then
+						local valid, err = keepStore.validate(keep.Data) -- validate data before saving
+
+						if valid then
+							latestData.Data = keep.Data
+
+							if keepStore._preSave then
+								local processedData = keepStore._preSave(DeepCopy(keep.Data))
+
+								if not processedData then
+									keepStore._processError(":PreSave() must return a table", 2)
+									return true -- cancel :UpdateAsync() operation
+								end
+
+								latestData.Data = processedData
+							end
+
+							latestData.UserIds = keep.UserIds
+						else
+							keepStore._processError(err, 0)
+							return true
+						end
+					end
+
+					if isReleasing or (isOverwriting and shouldReleaseSessionOnOverwrite) then
+						latestData.MetaData.ActiveSession = nil -- clear active session on this server
+
+						if isOverwriting then
+							latestData.MetaData.IsOverwriting = nil
+							latestData.MetaData.ReleaseSessionOnOverwrite = nil
+						end
+
+						if latestData.MetaData.ForceLoad or isOverwriting then
+							-- mark server as ready for cleanup
+							keep:_release(Promise.resolve(keep))
+						end
+					elseif isOverwriting and not shouldReleaseSessionOnOverwrite then
+						-- keep active session on this server
+						latestData.MetaData.IsOverwriting = nil
+						latestData.MetaData.ReleaseSessionOnOverwrite = nil
+
+						keep.Data = latestData.Data
+						keep.MetaData = latestData.MetaData
+						keep.GlobalUpdates = latestData.GlobalUpdates
+						keep.UserIds = latestData.UserIds
+					end
+
+					latestData.MetaData.LastUpdate = os.time()
+				end
+
+				return false
+			end,
+		})
+	end):andThen(function(_latestData, dataStoreKeyInfo)
+		keep._last_save = os.clock() -- reset the auto save timer
+
+		if dataStoreKeyInfo then
+			keep._keyInfo = { -- have to map the tuple to a table for type checking (even though tuples are arrays in lua)
+				CreatedTime = dataStoreKeyInfo.CreatedTime,
+				UpdatedTime = dataStoreKeyInfo.UpdatedTime,
+				Version = dataStoreKeyInfo.Version,
+			}
 		end
-	end
 
-	isReleasing = isReleasing or forceLoadRequested
-
-	local transformedData = transformUpdate(self, newestData, isReleasing)
-
-	if self._keep_store and self._keep_store._preSave and not self._global_updates_only then
-		local processedData = self._keep_store._preSave(deepCopy(transformedData.Data))
-
-		if not processedData then
-			self._keep_store._processError(":PreSave() must return a table", 2)
-			return nil -- cancel :UpdateAsync() operation
+		if isOverwritten then
+			keep.Overwritten:Fire(isReleasingOnOverwrite)
 		end
-
-		transformedData.Data = processedData
-	end
-
-	if self._overwriting then
-		self._overwriting = false -- already overwritten, so we can reset
-		self._releaseSessionOnOverwrite = nil
-	end
-
-	return transformedData
+	end)
 end
 
 --> Public Methods
@@ -762,7 +528,7 @@ end
 	@method Save
 	@within Keep
 
-	@return Promise<Keep>
+	@return Promise
 
 	Manually Saves a Keep. Commonly useful for speeding up global updates
 
@@ -777,45 +543,16 @@ end
 
 function Keep:Save(): Promise
 	if self._releasing or self._released then
-		return Promise.resolve(self)
+		return Promise.resolve()
 	end
 
 	Keep._activeSaveJobs += 1
 
-	local savingState = Promise.try(function()
-		local isOverwritten = false
-		local isReleasingSession = false
-
-		local _, dataKeyInfo: DataStoreKeyInfo? = self._store:UpdateAsync(self._key, function(newestData)
-			isOverwritten = newestData and newestData.MetaData and newestData.MetaData.IsOverwriting == true
-			isReleasingSession = newestData and newestData.MetaData and newestData.MetaData.ReleaseSessionOnOverwrite == true
-
-			return self:_save(newestData, false)
-		end)
-
-		self._last_save = os.clock() -- reset the auto save timer
-
-		if dataKeyInfo then
-			self._keyInfo = { -- have to map the tuple to a table for type checking (even though tuples are arrays in lua)
-				CreatedTime = dataKeyInfo.CreatedTime,
-				UpdatedTime = dataKeyInfo.UpdatedTime,
-				Version = dataKeyInfo.Version,
-			}
-		end
-
-		if isOverwritten then
-			self.Overwritten:Fire(isReleasingSession)
-		end
-
-		return self
+	local savingState = save(self, false):catch(function(err)
+		self._keep_store._processError(err, 1)
+	end):finally(function()
+		Keep._activeSaveJobs -= 1
 	end)
-		:catch(function(err)
-			local keepStore = self._keep_store
-			keepStore._processError(err, 1)
-		end)
-		:finally(function()
-			Keep._activeSaveJobs -= 1
-		end)
 
 	self.Saving:Fire(savingState)
 
@@ -826,58 +563,88 @@ end
 	@method Overwrite
 	@within Keep
 
-	@param ignoreExistingSession boolean?
+	@param shouldKeepExistingSession boolean?
 
-	@return Promise<Keep>
+	@return Promise
 
-	Used to overwrite on a view-only Keep.
+	Used to overwrite a view-only Keep.
 
-	```ignoreExistingSession``` controls the behavior of the server with the active session lock, defaults to ```false```
+	```shouldKeepExistingSession``` controls the behavior of the server with the active session lock, defaults to ```false```
 ]=]
 
-function Keep:Overwrite(ignoreExistingSession: boolean?): Promise
-	ignoreExistingSession = if typeof(ignoreExistingSession) == "boolean" then ignoreExistingSession else false
+function Keep:Overwrite(shouldKeepExistingSession: boolean?): Promise
+	shouldKeepExistingSession = if typeof(shouldKeepExistingSession) == "boolean" then shouldKeepExistingSession else false
+
+	local shouldReleaseSession = shouldKeepExistingSession == false
+
+	local keepStore = self._keep_store
 
 	Keep._activeSaveJobs += 1
 
-	local savingState = Promise.try(function()
-		local _, dataKeyInfo: DataStoreKeyInfo? = self._store:UpdateAsync(self._key, function(newestData)
-			self._overwriting = true
-			self._releaseSessionOnOverwrite = ignoreExistingSession == false
+	return Promise.try(function()
+		return UpdateKeepAsync(self._key, self._store, {
+			edit = function(latestData)
+				if typeof(latestData.Data) == "table" and typeof(latestData.MetaData) == "table" then -- full profile
+					local valid, err = keepStore.validate(self.Data) -- validate data before saving
 
-			return self:_save(newestData, false)
-		end)
+					if valid then
+						latestData.Data = self.Data
 
-		self._last_save = os.clock() -- reset the auto save timer
+						if keepStore._preSave then
+							local processedData = keepStore._preSave(DeepCopy(self.Data))
 
-		if dataKeyInfo then
-			self._keyInfo = { -- have to map the tuple to a table for type checking (even though tuples are arrays in lua)
-				CreatedTime = dataKeyInfo.CreatedTime,
-				UpdatedTime = dataKeyInfo.UpdatedTime,
-				Version = dataKeyInfo.Version,
-			}
-		end
+							if not processedData then
+								keepStore._processError(":PreSave() must return a table", 2)
+								return true -- cancel :UpdateAsync() operation
+							end
 
-		return self
+							latestData.Data = processedData
+						end
+
+						latestData.UserIds = self.UserIds
+					else
+						keepStore._processError(err, 0)
+						return true
+					end
+				end
+
+				if latestData.MetaData.ActiveSession then
+					latestData.MetaData.IsOverwriting = true -- tell the other server to release session
+					latestData.MetaData.ReleaseSessionOnOverwrite = shouldReleaseSession
+				end
+
+				latestData.MetaData.LoadCount += 1
+
+				self.MetaData.LoadCount = latestData.MetaData.LoadCount
+
+				return false
+			end,
+		})
 	end)
+		:andThen(function(_latestData, dataStoreKeyInfo)
+			self._last_save = os.clock() -- reset the auto save timer
+
+			if dataStoreKeyInfo then
+				self._keyInfo = { -- have to map the tuple to a table for type checking (even though tuples are arrays in lua)
+					CreatedTime = dataStoreKeyInfo.CreatedTime,
+					UpdatedTime = dataStoreKeyInfo.UpdatedTime,
+					Version = dataStoreKeyInfo.Version,
+				}
+			end
+		end)
 		:catch(function(err)
-			local keepStore = self._keep_store
 			keepStore._processError(err, 1)
 		end)
 		:finally(function()
 			Keep._activeSaveJobs -= 1
 		end)
-
-	self.Saving:Fire(savingState)
-
-	return savingState
 end
 
 --[=[
 	@method Release
 	@within Keep
 
-	@return Promise<Keep>
+	@return Promise
 
 	Releases the session lock to allow other servers to access the Keep
 
@@ -892,28 +659,20 @@ function Keep:Release(): Promise
 	end
 
 	if self._released and not self._global_updates_only then
-		return Promise.resolve(self)
+		return Promise.resolve()
 	end
 
+	Keep._activeSaveJobs += 1
+
 	local updater = Promise.retry(function()
-		return Promise.try(function()
-			local _, dataKeyInfo: DataStoreKeyInfo? = self._store:UpdateAsync(self._key, function(newestData: KeepStruct)
-				return self:_save(newestData, true)
-			end)
-
-			self._last_save = os.clock() -- reset the auto save timer
-
-			if dataKeyInfo then
-				self._keyInfo = { -- have to map the tuple to a table for type checking (even though tuples are arrays in lua)
-					CreatedTime = dataKeyInfo.CreatedTime,
-					UpdatedTime = dataKeyInfo.UpdatedTime,
-					Version = dataKeyInfo.Version,
-				}
-			end
-
-			return self
-		end)
+		return save(self, true)
 	end, Keep._releaseRetryMaxAttempts)
+		:catch(function(err)
+			self._keep_store._processError(err, 1)
+		end)
+		:finally(function()
+			Keep._activeSaveJobs -= 1
+		end)
 
 	self.Saving:Fire(updater)
 
@@ -992,14 +751,14 @@ end
 
 function Keep:Reconcile(): ()
 	local function reconcileData(data: any, template: any)
-		if type(data) ~= "table" then
+		if typeof(data) ~= "table" then
 			return template
 		end
 
 		for key, value in template do
 			if data[key] == nil then
 				data[key] = value
-			elseif type(data[key]) == "table" then
+			elseif typeof(data[key]) == "table" then
 				data[key] = reconcileData(data[key], value)
 			end
 		end
@@ -1007,8 +766,8 @@ function Keep:Reconcile(): ()
 		return data
 	end
 
-	self.Data = reconcileData(self.Data, deepCopy(self._data_template))
-	self.MetaData = reconcileData(self.MetaData, deepCopy(DefaultKeep.MetaData))
+	self.Data = reconcileData(self.Data, DeepCopy(self._data_template))
+	self.MetaData = reconcileData(self.MetaData, DeepCopy(DefaultData.MetaData))
 end
 
 --[=[
@@ -1244,21 +1003,22 @@ function Keep:SetVersion(version: string, migrateProcessor: ((versionKeep: Keep)
 		end
 	end
 
-	if type(migrateProcessor) ~= "function" then
+	if typeof(migrateProcessor) ~= "function" then
 		error("[DataKeep] migrateProcessor must be a function")
 	end
 
 	return Promise.new(function(resolve, reject)
 		if not self:IsActive() then
-			return reject()
+			reject()
+			return
 		end
 
 		local oldKeep = {
-			Data = deepCopy(self.Data),
-			MetaData = deepCopy(self.MetaData),
-			GlobalUpdates = deepCopy(self.GlobalUpdates),
-			UserIds = deepCopy(self.UserIds),
-		} -- was going to just return self.LatestKeep but worried on the timing of the save
+			Data = DeepCopy(self.Data),
+			MetaData = DeepCopy(self.MetaData),
+			GlobalUpdates = DeepCopy(self.GlobalUpdates),
+			UserIds = DeepCopy(self.UserIds),
+		}
 
 		local versionKeep = self._keep_store
 			:ViewKeep(self._key, version)
@@ -1286,7 +1046,7 @@ end
 	@method GetActiveGlobalUpdates
 	@within Keep
 
-	@return {Array<{ Data: {}, ID: number }>}
+	@return {Array<{ Data: {}, Id: number }>}
 
 	Returns an array of active global updates (not locked/processed)
 ]=]
@@ -1299,7 +1059,7 @@ function Keep:GetActiveGlobalUpdates(): { GlobalUpdate }
 			continue
 		end
 
-		table.insert(activeUpdates, { Data = update.Data, ID = update.ID, Locked = update.Locked })
+		table.insert(activeUpdates, { Data = update.Data, Id = update.Id, Locked = update.Locked })
 	end
 
 	return activeUpdates
@@ -1309,7 +1069,7 @@ end
 	@method GetLockedGlobalUpdates
 	@within Keep
 
-	@return {Array<{ Data: {}, ID: number }>}
+	@return {Array<{ Data: {}, Id: number }>}
 
 	Returns an array of locked global updates (processed)
 
@@ -1326,7 +1086,7 @@ function Keep:GetLockedGlobalUpdates(): { GlobalUpdate }
 			continue
 		end
 
-		table.insert(lockedUpdates, { Data = update.Data, ID = update.ID, Locked = update.Locked })
+		table.insert(lockedUpdates, { Data = update.Data, Id = update.Id, Locked = update.Locked })
 	end
 
 	return lockedUpdates
@@ -1349,18 +1109,18 @@ end
 
 function Keep:ClearLockedUpdate(id: number): Promise
 	return Promise.new(function(resolve, reject)
-		if Keep._isSessionLocked(self.MetaData.ActiveSession) then
+		if not self:IsActive() then
 			return reject()
 		end
 
 		local globalUpdates = self.GlobalUpdates
 
-		if id > globalUpdates.ID then
+		if id > globalUpdates.Id then
 			return reject()
 		end
 
 		for i = 1, #globalUpdates.Updates do
-			if globalUpdates.Updates[i].ID == id and globalUpdates.Updates[i].Locked then
+			if globalUpdates.Updates[i].Id == id and globalUpdates.Updates[i].Locked then
 				table.insert(self._pending_global_lock_removes, id) -- locked removal queue
 				return resolve()
 			end

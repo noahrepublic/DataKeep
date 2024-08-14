@@ -1,9 +1,11 @@
-local deepCopy = require(script.Parent.deepCopy)
-local defaultData = require(script.Parent.defaultData)
+--!strict
+
+local DeepCopy = require(script.Parent.Utils.DeepCopy)
+local DefaultData = require(script.Parent.DefaultData)
 
 type Session = {
-	PlaceID: number,
-	JobID: string,
+	PlaceId: number,
+	JobId: string,
 }
 
 type MetaData = {
@@ -22,15 +24,17 @@ type MetaData = {
 type GlobalUpdateData = { [string]: any }
 
 type GlobalUpdate = {
-	ID: number,
+	Id: number,
 	Locked: boolean,
 	Data: GlobalUpdateData,
 }
 
 type GlobalUpdates = {
-	ID: number,
+	Id: number,
 	Updates: { GlobalUpdate },
 }
+
+type UserIds = { [number]: number }
 
 type Data = {
 	Data: { [string]: any },
@@ -38,74 +42,46 @@ type Data = {
 	MetaData: MetaData,
 	GlobalUpdates: GlobalUpdates,
 
-	UserIds: { [number]: number },
+	UserIds: UserIds,
 }
 
-local function isDataEmpty(newestData: Data)
+local function isDataEmpty(latestData: Data)
 	-- someone wants to fix this mess??
 
-	return newestData == nil
-		or type(newestData) ~= "table"
-		or type(newestData.Data) ~= "table" and newestData.Data == nil and newestData.MetaData == nil and newestData.GlobalUpdates == nil -- might be global updates there
-		or type(newestData.MetaData) ~= "table"
+	return latestData == nil
+		or typeof(latestData) ~= "table"
+		or typeof(latestData.Data) ~= "table" and latestData.Data == nil and latestData.MetaData == nil and latestData.GlobalUpdates == nil -- might be global updates there
+		or typeof(latestData.MetaData) ~= "table"
 end
 
---[[local function isDataCorrupted(newestData: Data)
-	if newestData == nil then
-		return false
-	end
-
-	if type(newestData) ~= "table" then
-		return true
-	end
-
-	if type(newestData.Data) ~= "table" then
-		return true
-	end
-
-	if type(newestData.MetaData) ~= "table" then
-		return true
-	end
-
-	if type(newestData.GlobalUpdates) ~= "table" then
-		return true
-	end
-
-	if type(newestData.UserIds) ~= "table" then
-		return true
-	end
-
-	return false
-end]]
-
-function updateAsync(
+local function updateAsync(
 	key: string,
 	store: DataStore,
 	updateSettings: {
-		existingHandle: ((latestData: Data) -> Data?)?,
-		missingHandle: ((latestData: Data) -> Data?)?,
-		edit: ((latestData: Data) -> Data?)?,
-	}
+		onExisting: ((latestData: Data) -> boolean?)?,
+		onMissing: ((latestData: Data) -> boolean?)?,
+		edit: ((latestData: Data) -> boolean?)?,
+	},
+	useGet: { version: string }?
 )
-	local function transformUpdate(latestData: Data)
+	local function transformUpdate(latestData: Data): (Data?, UserIds?)
+		local isEmpty = isDataEmpty(latestData)
+
 		if not latestData then
 			latestData = {} :: any
 		end
 
-		local isEmpty = isDataEmpty(latestData)
-		--local isCorrupted = isDataCorrupted(latestData)
-
-		local globalUpdates = deepCopy(defaultData.GlobalUpdates)
+		local globalUpdates = DeepCopy(DefaultData.GlobalUpdates)
 
 		if typeof(latestData) == "table" then
 			if typeof(latestData.Data) == "table" and typeof(latestData.MetaData) == "table" and typeof(latestData.GlobalUpdates) == "table" then
 				-- keep was loaded before
 				globalUpdates = latestData.GlobalUpdates
 
-				local existingHandle = if typeof(updateSettings.existingHandle) == "function" then updateSettings.existingHandle else nil
+				local onExisting = if typeof(updateSettings.onExisting) == "function" then updateSettings.onExisting else nil
 
-				if existingHandle then
-					local shouldCancelOperation = existingHandle(latestData) == nil
+				if onExisting then
+					local shouldCancelOperation = onExisting(latestData) == true
 
 					if shouldCancelOperation then
 						return nil
@@ -126,10 +102,10 @@ function updateAsync(
 				GlobalUpdates = globalUpdates,
 			} :: any
 
-			local missingHandle = if typeof(updateSettings.missingHandle) == "function" then updateSettings.missingHandle else nil
+			local onMissing = if typeof(updateSettings.onMissing) == "function" then updateSettings.onMissing else nil
 
-			if missingHandle then
-				local shouldCancelOperation = missingHandle(latestData) == nil
+			if onMissing then
+				local shouldCancelOperation = onMissing(latestData) == true
 
 				if shouldCancelOperation then
 					return nil
@@ -140,7 +116,7 @@ function updateAsync(
 		local edit = if typeof(updateSettings.edit) == "function" then updateSettings.edit else nil
 
 		if edit then
-			local shouldCancelOperation = edit(latestData) == nil
+			local shouldCancelOperation = edit(latestData) == true
 
 			if shouldCancelOperation then
 				return nil
@@ -150,7 +126,23 @@ function updateAsync(
 		return latestData, latestData.UserIds
 	end
 
-	return store:UpdateAsync(key, transformUpdate)
+	if useGet then
+		local getData, getDataStoreKeyInfo
+
+		if useGet.version then
+			getData, getDataStoreKeyInfo = store:GetVersionAsync(key, useGet.version)
+		else
+			local dataStoreGetOptions = Instance.new("DataStoreGetOptions")
+			dataStoreGetOptions.UseCache = false
+
+			getData, getDataStoreKeyInfo = store:GetAsync(key, dataStoreGetOptions)
+		end
+
+		getData = transformUpdate(getData)
+		return getData, getDataStoreKeyInfo
+	else
+		return store:UpdateAsync(key, transformUpdate)
+	end
 end
 
 return updateAsync

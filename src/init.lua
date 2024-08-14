@@ -8,10 +8,11 @@ local RunService = game:GetService("RunService")
 local Promise = require(script.Parent.Promise)
 local Signal = require(script.Parent.Signal)
 
+local DeepCopy = require(script.Utils.DeepCopy)
+local DefaultData = require(script.DefaultData)
 local Keep = require(script.Keep)
 local MockStore = require(script.MockStore)
-local deepCopy = require(script.deepCopy)
-local updateKeepAsync = require(script.updateKeepAsync)
+local UpdateKeepAsync = require(script.UpdateKeepAsync)
 
 --> Structure
 
@@ -223,43 +224,10 @@ export type unreleasedHandler = (Keep.Session) -> string -- use a function for a
 
 local Keeps: { [string]: Keep } = {} -- queues to save
 
-local JobID = game.JobId
-local PlaceID = game.PlaceId
-
 local autoSaveCycle = 0
 local internalKeepCleanupCycle = 0
 
 --> Private Functions
-
-local function len(tbl: { [any]: any })
-	local count = 0
-
-	for _ in tbl do
-		count += 1
-	end
-
-	return count
-end
-
-local function canLoad(keep: Keep.KeepStruct)
-	local metaData = keep.MetaData
-
-	if not metaData then
-		return true
-	end
-
-	local activeSession = metaData.ActiveSession
-
-	if not activeSession then
-		return true
-	end
-
-	if Keep._isThisSession(activeSession) then
-		return true
-	end
-
-	return false
-end
 
 local function createMockStore(storeInfo: StoreInfo, dataTemplate) -- complete mirror of real stores, minus mock related data as we are in a mock store
 	return setmetatable({
@@ -285,8 +253,7 @@ end
 local function releaseKeepInternally(keep: Keep)
 	Keeps[keep:Identify()] = nil
 
-	local keepStore = keep._keep_store
-	keepStore._cachedKeepPromises[keep:Identify()] = nil
+	keep._keep_store._cachedKeepPromises[keep:Identify()] = nil
 
 	keep:Destroy()
 end
@@ -349,7 +316,7 @@ end)
 function Store.GetStore(storeInfo: StoreInfo | string, dataTemplate: { [string]: any }): Promise
 	local info: StoreInfo
 
-	if type(storeInfo) == "string" then
+	if typeof(storeInfo) == "string" then
 		info = {
 			Name = storeInfo,
 			Scope = nil,
@@ -471,7 +438,7 @@ function Store:LoadKeep(key: string, unreleasedHandler: unreleasedHandler?): Pro
 		end
 	end
 
-	if type(unreleasedHandler) ~= "function" then
+	if typeof(unreleasedHandler) ~= "function" then
 		error("[DataKeep] unreleasedHandler must be a function")
 	end
 
@@ -511,111 +478,204 @@ function Store:LoadKeep(key: string, unreleasedHandler: unreleasedHandler?): Pro
 		-- keep released so we can load new keep
 
 		return nil
-	end):andThen(function(cachedKeep)
-		if cachedKeep then
-			return cachedKeep
-		end
-
-		if self._isMockEnabled then
-			print(`[DataKeep] Using mock store on {id}`)
-		end
-
-		return Promise.new(function(resolve, reject)
-			local keep: Keep.KeepStruct = store:GetAsync(key) or {} -- support versions
-			local isInDeadLock = if keep.MetaData then os.time() - keep.MetaData.LastUpdate > Store._assumeDeadLock else false
-
-			local forceLoad = nil
-			local shouldStealSession = false
-
-			if isInDeadLock then
-				shouldStealSession = true
-			elseif not canLoad(keep) and keep.MetaData.ActiveSession then
-				local loadMethod = unreleasedHandler(keep.MetaData.ActiveSession)
-
-				if not Store.LoadMethods[loadMethod] then
-					warn(`[DataKeep] unreleasedHandler returned an invalid value, defaulting to {Store.LoadMethods.ForceLoad}`) -- TODO: Custom Error Class to fire to IssueSignal
-
-					loadMethod = Store.LoadMethods.ForceLoad
-				end
-
-				if loadMethod == Store.LoadMethods.Cancel then
-					reject(nil) -- should this return an error object?
-					return
-				elseif loadMethod == Store.LoadMethods.Steal then
-					shouldStealSession = true
-				elseif loadMethod == Store.LoadMethods.ForceLoad then
-					forceLoad = { PlaceID = PlaceID, JobID = JobID }
-				end
-			elseif keep.MetaData and keep.MetaData.ForceLoad then
-				-- in case of .ForceLoad left in MetaData and no .ActiveSession
-				forceLoad = { PlaceID = PlaceID, JobID = JobID }
-			end
-
-			if self._preLoad and keep.Data and len(keep.Data) > 0 then
-				local processedData = self._preLoad(deepCopy(keep.Data))
-
-				if not processedData then
-					self._processError(":PreLoad() must return a table", 2)
-					return
-				end
-
-				keep.Data = processedData
-			end
-
-			local keepClass = Keep.new(keep, self._data_template)
-
-			keepClass._store = store -- mock store or real store
-			keepClass._key = key
-			keepClass._store_info.Name = self._store_info.Name
-			keepClass._store_info.Scope = self._store_info.Scope or ""
-
-			keepClass._keep_store = self
-
-			keepClass.MetaData.LoadCount = (keepClass.MetaData.LoadCount or 0) + 1
-			keepClass.MetaData.ForceLoad = forceLoad
-
-			keepClass._requestForceLoad = forceLoad ~= nil
-			keepClass._stealSession = shouldStealSession
-
-			Keeps[keepClass:Identify()] = keepClass
-
-			if keepClass._requestForceLoad and (not keepClass.MetaData.ActiveSession or not Keep._isThisSession(keepClass.MetaData.ActiveSession)) then
-				-- wait for previous :Release() to finish (teleporting between places, etc.)
-
-				local attemptsLeft = Store._forceLoadMaxAttempts
-
-				repeat
-					task.wait(2 ^ (Store._forceLoadMaxAttempts - attemptsLeft)) -- don't ask why, it just works :)
-
-					attemptsLeft -= 1
-
-					keepClass:Save():await()
-
-					if keepClass._releasing or keepClass._released then
-						resolve(nil) -- ForceLoad interrupted by another server
-						return
-					end
-				until Keep._isThisSession(keepClass.MetaData.ActiveSession) or attemptsLeft == 0
-
-				if keepClass.MetaData.ActiveSession and not Keep._isThisSession(keepClass.MetaData.ActiveSession) and attemptsLeft == 0 then
-					keepClass._stealSession = true
-					keepClass:Save():await()
-				end
-			else
-				keepClass:Save():await()
-			end
-
-			for functionName, func in self.Wrapper do
-				keepClass[functionName] = function(...)
-					return func(...)
-				end
-			end
-
-			self._cachedKeepPromises[id] = nil
-
-			resolve(keepClass)
-		end)
 	end)
+		:andThen(function(cachedKeep)
+			if cachedKeep then
+				return cachedKeep
+			end
+
+			if self._isMockEnabled then
+				print(`[DataKeep] Using mock store on {id}`)
+			end
+
+			local shouldForceLoad = false
+			local requestForceLoad = false
+			local shouldStealSessionOnForceLoad = false -- used only with ForceLoad
+			local shouldStealSession = false -- unreleasedHandler() == Store.LoadMethods.Steal
+
+			local forceLoadAttempts = 0
+
+			return Promise.try(function()
+				while true do
+					local loadedData, dataStoreKeyInfo = UpdateKeepAsync(key, store, {
+						onExisting = function(latestData)
+							if Store.ServiceDone then
+								return true
+							end
+
+							local activeSession = latestData.MetaData.ActiveSession
+							local forceLoadSession = latestData.MetaData.ForceLoad
+
+							if activeSession == nil then
+								latestData.MetaData.ActiveSession = DeepCopy(DefaultData.MetaData.ActiveSession)
+								latestData.MetaData.ForceLoad = nil
+							elseif typeof(activeSession) == "table" then
+								if not Keep._isThisSession(activeSession) then
+									local lastUpdate = latestData.MetaData.LastUpdate
+
+									if lastUpdate ~= nil then
+										if os.time() - lastUpdate > Store._assumeDeadLock then
+											shouldStealSession = true
+										end
+									end
+
+									if shouldStealSessionOnForceLoad or shouldStealSession then
+										local forceLoadInterrupted = false
+
+										if forceLoadSession ~= nil then
+											forceLoadInterrupted = Keep._isThisSession(forceLoadSession) == false
+										end
+
+										if not forceLoadInterrupted or shouldStealSession then
+											latestData.MetaData.ActiveSession = DeepCopy(DefaultData.MetaData.ActiveSession)
+											latestData.MetaData.ForceLoad = nil
+										end
+									elseif requestForceLoad then
+										latestData.MetaData.ForceLoad = DeepCopy(DefaultData.MetaData.ActiveSession)
+									end
+								else
+									latestData.MetaData.ForceLoad = nil
+								end
+							end
+
+							return false
+						end,
+						onMissing = function(latestData)
+							latestData.Data = DeepCopy(self._data_template)
+							latestData.MetaData = DeepCopy(DefaultData.MetaData)
+							latestData.MetaData.Created = os.time()
+							latestData.UserIds = DeepCopy(DefaultData.UserIds)
+						end,
+						edit = function(latestData)
+							if Store.ServiceDone then
+								return true
+							end
+
+							local activeSession = latestData.MetaData.ActiveSession
+
+							if activeSession ~= nil and Keep._isThisSession(activeSession) then
+								latestData.MetaData.LoadCount += 1
+								latestData.MetaData.LastUpdate = os.time()
+
+								if self._preLoad then
+									local processedData = self._preLoad(DeepCopy(latestData.Data))
+
+									if not processedData then
+										self._processError(":PreLoad() must return a table", 2)
+										return true
+									end
+
+									latestData.Data = processedData
+								end
+							end
+
+							return false
+						end,
+					})
+
+					if not loadedData or not dataStoreKeyInfo then
+						-- cancel :LoadKeep() attempt
+						return nil
+					end
+
+					local activeSession = loadedData.MetaData.ActiveSession
+
+					if not (typeof(activeSession) == "table") then
+						-- probably because of Store.ServiceDone
+						return nil
+					end
+
+					if Keep._isThisSession(activeSession) then
+						return {
+							loadedData = loadedData,
+							dataStoreKeyInfo = dataStoreKeyInfo,
+						}
+					end
+
+					if shouldForceLoad then
+						local forceLoadSession = loadedData.MetaData.ForceLoad
+						local forceLoadInterrupted = false
+
+						if forceLoadSession ~= nil then
+							forceLoadInterrupted = Keep._isThisSession(forceLoadSession) == false
+						end
+
+						if forceLoadInterrupted then
+							-- another session tried to force load this keep
+							return nil
+						end
+
+						if not requestForceLoad then
+							forceLoadAttempts += 1
+
+							if forceLoadAttempts == Store._forceLoadMaxAttempts then
+								shouldStealSessionOnForceLoad = true
+							else
+								local attemptsLeft = Store._forceLoadMaxAttempts - forceLoadAttempts
+								task.wait(2 ^ (Store._forceLoadMaxAttempts - attemptsLeft)) -- don't ask why, it just works :)
+							end
+						end
+
+						requestForceLoad = false -- only request a force load once
+					else
+						local loadMethod = unreleasedHandler(activeSession)
+
+						if not Store.LoadMethods[loadMethod] then
+							warn(`[DataKeep] unreleasedHandler returned an invalid value, defaulting to {Store.LoadMethods.ForceLoad}`) -- TODO: Custom Error Class to fire to IssueSignal
+
+							loadMethod = Store.LoadMethods.ForceLoad
+						end
+
+						if loadMethod == Store.LoadMethods.Cancel then
+							return nil
+						elseif loadMethod == Store.LoadMethods.ForceLoad then
+							shouldForceLoad = true
+							requestForceLoad = true
+						elseif loadMethod == Store.LoadMethods.Steal then
+							shouldStealSession = true
+						end
+					end
+				end
+			end):andThen(function(keepData)
+				self._cachedKeepPromises[id] = nil
+
+				if not keepData then
+					return nil
+				end
+
+				local loadedData = keepData.loadedData
+				local dataStoreKeyInfo = keepData.dataStoreKeyInfo
+
+				local keepClass = Keep.new(loadedData, self._data_template)
+
+				if dataStoreKeyInfo then
+					keepClass._keyInfo = {
+						CreatedTime = dataStoreKeyInfo.CreatedTime,
+						UpdatedTime = dataStoreKeyInfo.UpdatedTime,
+						Version = dataStoreKeyInfo.Version,
+					}
+				end
+
+				keepClass._key = key
+				keepClass._store = store -- mock store or real store
+				keepClass._store_info.Name = self._store_info.Name
+				keepClass._store_info.Scope = self._store_info.Scope or ""
+				keepClass._keep_store = self
+
+				for functionName, func in self.Wrapper do
+					keepClass[functionName] = function(...)
+						return func(...)
+					end
+				end
+
+				Keeps[keepClass:Identify()] = keepClass
+
+				return keepClass
+			end)
+		end)
+		:catch(function(err)
+			self._processError(`Unable to load keep for {id}: {err}`, 1)
+		end)
 
 	self._cachedKeepPromises[id] = promise
 	return promise
@@ -650,61 +710,63 @@ end
 ]=]
 
 function Store:ViewKeep(key: string, version: string?): Promise
-	-- do we need to check for Store.ServiceDone here?
+	local id = `{self._store_info.Name}/{self._store_info.Scope or ""}{self._store_info.Scope and "/" or ""}{key}`
 
-	return Promise.new(function(resolve)
-		local id = `{self._store_info.Name}/{self._store_info.Scope or ""}{self._store_info.Scope and "/" or ""}{key}`
-		local isFoundLoadedKeep = false
+	if Store.ServiceDone then
+		warn(`[DataKeep] Server is closing, unable to view keep for {id}`)
+		return Promise.reject(nil)
+	end
 
-		if Keeps[id] and not Keeps[id]._releasing and not Keeps[id]._released then
-			isFoundLoadedKeep = true
-		end
+	return Promise.try(function()
+		local loadedData, dataStoreKeyInfo = UpdateKeepAsync(key, self._store, {
+			onMissing = function(latestData)
+				latestData.Data = DeepCopy(self._data_template)
+				latestData.MetaData = DeepCopy(DefaultData.MetaData)
+				latestData.MetaData.Created = os.time()
+				latestData.UserIds = DeepCopy(DefaultData.UserIds)
 
-		local keep
+				latestData.MetaData.ActiveSession = nil
+			end,
+		}, { version = version })
 
-		if not (version == nil) then
-			keep = self._store:GetVersionAsync(key, version) or {}
-		elseif not isFoundLoadedKeep then
-			keep = self._store:GetAsync(key) or {}
-		else
-			keep = {
-				Data = deepCopy(Keeps[id].Data),
-				MetaData = deepCopy(Keeps[id].MetaData),
-				GlobalUpdates = deepCopy(Keeps[id].GlobalUpdates),
-				UserIds = deepCopy(Keeps[id].UserIds),
-			}
-		end
-
-		if self._preLoad and keep.Data and len(keep.Data) > 0 then
-			local processedData = self._preLoad(deepCopy(keep.Data))
+		if self._preLoad then
+			local processedData = self._preLoad(DeepCopy(loadedData.Data))
 
 			if not processedData then
 				self._processError(":PreLoad() must return a table", 2)
 				return
 			end
 
-			keep.Data = processedData
+			loadedData.Data = processedData
 		end
 
-		local keepObject = Keep.new(keep, self._data_template, true)
+		local keepClass = Keep.new(loadedData, self._data_template)
 
-		keepObject._view_only = true
-		keepObject._released = true -- incase they call :Release() and it tries to save
+		if dataStoreKeyInfo then
+			keepClass._keyInfo = {
+				CreatedTime = dataStoreKeyInfo.CreatedTime,
+				UpdatedTime = dataStoreKeyInfo.UpdatedTime,
+				Version = dataStoreKeyInfo.Version,
+			}
+		end
 
-		keepObject._store = self._store -- mock store or real store
-		keepObject._key = key
-		keepObject._store_info.Name = self._store_info.Name
-		keepObject._store_info.Scope = self._store_info.Scope or ""
+		keepClass._view_only = true
+		keepClass._releasing = true
+		keepClass._released = true -- incase they call :Release() and it tries to save
 
-		keepObject._keep_store = self
+		keepClass._key = key
+		keepClass._store = self._store -- mock store or real store
+		keepClass._store_info.Name = self._store_info.Name
+		keepClass._store_info.Scope = self._store_info.Scope or ""
+		keepClass._keep_store = self
 
 		for functionName, func in self.Wrapper do -- attach wrapper functions
-			keepObject[functionName] = function(...)
+			keepClass[functionName] = function(...)
 				return func(...)
 			end
 		end
 
-		return resolve(keepObject)
+		return keepClass
 	end)
 end
 
@@ -741,7 +803,7 @@ end
 
 function Store:PreSave(callback: ({ [string]: any }) -> { [string]: any }): ()
 	assert(self._preSave == nil, "[DataKeep] :PreSave() can only be set once")
-	assert(callback and type(callback) == "function", "[DataKeep] :PreSave() callback must be a function")
+	assert(callback and typeof(callback) == "function", "[DataKeep] :PreSave() callback must be a function")
 
 	self._preSave = callback
 end
@@ -779,7 +841,7 @@ end
 
 function Store:PreLoad(callback: ({ [string]: any }) -> { [string]: any }): ()
 	assert(self._preLoad == nil, "[DataKeep] :PreLoad() can only be set once")
-	assert(callback and type(callback) == "function", "[DataKeep] :PreLoad() callback must be a function")
+	assert(callback and typeof(callback) == "function", "[DataKeep] :PreLoad() callback must be a function")
 
 	self._preLoad = callback
 end
@@ -816,19 +878,19 @@ function Store:PostGlobalUpdate(key: string, updateHandler: (GlobalUpdates) -> (
 
 		local store = self._store
 
-		return updateKeepAsync(key, store, {
-			edit = function(newestData)
+		return UpdateKeepAsync(key, store, {
+			edit = function(latestData)
 				local globalUpdateObject = {
-					_updates = newestData.GlobalUpdates,
+					_updates = latestData.GlobalUpdates,
 				}
 
 				setmetatable(globalUpdateObject, GlobalUpdates)
 
 				updateHandler(globalUpdateObject)
-
-				return newestData
 			end,
 		})
+	end):catch(function(err)
+		self._processError(`Unable to post GlobalUpdate: {err}`, 1)
 	end)
 end
 
@@ -844,7 +906,7 @@ end
 ]=]
 
 --[=[
-	@type GlobalID number
+	@type GlobalId number
 	@within GlobalUpdates
 
 	Used to identify a global update
@@ -856,7 +918,7 @@ end
 
 	@param globalData {}
 
-	@return Promise<GlobalID>
+	@return Promise<GlobalId>
 
 	Adds a global update to the Keep
 
@@ -877,13 +939,13 @@ function GlobalUpdates:AddGlobalUpdate(globalData: {}): Promise
 
 		local globalUpdates = self._updates
 
-		local updateId: number = globalUpdates.ID
+		local updateId: number = globalUpdates.Id
 		updateId += 1
 
-		globalUpdates.ID = updateId
+		globalUpdates.Id = updateId
 
 		table.insert(globalUpdates.Updates, {
-			ID = updateId,
+			Id = updateId,
 			Locked = false,
 			Data = globalData,
 		})
@@ -931,7 +993,7 @@ end
 	@method RemoveActiveUpdate
 	@within GlobalUpdates
 
-	@param updateId GlobalID
+	@param updateId GlobalId
 
 	@return Promise<void>
 
@@ -941,7 +1003,7 @@ end
 	local updates = globalUpdates:GetActiveUpdates()
 
 	for _, update in updates do
-		globalUpdates:RemoveActiveUpdate(update.ID):andThen(function()
+		globalUpdates:RemoveActiveUpdate(update.Id):andThen(function()
 			print("Removed Global Update!")
 		end)
 	end
@@ -954,16 +1016,20 @@ function GlobalUpdates:RemoveActiveUpdate(updateId: number): Promise
 			return reject()
 		end
 
+		if not updateId or not (typeof(updateId) == "number") then
+			return reject()
+		end
+
 		local globalUpdates = self._updates
 
-		if globalUpdates.ID < updateId then
+		if globalUpdates.Id < updateId then
 			return reject()
 		end
 
 		local globalUpdateIndex = nil
 
 		for i = 1, #globalUpdates.Updates do
-			if globalUpdates.Updates[i].ID == updateId then
+			if globalUpdates.Updates[i].Id == updateId then
 				globalUpdateIndex = i
 				break
 			end
@@ -987,7 +1053,7 @@ end
 	@method ChangeActiveUpdate
 	@within GlobalUpdates
 
-	@param updateId GlobalID
+	@param updateId GlobalId
 	@param globalData {}
 
 	@return Promise<void>
@@ -1003,14 +1069,18 @@ function GlobalUpdates:ChangeActiveUpdate(updateId: number, globalData: {}): Pro
 			return reject()
 		end
 
+		if not updateId or not (typeof(updateId) == "number") then
+			return reject()
+		end
+
 		local globalUpdates = self._updates
 
-		if globalUpdates.ID < updateId then
+		if globalUpdates.Id < updateId then
 			return reject()
 		end
 
 		for _, update in globalUpdates.Updates do
-			if update.ID == updateId and not update.Locked then
+			if update.Id == updateId and not update.Locked then
 				update.Data = globalData
 
 				return resolve()
@@ -1028,12 +1098,12 @@ game:BindToClose(function()
 
 	-- loop through and release (release saves too)
 
-	local saveSize = len(Keeps)
-
-	if saveSize > 0 then
-		for _, keep in Keeps do
-			keep:Release()
+	for _, keep in Keeps do
+		if keep._releasing or keep._released then
+			continue
 		end
+
+		keep:Release()
 	end
 
 	-- delay server closing process until all save jobs are completed
@@ -1049,17 +1119,11 @@ local function runAutoSave(deltaTime: number)
 
 	autoSaveCycle += deltaTime
 
-	if autoSaveCycle < Store._saveInterval then
+	if autoSaveCycle < 1 then -- I'm not sure if there will be any performance impact, keeps are still saved within the Store._saveInterval
 		return
 	end
 
 	autoSaveCycle = 0 -- reset awaiting cycle
-
-	local saveSize = len(Keeps)
-
-	if not (saveSize > 0) then
-		return
-	end
 
 	local clock = os.clock()
 
@@ -1067,7 +1131,7 @@ local function runAutoSave(deltaTime: number)
 		if keep._releasing or keep._released then
 			continue
 		end
-		if clock - keep._last_save < Store._saveInterval then -- keep already saved within the Store._saveInterval
+		if clock - keep._last_save < Store._saveInterval then
 			continue
 		end
 
