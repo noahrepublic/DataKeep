@@ -23,13 +23,13 @@ type MetaData = {
 type GlobalUpdateData = { [string]: any }
 
 type GlobalUpdate = {
-	Id: number,
+	ID: number,
 	Locked: boolean,
 	Data: GlobalUpdateData,
 }
 
 type GlobalUpdates = {
-	Id: number,
+	ID: number,
 	Updates: { GlobalUpdate },
 }
 
@@ -52,7 +52,7 @@ local defaultMetaData: MetaData = {
 }
 
 local defaultGlobalUpdates: GlobalUpdates = {
-	Id = 0, -- [recentUpdateId] newest global update id to process in order
+	ID = 0, -- [recentUpdateId] newest global update id to process in order
 	Updates = {},
 }
 

@@ -236,7 +236,7 @@ return function()
 			store
 				:PostGlobalUpdate("Data", function(globalUpdates)
 					for i, globalUpdate in globalUpdates:GetActiveUpdates() do
-						globalUpdates:ChangeActiveUpdate(globalUpdate.Id, {
+						globalUpdates:ChangeActiveUpdate(globalUpdate.ID, {
 							Message = `{globalUpdate.Data.Message}Goodbye`,
 						})
 
@@ -268,7 +268,7 @@ return function()
 					expect(#globalUpdates:GetActiveUpdates()).to.equal(1)
 
 					for _, globalUpdate in globalUpdates:GetActiveUpdates() do
-						globalUpdates:RemoveActiveUpdate(globalUpdate.Id)
+						globalUpdates:RemoveActiveUpdate(globalUpdate.ID)
 
 						expect(#globalUpdates:GetActiveUpdates()).to.equal(0)
 					end
@@ -280,10 +280,10 @@ return function()
 		end)
 
 		it("should clear locked updates", function()
-			local keep = store:LoadKeep("Data"):expect()
+			local keep = store:LoadKeep("ClearLockTest"):expect()
 
 			store
-				:PostGlobalUpdate("Data", function(globalUpdates)
+				:PostGlobalUpdate("ClearLockTest", function(globalUpdates)
 					globalUpdates:AddGlobalUpdate({
 						Message = "ClearLockTest",
 					})
@@ -292,13 +292,12 @@ return function()
 				end)
 				:await()
 
-			keep:Save():await() -- get new and lock old globalUpdates
-			keep:Save():await() -- lock globalUpdates
+			keep:Save():await() -- get new and lock globalUpdates
 
 			expect(#keep:GetLockedGlobalUpdates()).to.equal(1)
 
 			for _, update in keep:GetLockedGlobalUpdates() do
-				keep:ClearLockedUpdate(update.Id):await()
+				keep:ClearLockedUpdate(update.ID):await()
 			end
 
 			keep:Save():await()

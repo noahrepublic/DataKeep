@@ -24,13 +24,13 @@ type MetaData = {
 type GlobalUpdateData = { [string]: any }
 
 type GlobalUpdate = {
-	Id: number,
+	ID: number,
 	Locked: boolean,
 	Data: GlobalUpdateData,
 }
 
 type GlobalUpdates = {
-	Id: number,
+	ID: number,
 	Updates: { GlobalUpdate },
 }
 
@@ -61,9 +61,9 @@ function reconcileGlobalUpdates(newGlobalUpdates: GlobalUpdates)
 
 	for _, newUpdate in newGlobalUpdates.Updates do
 		id += 1
-		finalGlobals.Id = id
+		finalGlobals.ID = id
 
-		newUpdate.Id = id
+		newUpdate.ID = id
 		table.insert(finalGlobals.Updates, newUpdate)
 	end
 
@@ -93,6 +93,7 @@ local function updateAsync(
 			if typeof(latestData.Data) == "table" and typeof(latestData.MetaData) == "table" and typeof(latestData.GlobalUpdates) == "table" then
 				-- keep was loaded before
 				globalUpdates = reconcileGlobalUpdates(latestData.GlobalUpdates)
+				latestData.GlobalUpdates = globalUpdates
 
 				local onExisting = if typeof(updateSettings.onExisting) == "function" then updateSettings.onExisting else nil
 
@@ -105,7 +106,7 @@ local function updateAsync(
 				end
 			elseif latestData.Data == nil and latestData.MetaData == nil and typeof(latestData.GlobalUpdates) == "table" then
 				-- keep was not loaded before but GlobalUpdate data exists
-				globalUpdates = reconcileGlobalUpdates(latestData.GlobalUpdates)
+				globalUpdates = reconcileGlobalUpdates(latestData.GlobalUpdates) -- latestData.GlobalUpdates will get updated inside isEmpty if
 
 				isEmpty = true
 			else

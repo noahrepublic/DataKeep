@@ -50,25 +50,25 @@ export type Session = {
 type GlobalUpdateData = { [any]: any }
 
 --[=[
-	@type GlobalUpdate { Id: number, Locked: boolean, Data: GlobalUpdateData }
+	@type GlobalUpdate { ID: number, Locked: boolean, Data: GlobalUpdateData }
 	@within Keep
 ]=]
 
 export type GlobalUpdate = {
-	Id: number,
+	ID: number,
 	Locked: boolean,
 	Data: GlobalUpdateData,
 }
 
 --[=[
-	@type GlobalUpdates { Id: number, Updates: { GlobalUpdate } }
+	@type GlobalUpdates { ID: number, Updates: { GlobalUpdate } }
 	@within Keep
 
-	```Id``` is the most recent update index
+	```ID``` is the most recent update index
 ]=]
 
 type GlobalUpdates = {
-	Id: number,
+	ID: number,
 	Updates: { GlobalUpdate },
 }
 
@@ -261,7 +261,7 @@ local function processGlobalUpdates(keep: Keep, latestData: KeepStruct)
 				return reject()
 			end
 
-			if globalUpdates[index].Id ~= updateId then -- shouldn't happen, but
+			if globalUpdates[index].ID ~= updateId then -- shouldn't happen, but
 				return reject()
 			end
 
@@ -292,7 +292,7 @@ local function processGlobalUpdates(keep: Keep, latestData: KeepStruct)
 			end)
 		end, function()
 			table.insert(processUpdates, function()
-				removeLockedUpdate(i, globalUpdates[i].Id)
+				removeLockedUpdate(i, globalUpdates[i].ID)
 			end)
 		end)
 	end
@@ -309,7 +309,7 @@ local function processGlobalUpdates(keep: Keep, latestData: KeepStruct)
 		end
 
 		for _, pendingLock in keep._pending_global_locks do
-			if not (pendingLock == update.Id) then
+			if not (pendingLock == update.ID) then
 				continue
 			end
 
@@ -322,7 +322,7 @@ local function processGlobalUpdates(keep: Keep, latestData: KeepStruct)
 
 	for _, updateId in keep._pending_global_lock_removes do
 		for i = 1, #finalGlobals.Updates do
-			if finalGlobals.Updates[i].Id == updateId and finalGlobals.Updates[i].Locked then
+			if finalGlobals.Updates[i].ID == updateId and finalGlobals.Updates[i].Locked then
 				table.remove(finalGlobals.Updates, i)
 				break
 			end
@@ -376,7 +376,9 @@ function Keep:_release(updater: Promise): Promise
 			Keep._activeSaveJobs -= 1
 		end)
 
-	releaseCache[self:Identify()] = updater
+	if updater:getStatus() == Promise.Status.Started then
+		releaseCache[self:Identify()] = updater
+	end
 
 	return updater
 end
@@ -433,7 +435,7 @@ local function save(keep: Keep, isReleasing: boolean): Promise
 
 						for _, recentUpdate in recentlyLockedGlobalUpdates do
 							-- fire the global update event
-							keep.OnGlobalUpdate:Fire(recentUpdate.Data, recentUpdate.Id)
+							keep.OnGlobalUpdate:Fire(recentUpdate.Data, recentUpdate.ID)
 						end
 					end
 				end
@@ -552,7 +554,9 @@ function Keep:Save(): Promise
 
 	self.Saving:Fire(savingState)
 
-	saveCache[self:Identify()] = savingState
+	if savingState:getStatus() == Promise.Status.Started then
+		saveCache[self:Identify()] = savingState
+	end
 
 	return savingState
 end
@@ -682,7 +686,9 @@ function Keep:Overwrite(shouldKeepExistingSession: boolean?): Promise
 			Keep._activeSaveJobs -= 1
 		end)
 
-	overwriteCache[self:Identify()] = overwritingState
+	if overwritingState:getStatus() == Promise.Status.Started then
+		overwriteCache[self:Identify()] = overwritingState
+	end
 
 	return overwritingState
 end
@@ -1054,7 +1060,7 @@ end
 	@method GetActiveGlobalUpdates
 	@within Keep
 
-	@return {Array<{ Data: {}, Id: number }>}
+	@return {Array<{ Data: {}, ID: number }>}
 
 	Returns an array of active global updates (not locked/processed)
 ]=]
@@ -1067,7 +1073,7 @@ function Keep:GetActiveGlobalUpdates(): { GlobalUpdate }
 			continue
 		end
 
-		table.insert(activeUpdates, { Data = update.Data, Id = update.Id, Locked = update.Locked })
+		table.insert(activeUpdates, { Data = update.Data, ID = update.ID, Locked = update.Locked })
 	end
 
 	return activeUpdates
@@ -1077,7 +1083,7 @@ end
 	@method GetLockedGlobalUpdates
 	@within Keep
 
-	@return {Array<{ Data: {}, Id: number }>}
+	@return {Array<{ Data: {}, ID: number }>}
 
 	Returns an array of locked global updates (processed)
 
@@ -1094,7 +1100,7 @@ function Keep:GetLockedGlobalUpdates(): { GlobalUpdate }
 			continue
 		end
 
-		table.insert(lockedUpdates, { Data = update.Data, Id = update.Id, Locked = update.Locked })
+		table.insert(lockedUpdates, { Data = update.Data, ID = update.ID, Locked = update.Locked })
 	end
 
 	return lockedUpdates
@@ -1123,12 +1129,12 @@ function Keep:ClearLockedUpdate(id: number): Promise
 
 		local globalUpdates = self.GlobalUpdates
 
-		if id > globalUpdates.Id then
+		if id > globalUpdates.ID then
 			return reject()
 		end
 
 		for i = 1, #globalUpdates.Updates do
-			if globalUpdates.Updates[i].Id == id and globalUpdates.Updates[i].Locked then
+			if globalUpdates.Updates[i].ID == id and globalUpdates.Updates[i].Locked then
 				table.insert(self._pending_global_lock_removes, id) -- locked removal queue
 				return resolve()
 			end
