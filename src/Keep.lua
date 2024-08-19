@@ -237,21 +237,7 @@ end
 local function processGlobalUpdates(keep: Keep, latestData: KeepStruct)
 	-- this handles full profiles and if there are only global updates (globals posted with never loaded)
 
-	local finalGlobals = DeepCopy(DefaultData.GlobalUpdates) -- the final global updates to save
-	local recentlyLockedGlobalUpdates = {} -- list of locked GlobalUpdates for .OnGlobalUpdate
-
-	local id = 0 -- used to fix any missing ids
-
-	local newGlobals = latestData.GlobalUpdates
-
-	for _, newUpdate in newGlobals.Updates do
-		id += 1
-		finalGlobals.Id = id
-
-		newUpdate.Id = id
-		table.insert(finalGlobals.Updates, newUpdate)
-	end
-
+	local finalGlobals = latestData.GlobalUpdates -- the final global updates to save
 	local globalUpdates = finalGlobals.Updates -- do we deep copy here..?
 
 	local function lockGlobalUpdate(index: number) -- we take index instead, why take updateId just to loop through? we aren't doing any removing, all removals are on locked globals and will be passed to _pending_global_lock_removes
@@ -314,6 +300,8 @@ local function processGlobalUpdates(keep: Keep, latestData: KeepStruct)
 	for _, updateProcessor in processUpdates do
 		updateProcessor()
 	end
+
+	local recentlyLockedGlobalUpdates = {} -- list of locked GlobalUpdates for .OnGlobalUpdate
 
 	for _, update in finalGlobals.Updates do
 		if update.Locked then
