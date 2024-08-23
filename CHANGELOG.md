@@ -1,6 +1,6 @@
 # DataKeep
 
-## [version 3.2.0](https://github.com/noahrepublic/DataKeep/releases/tag/v3.2.0): 08/18/2024
+## [version 3.2.0](https://github.com/noahrepublic/DataKeep/releases/tag/v3.2.0): 08/23/2024
 
 - Fixes [#21](https://github.com/noahrepublic/DataKeep/issues/21)
 - Adds Steal option to .LoadMethods
