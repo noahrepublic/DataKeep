@@ -2,6 +2,7 @@
 
 --> Includes
 
+local DeepCopy = require(script.Parent.Utils.DeepCopy)
 local MockStorePages = require(script.MockStorePages)
 
 --> Structure
@@ -29,29 +30,13 @@ export type MockStore = typeof(MockStore.new()) & {
 function didyield(f, ...)
 	local finished = false
 	local data
+
 	coroutine.wrap(function(...)
 		data = f(...)
 		finished = true
 	end)(...)
+
 	return not finished, data
-end
-
-local function deepCopy(t: any)
-	local copy = {}
-
-	if not t then
-		return copy
-	end
-
-	for key, value in pairs(t) do
-		if type(value) == "table" then
-			copy[key] = deepCopy(value)
-		else
-			copy[key] = value
-		end
-	end
-
-	return copy
 end
 
 local function createNewVersion(self, key, data: any)
@@ -66,7 +51,7 @@ local function createNewVersion(self, key, data: any)
 		Deleted = false,
 	}
 
-	table.insert(self._dataVersions[key], { versionData, deepCopy(data) })
+	table.insert(self._dataVersions[key], { versionData, DeepCopy(data) })
 
 	return versionData
 end
@@ -74,17 +59,17 @@ end
 --> Public Methods
 
 function MockStore:GetAsync(key: string)
-	return self._data[key]
+	return DeepCopy(self._data[key])
 end
 
 function MockStore:SetAsync(key: string, value: any)
-	self._data[key] = deepCopy(value)
+	self._data[key] = DeepCopy(value)
 
 	return createNewVersion(self, key, value)
 end
 
 function MockStore:UpdateAsync(key: string, callback: (any) -> any)
-	local value = self._data[key]
+	local value = DeepCopy(self._data[key])
 	local yielded, newValue = didyield(callback, value)
 
 	if yielded then
@@ -92,7 +77,12 @@ function MockStore:UpdateAsync(key: string, callback: (any) -> any)
 		return value
 	end
 
-	return self:SetAsync(key, newValue)
+	if not newValue then
+		return value
+	end
+
+	local newVersion = self:SetAsync(key, newValue)
+	return DeepCopy(self._data[key]), newVersion
 end
 
 function MockStore:ListVersionsAsync(key: string, sortDirection: Enum.SortDirection, minDate: number, maxDate: number, limit: number)
@@ -106,14 +96,14 @@ function MockStore:ListVersionsAsync(key: string, sortDirection: Enum.SortDirect
 
 	local filteredVersions = {}
 
-	for _, versionData in ipairs(versions) do
+	for _, versionData in versions do
 		local createdTime = versionData[1].CreatedTime
 
 		minDate = minDate or 0
 		maxDate = maxDate or math.huge
 
 		if createdTime >= minDate and createdTime <= maxDate then
-			table.insert(filteredVersions, 1, versionData[1])
+			table.insert(filteredVersions, 1, DeepCopy(versionData[1]))
 		end
 	end
 
@@ -124,16 +114,16 @@ function MockStore:ListVersionsAsync(key: string, sortDirection: Enum.SortDirect
 	return MockStorePages(filteredVersions, sortDirection == Enum.SortDirection.Ascending, limit)
 end
 
-function MockStore:GetVersionAsync(key, version)
+function MockStore:GetVersionAsync(key: string, version)
 	local versions = self._dataVersions[key]
 
 	if not versions then
 		return
 	end
 
-	for _, versionData in ipairs(versions) do
+	for _, versionData in versions do
 		if versionData[1].Version == version then
-			return versionData[2]
+			return DeepCopy(versionData[2])
 		end
 	end
 

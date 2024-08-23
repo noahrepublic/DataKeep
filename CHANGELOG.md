@@ -1,5 +1,9 @@
 # DataKeep
 
+## [version 3.2.0](https://github.com/noahrepublic/DataKeep/releases/tag/v3.2.0): 08/18/2024
+
+- 
+
 ## [version 3.1.2](https://github.com/noahrepublic/DataKeep/releases/tag/v3.1.2): 05/28/2024
 - Fix a few things by @FireBird702 in https://github.com/noahrepublic/DataKeep/pull/20
 - Fix for #22 by @FireBird702 in https://github.com/noahrepublic/DataKeep/pull/23

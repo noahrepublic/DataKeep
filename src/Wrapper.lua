@@ -6,7 +6,7 @@ local function getOrCreateListener(self, dataPath)
 
 		self.Releasing:Connect(function(releaseState)
 			releaseState:andThen(function()
-				for _, signal in pairs(self._listeners) do
+				for _, signal in self._listeners do
 					signal:Destroy()
 				end
 			end)
@@ -50,7 +50,7 @@ return {
 
 		local currentData = self.Data
 
-		for i, part in ipairs(dataToFindSplit) do
+		for i, part in dataToFindSplit do
 			if i == #dataToFindSplit then
 				currentData[part] = processor(currentData[part])
 

@@ -5,155 +5,304 @@ return function()
 		Coins = 0,
 	}
 
-	local testStore = datakeep.GetStore("Test", dataTemplate):expect()
+	local store = datakeep.GetStore("Test", dataTemplate):expect()
 
-	describe("testStore", function()
+	describe("store", function()
 		it("should be mock", function()
-			expect(testStore.Mock == true).to.be.ok()
+			expect(store._isMockEnabled).to.equal(true)
 		end)
 
 		it("should return cached values", function()
-			local testKeep1 = testStore:LoadKeep("Data"):expect()
-			local testKeep2 = testStore:LoadKeep("Data"):expect()
+			local keep1 = store:LoadKeep("cacheTest"):expect()
+			local keep2 = store:LoadKeep("cacheTest"):expect()
 
-			expect(testKeep1 == testKeep2).to.equal(true)
+			expect(keep1 == keep2).to.equal(true)
 		end)
 
 		it("should pass validate before saving", function()
-			testStore.validate = function(data)
+			store.validate = function(data)
 				for key in data do
 					local dataTempVersion = dataTemplate[key]
 
 					if typeof(data[key]) ~= typeof(dataTempVersion) then
-						return false, "Invalid type for key " .. key
+						return false, `Invalid type for key: {key}`
 					end
 				end
 
 				return true
 			end
 
-			local testKeep = testStore:LoadKeep("Data"):expect()
+			local keep = store:LoadKeep("validateTest"):expect()
+			keep.Data.Coins = "not a number"
 
-			testKeep.Data.Coins = "not a number"
+			keep:Save():await()
 
-			testKeep:Save()
+			local testDataStoreRaw = store._store:GetAsync("validateTest")
+			expect(testDataStoreRaw.Data.Coins).to.be.a("number")
 
-			local testDataStoreRaw = testStore._store:GetAsync("Data")
+			store.validate = function() -- revert to prevent other tests from failing
+				return true
+			end
+		end)
 
-			expect(type(testDataStoreRaw.Data.Coins)).to.equal("number")
+		it("should wait for previous keep to release before loading again and loads it's data", function()
+			local keep = store:LoadKeep("awaitReleaseTest"):expect()
+			keep.Data.Money = 50
+
+			keep._releasing = true -- tell future :LoadKeep() that this keep is in releasing process. This is the only way to check if it's working
+
+			local start = os.clock()
+
+			task.delay(2, function()
+				keep:Release()
+					:andThen(function()
+						print("[DataKeep Unit Tests] Time passed while waiting for keep to release:", os.clock() - start)
+					end)
+					:await()
+			end)
+
+			keep = store:LoadKeep("awaitReleaseTest"):expect()
+
+			expect(keep ~= nil).to.be.ok()
+			expect(keep.Data.Money).to.equal(50)
 		end)
 	end)
 
-	local testKeep = testStore:LoadKeep("Data"):expect()
+	describe("keep", function()
+		it("should save keep", function()
+			local keep = store:LoadKeep("Data"):expect()
+			keep.Data.Coins = 100
 
-	describe("testKeep", function()
+			keep:Save():await()
+
+			local testDataStoreRaw = store._store:GetAsync("Data")
+			expect(testDataStoreRaw.Data.Coins).to.equal(100)
+		end)
+
+		--[[it("should not let view-only keep save data", function()
+			local viewKeep = store:ViewKeep("Data2"):expect()
+			viewKeep.Data.Coins = 100
+
+			viewKeep:Save():await() -- not sure how to catch this. this doesn't error but processError does.
+
+			local testDataStoreRaw = store._store:GetAsync("Data2")
+			expect(testDataStoreRaw).to.equal(nil)
+		end)]]
+
+		it("should not let view-only keep release", function()
+			local viewKeep = store:ViewKeep("Data3"):expect()
+			viewKeep.Data.Coins = 100
+
+			viewKeep:Release():await()
+
+			local testDataStoreRaw = store._store:GetAsync("Data3")
+			expect(testDataStoreRaw).to.equal(nil)
+		end)
+
 		it("should own session lock", function()
-			expect(testKeep.MetaData.ActiveSession == { PlaceID = game.PlaceId, JobID = game.JobId })
-		end)
+			local thisSession = { PlaceId = game.PlaceId, JobId = game.JobId }
 
-		it("should add userids", function()
-			testKeep:AddUserId(0)
-
-			expect(table.find(testKeep.UserIds, 0)).to.be.ok()
-		end)
-
-		it("should remove userids", function()
-			testKeep:RemoveUserId(0)
-			expect(table.find(testKeep.UserIds, 0)).never.to.be.ok()
+			local keep = store:LoadKeep("Data"):expect()
+			expect(keep.MetaData.ActiveSession == thisSession).to.be.ok()
 		end)
 
 		it("should be active", function()
-			expect(testKeep:IsActive()).to.be.ok()
+			local keep = store:LoadKeep("Data"):expect()
+			expect(keep:IsActive()).to.equal(true)
+		end)
+
+		it("should add userId", function()
+			local keep = store:LoadKeep("Data"):expect()
+
+			keep:AddUserId(0)
+
+			expect(table.find(keep.UserIds, 0)).to.be.ok()
+		end)
+
+		it("should remove userId", function()
+			local keep = store:LoadKeep("Data"):expect()
+
+			keep:RemoveUserId(0)
+
+			expect(table.find(keep.UserIds, 0)).never.to.be.ok()
 		end)
 
 		it("should reconcile missing data", function()
-			testKeep.Data.Coins = nil
-			testKeep:Reconcile()
+			local keep = store:LoadKeep("Data"):expect()
+			keep.Data.Coins = nil
 
-			expect(testKeep.Data.Coins == 0).to.be.ok()
+			keep:Reconcile()
+
+			expect(keep.Data.Coins).to.equal(0)
+		end)
+
+		it("should let view-only keeps overwrite data", function()
+			local viewKeep = store:ViewKeep("Data"):expect()
+			viewKeep.Data.Coins = 100
+
+			viewKeep:Overwrite():await()
+
+			expect(viewKeep.Data.Coins).to.equal(100)
+
+			local testDataStoreRaw = store._store:GetAsync("Data")
+			expect(testDataStoreRaw.Data.Coins).to.equal(100)
 		end)
 
 		it("should be able to rollback versions", function()
-			testKeep.Data.Coins = 100
-			testKeep:Save()
+			local keep = store:LoadKeep("Data5"):expect()
+			keep.Data.Coins = 100
 
-			expect(testKeep.Data.Coins == 100).to.be.ok()
+			keep:Save():await()
 
-			local versions = testKeep:GetVersions()
+			expect(keep.Data.Coins).to.equal(100)
 
+			local testDataStoreRaw = store._store:GetAsync("Data5")
+			expect(testDataStoreRaw.Data.Coins).to.equal(100)
+
+			local versions = keep:GetVersions()
 			local iterator = versions:expect()
 
 			local versionToRoll = iterator.Current()
-			testKeep:SetVersion(versionToRoll.Version)
+			keep:SetVersion(versionToRoll.Version):await()
 
-			expect(testKeep.Data.Coins == 0).to.be.ok()
+			expect(keep.Data.Coins).to.equal(0)
 		end)
 
-		it("should add an update", function()
-			testStore:PostGlobalUpdate("Data", function(globalUpdates)
-				globalUpdates:AddGlobalUpdate({
-					Message = "Hello",
-				})
-			end)
+		it("should release keep", function()
+			local keep = store:LoadKeep("Data"):expect()
+
+			keep:Release():await()
+
+			local testDataStoreRaw = store._store:GetAsync("Data")
+			expect(testDataStoreRaw.MetaData.ActiveSession).to.equal(nil)
+		end)
+	end)
+
+	describe("globalUpdates", function()
+		it("should add an global update to new keep", function()
+			store
+				:PostGlobalUpdate("NewKeep", function(globalUpdates)
+					globalUpdates:AddGlobalUpdate({
+						Message = "World",
+					})
+
+					expect(#globalUpdates:GetActiveUpdates()).to.equal(1)
+				end)
+				:await()
+
+			local testDataStoreRaw = store._store:GetAsync("NewKeep")
+			expect(testDataStoreRaw.GlobalUpdates.Updates[1].Data.Message).to.equal("World")
+		end)
+
+		it("should add an global update to offline keep", function()
+			local keep = store:LoadKeep("OfflineKeep"):expect()
+			keep:Release():await()
+
+			local dataStoreRaw = store._store:GetAsync("OfflineKeep")
+			expect(#dataStoreRaw.GlobalUpdates.Updates).to.equal(0)
+
+			store
+				:PostGlobalUpdate("OfflineKeep", function(globalUpdates)
+					globalUpdates:AddGlobalUpdate({
+						Message = "HelloWorld",
+					})
+
+					expect(#globalUpdates:GetActiveUpdates()).to.equal(1)
+				end)
+				:await()
+
+			dataStoreRaw = store._store:GetAsync("OfflineKeep")
+			expect(dataStoreRaw.GlobalUpdates.Updates[1].Data.Message).to.equal("HelloWorld")
+		end)
+
+		it("should add an global update to already loaded keep", function()
+			store:LoadKeep("Data"):expect()
+
+			store
+				:PostGlobalUpdate("Data", function(globalUpdates)
+					globalUpdates:AddGlobalUpdate({
+						Message = "Hello",
+					})
+
+					expect(#globalUpdates:GetActiveUpdates()).to.equal(1)
+				end)
+				:await()
+
+			local testDataStoreRaw = store._store:GetAsync("Data")
+			expect(testDataStoreRaw.GlobalUpdates.Updates[1].Data.Message).to.equal("Hello")
 		end)
 
 		it("should change and add to an active update", function()
-			testStore:PostGlobalUpdate("Data", function(globalUpdates)
-				for i, globalUpdate in globalUpdates:GetActiveUpdates() do
-					globalUpdates:ChangeActiveUpdate(globalUpdate.ID, {
-						Message = globalUpdate.Data.Message .. "Goodbye",
-					})
+			store
+				:PostGlobalUpdate("Data", function(globalUpdates)
+					for i, globalUpdate in globalUpdates:GetActiveUpdates() do
+						globalUpdates:ChangeActiveUpdate(globalUpdate.ID, {
+							Message = `{globalUpdate.Data.Message}Goodbye`,
+						})
 
-					expect(#globalUpdates:GetActiveUpdates() == 1).to.be.ok()
-					expect(globalUpdates:GetActiveUpdates()[i].Data.Message == "HelloGoodbye").to.be.ok()
-				end
-			end)
+						expect(#globalUpdates:GetActiveUpdates()).to.equal(1)
+						expect(globalUpdates:GetActiveUpdates()[i].Data.Message).to.equal("HelloGoodbye")
+					end
+				end)
+				:await()
+
+			local testDataStoreRaw = store._store:GetAsync("Data")
+			expect(#testDataStoreRaw.GlobalUpdates.Updates).to.equal(1)
+			expect(testDataStoreRaw.GlobalUpdates.Updates[1].Data.Message).to.equal("HelloGoodbye")
 		end)
 
 		it("should get active updates", function()
-			testStore:PostGlobalUpdate("Data", function(globalUpdates)
-				expect(#globalUpdates:GetActiveUpdates() == 1).to.be.ok()
-			end)
+			store
+				:PostGlobalUpdate("Data", function(globalUpdates)
+					expect(#globalUpdates:GetActiveUpdates()).to.equal(1)
+				end)
+				:await()
+
+			local keep = store:LoadKeep("Data"):expect()
+			expect(#keep:GetActiveGlobalUpdates()).to.equal(0)
 		end)
 
 		it("should remove an active update", function()
-			testStore:PostGlobalUpdate("Data", function(globalUpdates)
-				for i, globalUpdate in globalUpdates:GetActiveUpdates() do
-					globalUpdates:RemoveActiveUpdate(globalUpdate.ID)
+			store
+				:PostGlobalUpdate("Data", function(globalUpdates)
+					expect(#globalUpdates:GetActiveUpdates()).to.equal(1)
 
-					expect(#globalUpdates:GetActiveUpdates() == 0).to.be.ok()
-				end
-			end)
+					for _, globalUpdate in globalUpdates:GetActiveUpdates() do
+						globalUpdates:RemoveActiveUpdate(globalUpdate.ID)
+
+						expect(#globalUpdates:GetActiveUpdates()).to.equal(0)
+					end
+				end)
+				:await()
+
+			local testDataStoreRaw = store._store:GetAsync("Data")
+			expect(#testDataStoreRaw.GlobalUpdates.Updates).to.equal(0)
 		end)
 
 		it("should clear locked updates", function()
-			warn(testKeep:GetLockedGlobalUpdates())
+			local keep = store:LoadKeep("ClearLockTest"):expect()
 
-			for _, update in testKeep:GetLockedGlobalUpdates() do
-				testKeep:ClearLockedUpdate(update.ID)
+			store
+				:PostGlobalUpdate("ClearLockTest", function(globalUpdates)
+					globalUpdates:AddGlobalUpdate({
+						Message = "ClearLockTest",
+					})
+
+					expect(#globalUpdates:GetActiveUpdates()).to.equal(1)
+				end)
+				:await()
+
+			keep:Save():await() -- get new and lock globalUpdates
+
+			expect(#keep:GetLockedGlobalUpdates()).to.equal(1)
+
+			for _, update in keep:GetLockedGlobalUpdates() do
+				keep:ClearLockedUpdate(update.ID):await()
 			end
 
-			expect(#testKeep:GetLockedGlobalUpdates() == 0).to.be.ok()
+			keep:Save():await()
+
+			expect(#keep:GetLockedGlobalUpdates()).to.equal(0)
 		end)
-
-		it("should let viewkeeps :Overwrite", function()
-			local viewKeep = testStore:ViewKeep("Data"):expect()
-
-			viewKeep.Data.Coins = 100
-
-			viewKeep:Overwrite()
-			expect(viewKeep.Data.Coins == 100).to.be.ok()
-		end)
-
-		-- it("should not let viewkeeps change data", function()
-		-- 	local viewKeep = testStore:ViewKeep("Data"):expect()
-
-		-- 	viewKeep.Data.Coins = 100
-		-- 	testStore.IssueSignal:Connect(function(err)
-		-- 		expect(err).to.be.ok()
-		-- 	end)
-
-		-- 	viewKeep:Save() -- not sure how to catch this. this doesn't error but processError does.
-		-- end)
 	end)
 end
