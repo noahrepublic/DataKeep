@@ -2,7 +2,16 @@
 
 ## [version 3.2.0](https://github.com/noahrepublic/DataKeep/releases/tag/v3.2.0): 08/18/2024
 
-- 
+- Fixes [#21](https://github.com/noahrepublic/DataKeep/issues/21)
+- Adds Steal option to .LoadMethods
+- ForceLoad now waits for previous keep to save data
+- :ViewKeep() now correctly calls :GetAsync() and :GetVersionAsync()
+- Adds keep:Destroy() for cleaning :ViewKeep()
+- Adds TestEZ definitions
+- Adds more tests
+- Fixed global update edge case
+- Cancel `:LoadKeep` when server closing
+- Fix infinite session stealing
 
 ## [version 3.1.2](https://github.com/noahrepublic/DataKeep/releases/tag/v3.1.2): 05/28/2024
 - Fix a few things by @FireBird702 in https://github.com/noahrepublic/DataKeep/pull/20
