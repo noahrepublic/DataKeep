@@ -343,8 +343,12 @@ local function processGlobalUpdates(keep: Keep, latestData: KeepStruct)
 	table.clear(keep._pending_global_lock_removes)
 
 	latestData.GlobalUpdates = finalGlobals
+	keep.GlobalUpdates = latestData.GlobalUpdates
 
-	return recentlyLockedGlobalUpdates
+	for _, recentUpdate in recentlyLockedGlobalUpdates do
+		-- fire the global update event
+		keep.OnGlobalUpdate:Fire(recentUpdate.Data, recentUpdate.ID)
+	end
 end
 
 function Keep:_release(updater: Promise): Promise
@@ -429,14 +433,7 @@ local function save(keep: Keep, isReleasing: boolean): Promise
 				-- process global updates only if this server has the session lock and is not releasing
 				if keep:IsActive() and not isReleasing then
 					if typeof(latestData.GlobalUpdates) == "table" then
-						local recentlyLockedGlobalUpdates = processGlobalUpdates(keep, latestData)
-
-						keep.GlobalUpdates = latestData.GlobalUpdates
-
-						for _, recentUpdate in recentlyLockedGlobalUpdates do
-							-- fire the global update event
-							keep.OnGlobalUpdate:Fire(recentUpdate.Data, recentUpdate.ID)
-						end
+						processGlobalUpdates(keep, latestData)
 					end
 				end
 

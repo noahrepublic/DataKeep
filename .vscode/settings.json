@@ -11,4 +11,5 @@
         "testez.d.lua"
     ],
     "luau-lsp.sourcemap.rojoProjectFile": "test-place.project.json",
+    "luau-lsp.completion.imports.requireStyle": "alwaysRelative",
 }
