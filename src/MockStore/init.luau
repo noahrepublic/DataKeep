@@ -27,7 +27,7 @@ export type MockStore = typeof(MockStore.new()) & {
 
 --> Private Functions
 
-function didyield(f, ...)
+local function didyield(f, ...)
 	local finished = false
 	local data
 

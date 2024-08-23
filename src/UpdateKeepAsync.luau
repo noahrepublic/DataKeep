@@ -54,7 +54,7 @@ local function isDataEmpty(latestData: Data)
 		or typeof(latestData.MetaData) ~= "table"
 end
 
-function reconcileGlobalUpdates(newGlobalUpdates: GlobalUpdates)
+local function reconcileGlobalUpdates(newGlobalUpdates: GlobalUpdates)
 	local finalGlobals = DeepCopy(DefaultData.GlobalUpdates)
 
 	local id = 0 -- used to fix any missing ids
@@ -106,7 +106,7 @@ local function updateAsync(
 				end
 			elseif latestData.Data == nil and latestData.MetaData == nil and typeof(latestData.GlobalUpdates) == "table" then
 				-- keep was not loaded before but GlobalUpdate data exists
-				globalUpdates = reconcileGlobalUpdates(latestData.GlobalUpdates) -- latestData.GlobalUpdates will get updated inside isEmpty if
+				globalUpdates = reconcileGlobalUpdates(latestData.GlobalUpdates) -- latestData.GlobalUpdates will get updated inside if isEmpty then block
 
 				isEmpty = true
 			else
