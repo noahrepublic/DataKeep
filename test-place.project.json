@@ -16,7 +16,7 @@
 		},
 		"ReplicatedStorage": {
 			"$className": "ReplicatedStorage",
-			"Test": {
+			"DevPackages": {
 				"$className": "Folder",
 				"$path": "DevPackages"
 			}

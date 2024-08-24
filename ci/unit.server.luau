@@ -3,9 +3,7 @@ print("Running unit tests...")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
-local TestEZ = require(ReplicatedStorage.Test.TestEZ)
-
--- Clear out package test files
+local TestEZ = require(ReplicatedStorage.DevPackages.TestEZ)
 
 local tests = {}
 
