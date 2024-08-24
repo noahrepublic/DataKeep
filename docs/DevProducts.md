@@ -33,7 +33,7 @@ local DevProducts = require(path_to_devproducts)
 
 local purchaseHistoryLimit = 50
 
-local function setProcessReceipt(loadedKeeps: { [Player]: DataKeep.Keep })
+local function setProcessReceipt(store: DataKeep.Store, keyPrefix: string)
 	local function processReceipt(receiptInfo): Enum.ProductPurchaseDecision
 		local player = Players:GetPlayerByUserId(receiptInfo.PlayerId)
 
@@ -41,12 +41,11 @@ local function setProcessReceipt(loadedKeeps: { [Player]: DataKeep.Keep })
 			return Enum.ProductPurchaseDecision.NotProcessedYet
 		end
 
-		while loadedKeeps[player] == nil and player:IsDescendantOf(Players) do
-			-- wait until the keep loads or the player leaves
-			task.wait()
-		end
+		local isLoaded, keep = store:LoadKeep(keyPrefix .. player.UserId):await()
 
-		local keep = loadedKeeps[player]
+		if not isLoaded then
+			return Enum.ProductPurchaseDecision.NotProcessedYet
+		end
 
 		if not keep then
 			return Enum.ProductPurchaseDecision.NotProcessedYet
@@ -108,13 +107,14 @@ local DataKeep = require(path_to_datakeep)
 local SetProcessReceipt = require(path_to_setprocessreceipt)
 
 local dataTemplate = { Coins = 0 }
+local keyPrefix = "Player_"
 
 local loadedKeeps = {}
 
 local keepStore = DataKeep.GetStore("PlayerData", dataTemplate):expect()
 
 local function onPlayerAdded(player: Player)
-	keepStore:LoadKeep(`Player_{player.UserId}`):andThen(function(keep)
+	keepStore:LoadKeep(keyPrefix .. player.UserId):andThen(function(keep)
 		if keep == nil then
 			player:Kick("Session lock interrupted!")
 		end
@@ -146,7 +146,7 @@ end
 
 -- SetProcessReceipt() must be called before the onPlayerAdded(),
 -- otherwise the player's existing receipts won't be processed.
-SetProcessReceipt(loadedKeeps)
+SetProcessReceipt(keepStore, keyPrefix)
 
 -- loop through already connected players in case they joined before DataKeep loaded
 for _, player in Players:GetPlayers() do
