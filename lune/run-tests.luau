@@ -6,7 +6,7 @@ process.spawn("wally", { "install" }, {
 	cwd = process.cwd,
 })
 
-print("Installed test packages")
+print("Installed all packages")
 
 process.spawn("rojo", {
 	"build",
