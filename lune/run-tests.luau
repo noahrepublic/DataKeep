@@ -17,6 +17,6 @@ process.spawn("rojo", {
 
 print("Built test place")
 
-local result = process.spawn("run-in-roblox", { "--script", "ci/unit.server.lua", "--place", "unit-tests.rbxl" })
+local result = process.spawn("run-in-roblox", { "--script", "ci/unit.server.luau", "--place", "unit-tests.rbxl" })
 
 print(result.stdout)
