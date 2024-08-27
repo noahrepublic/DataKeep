@@ -6,7 +6,7 @@ sidebar_position: 1
 
 ## What is DataKeep?
 
-DataKeep is a module that loads and autosaves to datastores
+DataKeep is a module that loads and autosaves to datastores.
 
 A Keep Datastore (Holds datastore saving information & methods) automatically saves itself and cleans up for you.
 
@@ -18,7 +18,6 @@ A Keep Datastore (Holds datastore saving information & methods) automatically sa
 - Similar API to previous data ModuleScript [ProfileService](https://github.com/MadStudioRoblox/ProfileService) allowing easy to pick up
 - Promised base for control over exactly when things complete
 - Actively maintained, and accepting contributions
-
 
 ### Ready to get started?
 

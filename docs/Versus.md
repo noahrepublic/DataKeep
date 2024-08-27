@@ -1,10 +1,10 @@
 ---
-sidebar_position: 4
+sidebar_position: 6
 ---
 
 # DataKeep vs ProfileService
 
-ProfileService by loleris is a great module. However, there are some minor opinionated flaws:
+[ProfileService](https://github.com/MadStudioRoblox/ProfileService) by loleris is a great module. However, there are some minor opinionated flaws:
 
 - Profile does not automatically clean up internal connections, making the developer have to perform inconvenient clean ups
 - ProfileService async calls make it difficult to wait for Profiles to be loaded. Causing weird patterns when waiting for Profiles, DataKeep is promise based

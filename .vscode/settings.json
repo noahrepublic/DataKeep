@@ -1,7 +1,15 @@
 {
+    "[lua]": {
+        "editor.defaultFormatter": "JohnnyMorganz.stylua",
+        "editor.formatOnSave": true
+    },
     "[luau]": {
         "editor.defaultFormatter": "JohnnyMorganz.stylua",
         "editor.formatOnSave": true
     },
-   
+    "luau-lsp.types.definitionFiles": [
+        "testez.d.lua"
+    ],
+    "luau-lsp.sourcemap.rojoProjectFile": "test-place.project.json",
+    "luau-lsp.completion.imports.requireStyle": "alwaysRelative",
 }

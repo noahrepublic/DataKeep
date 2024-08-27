@@ -1,5 +1,11 @@
 --!strict
 
+--> Includes
+
+local DeepCopy = require(script.Parent.Parent.Utils.DeepCopy)
+
+--> Structure
+
 local MockStorePages = {}
 MockStorePages.__index = MockStorePages
 
@@ -24,7 +30,7 @@ function MockStorePages:GetCurrentPage()
 	local maximumIndex = math.min(currentPage * pageSize, #self._data)
 
 	for i = minimumIndex, maximumIndex do
-		table.insert(retValue, { key = self._data[i].key, value = self._data[i].value })
+		table.insert(retValue, DeepCopy(self._data[i].value)) -- I'm not sure what to do with self._data[i].key
 	end
 
 	return retValue
@@ -49,7 +55,7 @@ end
 return function(unparsedData, isAscending: boolean, pageSize: number)
 	local data = {}
 
-	for key, value in pairs(unparsedData) do
+	for key, value in unparsedData do
 		table.insert(data, if not isAscending then math.max(#data, 1) else 1, { key = key, value = value })
 	end
 

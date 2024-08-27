@@ -1,7 +1,7 @@
 [package]
 name = "noahrepublic/datakeep"
 description = "The final data saving solution you need"
-version = "3.1.2"
+version = "3.2.0"
 license = "MIT"
 authors = ["noahrepublic"]
 registry = "https://github.com/UpliftGames/wally-index"
@@ -11,10 +11,9 @@ exclude = ["**"]
 include = ["src", "src/*", "default.project.json", "wally.toml", "LICENSE"]
 
 [dependencies]
-
 Signal = "lucasmzreal/fastsignal@10.2.1"
 Promise = "evaera/promise@4.0.0"
 
 [dev-dependencies]
-
+Iris = "sirmallard/iris@^2.3.1"
 TestEZ = "roblox/testez@^0.4.1"

@@ -1,31 +1,25 @@
 {
-  "name": "DataKeep",
-  "tree": {
-    "$className": "DataModel",
-
-    "ServerScriptService": {
-     
-      "TestRunner": {
-        "$path": "ci"
-      },
-
-      "ServerPackages": {
-        "$className": "Folder",
-        "$path": "Packages",
-
-        "datakeep": {
-          "$path": "src"
-        }
-      }
-      
-    },
-
-    "ReplicatedStorage": {
-      "$className": "ReplicatedStorage",
-      "Test": {
-        "$className": "Folder",
-        "$path": "DevPackages"
-      }
-    }
-  }
+	"name": "DataKeep",
+	"tree": {
+		"$className": "DataModel",
+		"ServerScriptService": {
+			"TestRunner": {
+				"$path": "ci"
+			},
+			"ServerPackages": {
+				"$className": "Folder",
+				"$path": "Packages",
+				"datakeep": {
+					"$path": "src"
+				}
+			}
+		},
+		"ReplicatedStorage": {
+			"$className": "ReplicatedStorage",
+			"DevPackages": {
+				"$className": "Folder",
+				"$path": "DevPackages"
+			}
+		}
+	}
 }
