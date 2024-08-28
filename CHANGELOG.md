@@ -14,23 +14,29 @@
 - Fix infinite session stealing
 
 ## [version 3.1.2](https://github.com/noahrepublic/DataKeep/releases/tag/v3.1.2): 05/28/2024
-- Fix a few things by @FireBird702 in https://github.com/noahrepublic/DataKeep/pull/20
-- Fix for #22 by @FireBird702 in https://github.com/noahrepublic/DataKeep/pull/23
-- `:SetAsync()` in mock store should deep copy value by @FireBird702 in https://github.com/noahrepublic/DataKeep/pull/26
+
+- Fix a few things by @FireBird702 in <https://github.com/noahrepublic/DataKeep/pull/20>
+- Fix for #22 by @FireBird702 in <https://github.com/noahrepublic/DataKeep/pull/23>
+- `:SetAsync()` in mock store should deep copy value by @FireBird702 in <https://github.com/noahrepublic/DataKeep/pull/26>
 
 ## [version 3.1.1](https://github.com/noahrepublic/DataKeep/releases/tag/v3.1.1): 03/17/2024
 
 ### Fixed
+
 - LoadCount not incrementing
 
 ### Added
+
 - Class implementation to Usage docs
 
 ## [version 3.1.0](https://github.com/noahrepublic/DataKeep/releases/tag/v3.1.0): 03/17/2024
 
 ### Fixed
+
 - Mock detection fix
+
 ### SLIGHT BREAKING CHANGE
+
 - GetStore now waits for mockstore detection to finish. Players.PlayerAdded events may fire before getstore is ready. Use a loop of current players first. (See Example)
 
 ## [version 3.0.5](https://github.com/noahrepublic/DataKeep/releases/tag/v3.0.5): 02/13/2024
@@ -48,6 +54,7 @@
 ## [version 3.0.3](https://github.com/noahrepublic/DataKeep/releases/tag/v3.0.3): 01/06/2024
 
 ### Fixed
+
 - Mockstore not returning version key
 - Mockstore yield detection flagged false
 - .Mock missing API
@@ -57,7 +64,6 @@
 ### Fixed
 
 - .Mock erroring due to no ‘Wrapper’
-
 
 ## [version 3.0.1](https://github.com/noahrepublic/DataKeep/releases/tag/v3.0.1): 12/22/2023
 
@@ -91,19 +97,22 @@
 ## **API Breaking Change**
 
 ### Fixed
+
 - ViewKeep :Save not working, replaced with :Overwrite()
 
 ### Added
+
 - ViewKeep :Overwrite()
 
 ## [version 2.1.1](https://github.com/noahrepublic/DataKeep/releases/tag/v2.1.1): 12/05/2023
 
 ### Fixes
+
 - Merged PR [#12](https://github.com/noahrepublic/DataKeep/pull/12)
 
 ## [version 2.1.0](https://github.com/noahrepublic/DataKeep/releases/tag/v2.1.0): 11/30/2023
 
-### Added 
+### Added
 
 - Store.validate() for validating data before saving ex: type guards
 
@@ -121,7 +130,7 @@ Allows for more control and not limited to just compression/decompression but tr
 
 ### Added
 
-- Finally added compression 'plugins' see https://github.com/noahrepublic/DataKeep/issues/2
+- Finally added compression 'plugins' see <https://github.com/noahrepublic/DataKeep/issues/2>
     :AttachToSave()
 
 ## [version 1.2.2](https://github.com/noahrepublic/DataKeep/releases/tag/v1.2.2): 11/21/2023
@@ -146,7 +155,6 @@ Allows for more control and not limited to just compression/decompression but tr
 ### Improved
 
 - Reverted to an older method that works better for splitting up workload
-
 
 ## [version 1.2.0](https://github.com/noahrepublic/DataKeep/releases/tag/v1.2.0): 11/07/2023
 
@@ -182,7 +190,7 @@ Allows for more control and not limited to just compression/decompression but tr
 
 ### Fixed
 
-- Coroutine dead? 
+- Coroutine dead?
 
 ## [version 1.1.7](https://github.com/noahrepublic/DataKeep/releases/tag/v1.1.7): 10/25/2023
 
@@ -213,7 +221,7 @@ Stablized Session Lock
 
 ### Added
 
-Keep.MetaData.Created 
+Keep.MetaData.Created
 
 ### Improved
 

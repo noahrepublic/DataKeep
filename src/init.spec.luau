@@ -83,7 +83,7 @@ return function()
 			local viewKeep = store:ViewKeep("Data2"):expect()
 			viewKeep.Data.Coins = 100
 
-			viewKeep:Save():await() -- not sure how to catch this. this doesn't error but processError does.
+			viewKeep:Save():await() -- not sure how to catch this. this doesn't error but ProcessError does.
 
 			local testDataStoreRaw = store._store:GetAsync("Data2")
 			expect(testDataStoreRaw).to.equal(nil)

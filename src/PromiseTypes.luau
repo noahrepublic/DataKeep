@@ -1,3 +1,5 @@
+--!strict
+
 export type Status = "Started" | "Resolved" | "Rejected" | "Cancelled"
 
 export type Promise = {

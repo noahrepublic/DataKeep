@@ -11,7 +11,7 @@ exclude = ["**"]
 include = ["src", "src/*", "default.project.json", "wally.toml", "LICENSE"]
 
 [dependencies]
-Signal = "lucasmzreal/fastsignal@10.2.1"
+Signal = "lucasmzreal/fastsignal@10.3.1"
 Promise = "evaera/promise@4.0.0"
 
 [dev-dependencies]

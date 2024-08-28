@@ -1,51 +1,10 @@
 --!strict
 
-local DeepCopy = require(script.Parent.Utils.DeepCopy)
-local DefaultData = require(script.Parent.DefaultData)
+local DeepCopy = require(script.Parent.Parent.Utils.DeepCopy)
+local DefaultData = require(script.Parent.Parent.DefaultData)
+local Types = require(script.Parent.Parent.Types)
 
-type Session = {
-	PlaceId: number,
-	JobId: string,
-}
-
-type MetaData = {
-	ActiveSession: Session?,
-
-	ForceLoad: Session?, -- the session stealing the session lock, if any
-
-	IsOverwriting: boolean?, -- true if .ActiveSession is found during :Overwrite()
-	ReleaseSessionOnOverwrite: boolean?,
-
-	LastUpdate: number,
-	Created: number,
-	LoadCount: number,
-}
-
-type GlobalUpdateData = { [string]: any }
-
-type GlobalUpdate = {
-	ID: number,
-	Locked: boolean,
-	Data: GlobalUpdateData,
-}
-
-type GlobalUpdates = {
-	ID: number,
-	Updates: { GlobalUpdate },
-}
-
-type UserIds = { [number]: number }
-
-type Data = {
-	Data: { [string]: any },
-
-	MetaData: MetaData,
-	GlobalUpdates: GlobalUpdates,
-
-	UserIds: UserIds,
-}
-
-local function isDataEmpty(latestData: Data)
+local function isDataEmpty<T>(latestData: Types.keepStruct<T>)
 	-- someone wants to fix this mess??
 
 	return latestData == nil
@@ -54,7 +13,7 @@ local function isDataEmpty(latestData: Data)
 		or typeof(latestData.MetaData) ~= "table"
 end
 
-local function reconcileGlobalUpdates(newGlobalUpdates: GlobalUpdates)
+local function reconcileGlobalUpdates(newGlobalUpdates: Types.globalUpdates)
 	local finalGlobals = DeepCopy(DefaultData.GlobalUpdates)
 
 	local id = 0 -- used to fix any missing ids
@@ -70,17 +29,17 @@ local function reconcileGlobalUpdates(newGlobalUpdates: GlobalUpdates)
 	return finalGlobals
 end
 
-local function updateAsync(
+local function updateAsync<T>(
 	key: string,
 	store: DataStore,
 	updateSettings: {
-		onExisting: ((latestData: Data) -> boolean?)?,
-		onMissing: ((latestData: Data) -> boolean?)?,
-		edit: ((latestData: Data) -> boolean?)?,
+		onExisting: ((latestData: Types.keepStruct<T>) -> boolean)?,
+		onMissing: ((latestData: Types.keepStruct<T>) -> boolean)?,
+		edit: ((latestData: Types.keepStruct<T>) -> boolean)?,
 	},
-	useGet: { version: string }?
+	useGet: { version: string? }?
 )
-	local function transformUpdate(latestData: Data): (Data?, UserIds?)
+	local function transformUpdate(latestData: Types.keepStruct<T>): (Types.keepStruct<T>?, Types.userIds?)
 		local isEmpty = isDataEmpty(latestData)
 
 		if not latestData then
