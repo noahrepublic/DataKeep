@@ -63,7 +63,7 @@ export type Keep<T> = Types.keep<T>
 ]=]
 
 --[=[
-	@prop IssueSignal Signal
+	@prop IssueSignal Signal<string>
 	@within DataKeep
 
 	Fired when an issue occurs, like a failed request
@@ -76,10 +76,10 @@ export type Keep<T> = Types.keep<T>
 ]=]
 
 --[=[
-	@prop CriticalStateSignal Signal
+	@prop CriticalStateSignal Signal<boolean>
 	@within DataKeep
 
-	Fired when the store enters critical state. After it has failed many requests and maybe dangerous to proceed with purchases or other important actions
+	Fired when the store enters or exits critical state. After it has failed many requests and maybe dangerous to proceed with purchases or other important actions
 
 	```lua
 	DataKeep.CriticalStateSignal:Connect(function(isInCriticalState)
@@ -89,20 +89,6 @@ export type Keep<T> = Types.keep<T>
 			print("Critical state ended!")
 		end
 	end)
-	```
-]=]
-
---[=[
-	@prop CriticalState boolean
-	@within DataKeep
-
-	Whether the store is in critical state or not. See [CriticalStateSignal](#CriticalStateSignal)
-
-	```lua
-	if DataKeep.isCriticalState then
-		warn("Critical State!")
-		return
-	end
 	```
 ]=]
 
