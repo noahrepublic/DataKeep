@@ -14,6 +14,7 @@ local states = {
 	loadedKeeps = {} :: { [string]: Types.keep<{}> },
 
 	issueQueue = {} :: { number },
+	criticalStateStartTime = 0,
 }
 
 return states

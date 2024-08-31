@@ -4,15 +4,15 @@ local Config = require(script.Parent.Parent.Config)
 local Signals = require(script.Parent.Parent.Signals)
 local States = require(script.Parent.Parent.States)
 
-local function processError(err: string, priority: number)
+local function processError(err: string, priority: number?)
 	Signals.IssueSignal:Fire(err)
 
 	priority = priority or 1
 
 	-- priorities:
-	-- 0: no issue signal, warn
-	-- 1: warn
-	-- 2: error issue signal
+	-- 0: warn (no issue signal)
+	-- 1: warn (issue signal)
+	-- 2: error (no issue signal)
 
 	if priority > 1 then
 		error(`[DataKeep] {err}`)
@@ -26,21 +26,10 @@ local function processError(err: string, priority: number)
 		table.insert(States.issueQueue, clock)
 	end
 
-	if States.issueQueue[Config.criticalStateThreshold + 1] then
-		table.remove(States.issueQueue, Config.criticalStateThreshold + 1)
-	end
-
-	local issueCount = 0
-
-	for _, issueTime in States.issueQueue do
-		if clock - issueTime < Config.maxIssueTime then
-			issueCount += 1
-		end
-	end
-
-	if issueCount >= Config.criticalStateThreshold then
+	if not States.isCriticalState and #States.issueQueue >= Config.criticalStateThreshold then
 		States.isCriticalState = true
-		Signals.CriticalStateSignal:Fire()
+		States.criticalStateStartTime = clock
+		Signals.CriticalStateSignal:Fire(States.isCriticalState)
 	end
 end
 

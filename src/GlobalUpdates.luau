@@ -49,13 +49,13 @@ function GlobalUpdates:AddGlobalUpdate(globalData: {}): PromiseTypes.TypedPromis
 
 		local globalUpdates = self._updates
 
-		local updateId: number = globalUpdates.ID
+		local updateId: number = globalUpdates.Id
 		updateId += 1
 
-		globalUpdates.ID = updateId
+		globalUpdates.Id = updateId
 
 		table.insert(globalUpdates.Updates, {
-			ID = updateId,
+			Id = updateId,
 			Locked = false,
 			Data = globalData,
 		})
@@ -90,12 +90,12 @@ function GlobalUpdates:ChangeActiveUpdate(updateId: number, globalData: {}): Pro
 
 		local globalUpdates = self._updates
 
-		if globalUpdates.ID < updateId then
+		if globalUpdates.Id < updateId then
 			return reject()
 		end
 
 		for _, update in globalUpdates.Updates do
-			if update.ID == updateId and not update.Locked then
+			if update.Id == updateId and not update.Locked then
 				update.Data = globalData
 
 				return resolve()
@@ -120,7 +120,7 @@ end
 	local updates = globalUpdates:GetActiveUpdates()
 
 	for _, update in updates do
-		globalUpdates:RemoveActiveUpdate(update.ID):andThen(function()
+		globalUpdates:RemoveActiveUpdate(update.Id):andThen(function()
 			print("Removed Global Update!")
 		end)
 	end
@@ -139,14 +139,14 @@ function GlobalUpdates:RemoveActiveUpdate(updateId: number): PromiseTypes.Promis
 
 		local globalUpdates = self._updates
 
-		if globalUpdates.ID < updateId then
+		if globalUpdates.Id < updateId then
 			return reject()
 		end
 
 		local globalUpdateIndex = nil
 
 		for i = 1, #globalUpdates.Updates do
-			if globalUpdates.Updates[i].ID == updateId then
+			if globalUpdates.Updates[i].Id == updateId then
 				globalUpdateIndex = i
 				break
 			end

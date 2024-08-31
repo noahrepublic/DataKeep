@@ -82,8 +82,12 @@ export type Keep<T> = Types.keep<T>
 	Fired when the store enters critical state. After it has failed many requests and maybe dangerous to proceed with purchases or other important actions
 
 	```lua
-	DataKeep.CriticalStateSignal:Connect(function()
-		print("Critical State!")
+	DataKeep.CriticalStateSignal:Connect(function(isInCriticalState)
+		if isInCriticalState then
+			print("Critical state started!")
+		else
+			print("Critical state ended!")
+		end
 	end)
 	```
 ]=]
@@ -262,7 +266,39 @@ local function runKeepCleanup(deltaTime: number)
 	end
 end
 
+local function runClearCriticalState()
+	if not States.isCriticalState then
+		return
+	end
+
+	if #States.issueQueue >= Config.criticalStateThreshold then
+		-- update criticalStateStartTime until issue count gets below criticalStateThreshold
+
+		States.criticalStateStartTime = os.clock()
+	elseif os.clock() - States.criticalStateStartTime > Config.maxCriticalStateTime then
+		States.isCriticalState = false
+		Signals.CriticalStateSignal:Fire(States.isCriticalState)
+	end
+end
+
+local function runIssueQueueCleanup()
+	local issueTime = States.issueQueue[1]
+
+	if not issueTime then
+		return
+	end
+
+	if os.clock() - issueTime <= Config.maxIssueTime then
+		return
+	end
+
+	table.remove(States.issueQueue, 1)
+end
+
 RunService.Heartbeat:Connect(function(deltaTime)
+	runClearCriticalState()
+	runIssueQueueCleanup()
+
 	runKeepCleanup(deltaTime)
 	runAutoSave(deltaTime)
 end)

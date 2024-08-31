@@ -190,7 +190,7 @@ local function processGlobalUpdates<T>(keep: Types.keep<T>, latestData: Types.ke
 				return reject()
 			end
 
-			if globalUpdates[index].ID ~= updateId then -- shouldn't happen, but
+			if globalUpdates[index].Id ~= updateId then -- shouldn't happen, but
 				return reject()
 			end
 
@@ -221,7 +221,7 @@ local function processGlobalUpdates<T>(keep: Types.keep<T>, latestData: Types.ke
 			end)
 		end, function()
 			table.insert(processUpdates, function()
-				removeLockedUpdate(i, globalUpdates[i].ID)
+				removeLockedUpdate(i, globalUpdates[i].Id)
 			end)
 		end)
 	end
@@ -238,7 +238,7 @@ local function processGlobalUpdates<T>(keep: Types.keep<T>, latestData: Types.ke
 		end
 
 		for _, pendingLock in keep._pending_global_locks do
-			if not (pendingLock == update.ID) then
+			if not (pendingLock == update.Id) then
 				continue
 			end
 
@@ -251,7 +251,7 @@ local function processGlobalUpdates<T>(keep: Types.keep<T>, latestData: Types.ke
 
 	for _, updateId in keep._pending_global_lock_removes do
 		for i = 1, #finalGlobals.Updates do
-			if finalGlobals.Updates[i].ID == updateId and finalGlobals.Updates[i].Locked then
+			if finalGlobals.Updates[i].Id == updateId and finalGlobals.Updates[i].Locked then
 				table.remove(finalGlobals.Updates, i)
 				break
 			end
@@ -276,7 +276,7 @@ local function processGlobalUpdates<T>(keep: Types.keep<T>, latestData: Types.ke
 
 	for _, recentUpdate in recentlyLockedGlobalUpdates do
 		-- fire the global update event
-		keep.OnGlobalUpdate:Fire(recentUpdate.Data, recentUpdate.ID)
+		keep.OnGlobalUpdate:Fire(recentUpdate.Data, recentUpdate.Id)
 	end
 end
 
@@ -1049,12 +1049,12 @@ function Keep.ClearLockedUpdate<T>(self: Types.keep<T>, id: number): PromiseType
 
 		local globalUpdates = self.GlobalUpdates
 
-		if id > globalUpdates.ID then
+		if id > globalUpdates.Id then
 			return reject()
 		end
 
 		for i = 1, #globalUpdates.Updates do
-			if globalUpdates.Updates[i].ID == id and globalUpdates.Updates[i].Locked then
+			if globalUpdates.Updates[i].Id == id and globalUpdates.Updates[i].Locked then
 				table.insert(self._pending_global_lock_removes, id) -- locked removal queue
 				return resolve()
 			end

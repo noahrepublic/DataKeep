@@ -12,6 +12,7 @@ local config = {
 
 	criticalStateThreshold = 5, -- how many failed requests before we assume they are down
 	maxIssueTime = 60, -- how long to keep issues in the queue
+	maxCriticalStateTime = 60, -- how long to keep DataKeep in critical state after issue count gets below criticalStateThreshold
 
 	loadMethods = table.freeze({
 		ForceLoad = "ForceLoad",

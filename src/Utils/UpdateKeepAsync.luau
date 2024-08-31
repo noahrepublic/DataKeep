@@ -20,9 +20,9 @@ local function reconcileGlobalUpdates(newGlobalUpdates: Types.globalUpdates)
 
 	for _, newUpdate in newGlobalUpdates.Updates do
 		id += 1
-		finalGlobals.ID = id
+		finalGlobals.Id = id
 
-		newUpdate.ID = id
+		newUpdate.Id = id
 		table.insert(finalGlobals.Updates, newUpdate)
 	end
 

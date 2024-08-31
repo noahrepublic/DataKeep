@@ -193,25 +193,25 @@ export type iterator<T> = {
 type globalUpdateData = { [any]: any }
 
 --[=[
-	@type GlobalUpdate { ID: number, Locked: boolean, Data: GlobalUpdateData }
+	@type GlobalUpdate { Id: number, Locked: boolean, Data: GlobalUpdateData }
 	@within GlobalUpdates
 ]=]
 
 export type globalUpdate = {
-	ID: number,
+	Id: number,
 	Locked: boolean,
 	Data: globalUpdateData,
 }
 
 --[=[
-	@type GlobalUpdates { ID: number, Updates: { GlobalUpdate } }
+	@type GlobalUpdates { Id: number, Updates: { GlobalUpdate } }
 	@within GlobalUpdates
 
-	```ID``` is the most recent update index
+	```Id``` is the most recent update index
 ]=]
 
 export type globalUpdates = {
-	ID: number,
+	Id: number,
 	Updates: { globalUpdate },
 }
 
