@@ -8,7 +8,7 @@
         "editor.formatOnSave": true
     },
     "luau-lsp.types.definitionFiles": [
-        "testez.d.lua"
+        "testez.d.luau"
     ],
     "luau-lsp.sourcemap.rojoProjectFile": "test-place.project.json",
     "luau-lsp.completion.imports.requireStyle": "alwaysRelative",

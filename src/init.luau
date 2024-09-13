@@ -33,6 +33,10 @@ export type Store<T> = Types.store<T>
 export type MockStore<T> = Types.mockStore<T>
 export type Keep<T> = Types.keep<T>
 
+export type Promise = PromiseTypes.Promise
+export type TypedPromise<T...> = PromiseTypes.TypedPromise<T...>
+export type Status = PromiseTypes.Status
+
 --[=[
 	@class DataKeep
 	@server

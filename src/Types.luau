@@ -31,7 +31,7 @@ export type unreleasedHandler = (session) -> string -- function for any purposes
 
 export type dataTemplate<T> = T
 
-export type wrapper<T> = any --{ [string]: <R..., U...>(self: keep<T>, R...) -> U... } Waiting for new solver?
+export type wrapper<T> = any -- { [string]: <R..., U...>(self: keep<T>, R...) -> U... } Waiting for new solver?
 
 --[=[
 	@type StoreBase { LoadKeep: (string, unreleasedHandler?) -> Promise<Keep>, ViewKeep: (string) -> Promise<Keep>, PreLoad: (callback: (Data) -> Data) -> (), PreSave: (callback: (Data) -> Data) -> (), PostGlobalUpdate: (string, (GlobalUpdates) -> ()) -> Promise, Wrapper: { [string]: <R..., U...>(self: Keep, R...) -> U... }, validate: (data: Data) -> (boolean, string?) }
