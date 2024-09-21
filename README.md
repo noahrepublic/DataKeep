@@ -1,5 +1,3 @@
-# WARNING: This repository will be switching to [rokit](https://github.com/rojo-rbx/rokit) September 20th, 2024.
-
 <div align="center">
   <h1>DataKeep</h1>
   <p>
