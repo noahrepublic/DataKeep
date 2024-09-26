@@ -102,16 +102,6 @@ local autoSaveCycle = 0
 local internalKeepCleanupCycle = 0
 local loadedStores = {} -- list of stores that are currently loaded
 
---> Private Functions
-
---[[
-	Future idea: I doubt it is needed so it may just throttle speed.
-
-	local function getRequestBudget(keep)
-		return keep._store:GetRequestBudgetForRequestType(Enum.DataStoreRequestType.UpdateAsync)
-	end
-]]
-
 local mockStoreCheck = Promise.new(function(resolve)
 	if game.GameId == 0 then
 		print("[DataKeep] Local file, using mock store")
