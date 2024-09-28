@@ -209,7 +209,7 @@ function Keep.new(structure: KeepStruct, dataTemplate: { [string]: any }): Keep
 
 		_keyInfo = {},
 
-		_last_save = os.clock(),
+		_lastSaveAttempt = os.clock(),
 		Saving = Signal.new(),
 
 		_store_info = { Name = "", Scope = "" },
@@ -495,8 +495,6 @@ local function save(keep: Keep, isReleasing: boolean): Promise
 			end,
 		})
 	end):andThen(function(_latestData, dataStoreKeyInfo)
-		keep._last_save = os.clock() -- reset the auto save timer
-
 		if dataStoreKeyInfo then
 			keep._keyInfo = { -- have to map the tuple to a table for type checking (even though tuples are arrays in lua)
 				CreatedTime = dataStoreKeyInfo.CreatedTime,
@@ -544,6 +542,8 @@ function Keep:Save(): Promise
 	local savingState = save(self, false):catch(function(err)
 		self._keep_store._processError(err, 1)
 	end):finally(function()
+		self._lastSaveAttempt = os.clock() -- reset the auto save timer
+
 		saveCache[self:Identify()] = nil
 
 		Keep._activeSaveJobs -= 1
@@ -589,6 +589,8 @@ function Keep:Release(): Promise
 			self._keep_store._processError(err, 1)
 		end)
 		:finally(function()
+			self._lastSaveAttempt = os.clock() -- reset the auto save timer
+
 			Keep._activeSaveJobs -= 1
 		end)
 
@@ -664,8 +666,6 @@ function Keep:Overwrite(shouldKeepExistingSession: boolean?): Promise
 		})
 	end)
 		:andThen(function(_latestData, dataStoreKeyInfo)
-			self._last_save = os.clock() -- reset the auto save timer
-
 			if dataStoreKeyInfo then
 				self._keyInfo = { -- have to map the tuple to a table for type checking (even though tuples are arrays in lua)
 					CreatedTime = dataStoreKeyInfo.CreatedTime,
@@ -678,6 +678,8 @@ function Keep:Overwrite(shouldKeepExistingSession: boolean?): Promise
 			keepStore._processError(err, 1)
 		end)
 		:finally(function()
+			self._lastSaveAttempt = os.clock() -- reset the auto save timer
+
 			overwriteCache[self:Identify()] = nil
 
 			Keep._activeSaveJobs -= 1
