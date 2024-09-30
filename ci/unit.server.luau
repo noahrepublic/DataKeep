@@ -3,7 +3,8 @@ print("Running unit tests...")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
-local TestEZ = require(ReplicatedStorage.DevPackages.TestEZ)
+local DevPackages = ReplicatedStorage:WaitForChild("DevPackages")
+local TestEZ = require(DevPackages.TestEZ)
 
 local tests = {}
 
