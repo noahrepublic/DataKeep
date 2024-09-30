@@ -136,7 +136,7 @@ export type keep<T> = keepStruct<T> & {
 	_dataTemplate: dataTemplate<T>,
 
 	_keyInfo: DataStoreKeyInfo,
-	_lastSave: number,
+	_lastSaveAttempt: number,
 
 	_viewOnly: boolean,
 

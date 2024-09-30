@@ -143,7 +143,7 @@ function Keep.new<T>(structure: Types.keepStruct<T>, dataTemplate: Types.dataTem
 
 		_keyInfo = {},
 
-		_lastSave = os.clock(),
+		_lastSaveAttempt = os.clock(),
 		Saving = Signal.new(),
 
 		_storeInfo = { Name = "", Scope = "" },
@@ -423,9 +423,7 @@ local function save<T>(keep: Types.keep<T>, isReleasing: boolean): PromiseTypes.
 				return false
 			end,
 		})
-	end):andThen(function(_latestData, dataStoreKeyInfo: DataStoreKeyInfo)
-		keep._lastSave = os.clock() -- reset the auto save timer
-
+	end):andThen(function(_latestData, dataStoreKeyInfo)
 		if dataStoreKeyInfo then
 			keep._keyInfo = dataStoreKeyInfo
 		end
@@ -469,6 +467,8 @@ function Keep.Save<T>(self: Types.keep<T>): PromiseTypes.Promise
 	local savingState = save(self, false):catch(function(err)
 		ProcessError(err, 1)
 	end):finally(function()
+		self._lastSaveAttempt = os.clock() -- reset the auto save timer
+
 		saveCache[self:Identify()] = nil
 
 		States.activeSaveJobs -= 1
@@ -514,6 +514,8 @@ function Keep.Release<T>(self: Types.keep<T>): PromiseTypes.Promise
 			ProcessError(err, 1)
 		end)
 		:finally(function()
+			self._lastSaveAttempt = os.clock() -- reset the auto save timer
+
 			States.activeSaveJobs -= 1
 		end)
 
@@ -588,9 +590,7 @@ function Keep.Overwrite<T>(self: Types.keep<T>, shouldKeepExistingSession: boole
 			end,
 		})
 	end)
-		:andThen(function(_latestData, dataStoreKeyInfo: DataStoreKeyInfo)
-			self._lastSave = os.clock() -- reset the auto save timer
-
+		:andThen(function(_latestData, dataStoreKeyInfo)
 			if dataStoreKeyInfo then
 				self._keyInfo = dataStoreKeyInfo
 			end
@@ -599,6 +599,8 @@ function Keep.Overwrite<T>(self: Types.keep<T>, shouldKeepExistingSession: boole
 			ProcessError(err, 1)
 		end)
 		:finally(function()
+			self._lastSaveAttempt = os.clock() -- reset the auto save timer
+
 			overwriteCache[self:Identify()] = nil
 
 			States.activeSaveJobs -= 1

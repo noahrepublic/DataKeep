@@ -1,5 +1,9 @@
 # DataKeep
 
+## [version 3.2.1](https://github.com/noahrepublic/DataKeep/releases/tag/v3.2.1): 09/29/2024
+
+- Fixed no waiting between failed saves
+
 ## [version 3.2.0](https://github.com/noahrepublic/DataKeep/releases/tag/v3.2.0): 08/23/2024
 
 - Fixes [#21](https://github.com/noahrepublic/DataKeep/issues/21)

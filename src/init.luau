@@ -215,7 +215,7 @@ local function runAutoSave(deltaTime: number)
 		if keep._releasing or keep._released then
 			continue
 		end
-		if clock - keep._lastSave < Config.saveInterval then
+		if clock - keep._lastSaveAttempt < Config.saveInterval then
 			continue
 		end
 
