@@ -14,6 +14,7 @@ local Keep = require(script.Parent.Keep)
 local MockStore = require(script.Parent.MockStore)
 local ProcessError = require(script.Parent.Utils.ProcessError)
 local PromiseTypes = require(script.Parent.PromiseTypes)
+local ReleaseKeepInternally = require(script.Parent.Utils.ReleaseKeepInternally)
 local States = require(script.Parent.States)
 local Types = require(script.Parent.Types)
 local UpdateKeepAsync = require(script.Parent.Utils.UpdateKeepAsync)
@@ -29,17 +30,6 @@ Store.__index = Store
 	@class Store
 	@server
 	A store is a class that holds inner savable objects, Keep(s), from a datastore [DataStoreService:GetDataStore()](https://create.roblox.com/docs/reference/engine/classes/DataStoreService#GetDataStore)
-]=]
-
---[=[
-	@prop Wrapper { [string]: (self: Keep, ...) -> () }
-	@within Store
-
-	Wrapper functions that are inheritted by Keeps when they are loaded
-
-	:::info
-	Any wrapper changes post [.GetStore()](#GetStore) will not apply to that store but the next one.
-	:::info
 ]=]
 
 --[=[
@@ -72,8 +62,8 @@ Store.__index = Store
 
 --> Private Functions
 
-local function createMockStore<T>(storeInfo: Types.storeInfo, dataTemplate: Types.dataTemplate<T>) -- complete mirror of real stores, minus mock related data as we are in a mock store
-	return setmetatable({
+local function createMockStore<T, R>(storeInfo: Types.storeInfo, dataTemplate: Types.dataTemplate<T>, wrapper: R): Types.mockStore<T, R> -- complete mirror of real stores, minus mock related data as we are in a mock store
+	local self = {
 		_storeInfo = storeInfo,
 		_dataTemplate = dataTemplate,
 
@@ -81,20 +71,14 @@ local function createMockStore<T>(storeInfo: Types.storeInfo, dataTemplate: Type
 
 		_isMockEnabled = true,
 
-		Wrapper = require(script.Parent.Wrapper),
+		_wrapper = wrapper,
 
 		validate = function()
 			return true
 		end,
-	}, Store)
-end
+	}
 
-local function releaseKeepInternally<T>(keep: Types.keep<T>)
-	States.loadedKeeps[keep:Identify()] = nil
-
-	States.cachedKeepPromises[keep:Identify()] = nil
-
-	keep:Destroy()
+	return setmetatable(self, Store) :: any
 end
 
 --[[
@@ -107,25 +91,25 @@ end
 
 --> Public Functions
 
-function Store.new<T>(info: Types.storeInfo, dataTemplate: Types.dataTemplate<T>): Types.store<T>
-	local self = setmetatable({
+function Store.new<T, R>(info: Types.storeInfo, dataTemplate: Types.dataTemplate<T>, wrapper: R): Types.store<T, R>
+	local self = {
 		_storeInfo = info,
 		_dataTemplate = dataTemplate,
 
 		_store = if States.isUseMockStore then MockStore.new() else DataStoreService:GetDataStore(info.Name, info.Scope), -- this always returns even with datastores down, so only way of tracking is via failed requests
 
-		Mock = createMockStore(info, dataTemplate), -- revealed to api
+		Mock = createMockStore(info, dataTemplate, wrapper), -- revealed to api
 
 		_isMockEnabled = if States.isUseMockStore then true else false, -- studio only/datastores not available
+
+		_wrapper = wrapper,
 
 		validate = function()
 			return true
 		end,
+	}
 
-		Wrapper = require(script.Parent.Wrapper),
-	}, Store)
-
-	return self
+	return setmetatable(self, Store) :: any
 end
 
 --[=[
@@ -157,7 +141,7 @@ end
 	:::info
 ]=]
 
-function Store.LoadKeep<T>(self: Types.store<T>, key: string, unreleasedHandler: Types.unreleasedHandler?): PromiseTypes.TypedPromise<Types.keep<T>>
+function Store.LoadKeep<T, R>(self: Types.store<T, R>, key: string, unreleasedHandler: Types.unreleasedHandler?): PromiseTypes.TypedPromise<Types.keep<T, R>>
 	local store = self._store
 
 	if unreleasedHandler == nil then
@@ -192,7 +176,7 @@ function Store.LoadKeep<T>(self: Types.store<T>, key: string, unreleasedHandler:
 			until States.loadedKeeps[id] == nil or timer < 0
 
 			if States.loadedKeeps[id] then
-				releaseKeepInternally(States.loadedKeeps[id]) -- additional cleanup to prevent memory leaks
+				ReleaseKeepInternally(States.loadedKeeps[id]) -- additional cleanup to prevent memory leaks
 			end
 		elseif States.cachedKeepPromises[id] then
 			local promiseStatus = States.cachedKeepPromises[id]:getStatus()
@@ -388,9 +372,11 @@ function Store.LoadKeep<T>(self: Types.store<T>, key: string, unreleasedHandler:
 				keepClass._storeInfo.Scope = self._storeInfo.Scope or ""
 				keepClass._keep_store = self
 
-				for functionName, func in self.Wrapper do
-					keepClass[functionName] = function(...)
-						return func(...)
+				if typeof(self._wrapper) == "table" then
+					for functionName, func in self._wrapper do -- attach wrapper functions
+						keepClass[functionName] = function(...)
+							return func(...)
+						end
 					end
 				end
 
@@ -435,7 +421,7 @@ end
 	:::warning
 ]=]
 
-function Store.ViewKeep<T>(self: Types.store<T>, key: string, version: string?): PromiseTypes.TypedPromise<Types.keep<T>>
+function Store.ViewKeep<T, R>(self: Types.store<T, R>, key: string, version: string?): PromiseTypes.TypedPromise<Types.keep<T, R>>
 	local id = `{self._storeInfo.Name}/{self._storeInfo.Scope or ""}{self._storeInfo.Scope and "/" or ""}{key}`
 
 	if States.isServiceDone then
@@ -484,9 +470,11 @@ function Store.ViewKeep<T>(self: Types.store<T>, key: string, version: string?):
 		keepClass._storeInfo.Scope = self._storeInfo.Scope or ""
 		keepClass._keep_store = self
 
-		for functionName, func in self.Wrapper do -- attach wrapper functions
-			keepClass[functionName] = function(...)
-				return func(...)
+		if typeof(self._wrapper) == "table" then
+			for functionName, func in self._wrapper do -- attach wrapper functions
+				keepClass[functionName] = function(...)
+					return func(...)
+				end
 			end
 		end
 
@@ -525,7 +513,7 @@ end
 	```
 ]=]
 
-function Store.PreLoad<T>(self: Types.store<T>, callback: (Types.data<T>) -> Types.data<T>): ()
+function Store.PreLoad<T, R>(self: Types.store<T, R>, callback: (Types.data<T>) -> Types.data<T>): ()
 	assert(self._preLoad == nil, "[DataKeep] :PreLoad() can only be set once")
 	assert(callback and typeof(callback) == "function", "[DataKeep] :PreLoad() callback must be a function")
 
@@ -563,7 +551,7 @@ end
 	```
 ]=]
 
-function Store.PreSave<T>(self: Types.store<T>, callback: (Types.data<T>) -> Types.data<T>): ()
+function Store.PreSave<T, R>(self: Types.store<T, R>, callback: (Types.data<T>) -> Types.data<T>): ()
 	assert(self._preSave == nil, "[DataKeep] :PreSave() can only be set once")
 	assert(callback and typeof(callback) == "function", "[DataKeep] :PreSave() callback must be a function")
 
@@ -594,7 +582,7 @@ end
 	```
 ]=]
 
-function Store.PostGlobalUpdate<T>(self: Types.store<T>, key: string, updateHandler: (Types.globalUpdatesClass) -> ()): PromiseTypes.TypedPromise<any, DataStoreKeyInfo> -- gets passed add, lock & change functions
+function Store.PostGlobalUpdate<T, R>(self: Types.store<T, R>, key: string, updateHandler: (Types.globalUpdatesClass) -> ()): PromiseTypes.TypedPromise<any, DataStoreKeyInfo> -- gets passed add, lock & change functions
 	return Promise.try(function()
 		if States.isServiceDone then
 			error("[DataKeep] Server is closing, unable to post global update")

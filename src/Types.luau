@@ -31,16 +31,16 @@ export type unreleasedHandler = (session) -> string -- function for any purposes
 
 export type dataTemplate<T> = T
 
-export type wrapper<T> = any -- { [string]: <R..., U...>(self: keep<T>, R...) -> U... } Waiting for new solver?
+export type wrapper<T> = T
 
 --[=[
-	@type StoreBase { LoadKeep: (string, unreleasedHandler?) -> Promise<Keep>, ViewKeep: (string) -> Promise<Keep>, PreLoad: (callback: (Data) -> Data) -> (), PreSave: (callback: (Data) -> Data) -> (), PostGlobalUpdate: (string, (GlobalUpdates) -> ()) -> Promise, Wrapper: { [string]: <R..., U...>(self: Keep, R...) -> U... }, validate: (data: Data) -> (boolean, string?) }
+	@type StoreBase { LoadKeep: (string, unreleasedHandler?) -> Promise<Keep>, ViewKeep: (string) -> Promise<Keep>, PreLoad: (callback: (Data) -> Data) -> (), PreSave: (callback: (Data) -> Data) -> (), PostGlobalUpdate: (string, (GlobalUpdates) -> ()) -> Promise, validate: (data: Data) -> (boolean, string?) }
 	@within Store
 
 	Stores are used to load and save Keeps from a [DataStoreService:GetDataStore()](https://create.roblox.com/docs/reference/engine/classes/DataStoreService#GetDataStore)
 ]=]
 
-type storeBase<T> = {
+type storeBase<T, R> = {
 	_storeInfo: storeInfo,
 	_dataTemplate: dataTemplate<T>,
 
@@ -50,17 +50,17 @@ type storeBase<T> = {
 	_preLoad: (any) -> any,
 	_preSave: (any) -> any,
 
-	Wrapper: wrapper<T>,
+	_wrapper: wrapper<R>,
 
 	validate: (data: data<T>) -> (boolean, string?),
 
-	LoadKeep: (self: storeBase<T>, key: string, unreleasedHandler: unreleasedHandler?) -> PromiseTypes.TypedPromise<keep<T>>,
-	ViewKeep: (self: storeBase<T>, key: string, version: string?) -> PromiseTypes.TypedPromise<keep<T>>,
+	LoadKeep: (self: storeBase<T, R>, key: string, unreleasedHandler: unreleasedHandler?) -> PromiseTypes.TypedPromise<keep<T, R>>,
+	ViewKeep: (self: storeBase<T, R>, key: string, version: string?) -> PromiseTypes.TypedPromise<keep<T, R>>,
 
-	PreLoad: (self: storeBase<T>, callback: <T>(data<T>) -> data<T>) -> (),
-	PreSave: (self: storeBase<T>, callback: <T>(data<T>) -> data<T>) -> (),
+	PreLoad: (self: storeBase<T, R>, callback: <T>(data<T>) -> data<T>) -> (),
+	PreSave: (self: storeBase<T, R>, callback: <T>(data<T>) -> data<T>) -> (),
 
-	PostGlobalUpdate: (self: storeBase<T>, key: string, updateHandler: (globalUpdatesClass) -> ()) -> PromiseTypes.Promise,
+	PostGlobalUpdate: (self: storeBase<T, R>, key: string, updateHandler: (globalUpdatesClass) -> ()) -> PromiseTypes.Promise,
 }
 
 --[=[
@@ -70,7 +70,7 @@ type storeBase<T> = {
 	MockStores are used to mirror the real store, but doesn't save data
 ]=]
 
-export type mockStore<T> = storeBase<T>
+export type mockStore<T, R> = storeBase<T, R>
 
 --[=[
 	@type Store StoreBase & { Mock: MockStore }
@@ -79,8 +79,8 @@ export type mockStore<T> = storeBase<T>
 	Stores are used to load and save Keeps from a [DataStoreService:GetDataStore()](https://create.roblox.com/docs/reference/engine/classes/DataStoreService#GetDataStore)
 ]=]
 
-export type store<T> = storeBase<T> & {
-	Mock: mockStore<T>,
+export type store<T, R> = storeBase<T, R> & {
+	Mock: mockStore<T, R>,
 }
 
 --[=[
@@ -126,11 +126,11 @@ export type keepStruct<T> = {
 	@within Keep
 ]=]
 
-export type keep<T> = keepStruct<T> & {
+export type keep<T, R> = keepStruct<T> & {
 	_key: string,
 	_storeInfo: { Name: string, Scope: string },
 
-	_keep_store: store<T>,
+	_keep_store: store<T, R>,
 	_store: DataStore,
 
 	_dataTemplate: dataTemplate<T>,
@@ -154,26 +154,26 @@ export type keep<T> = keepStruct<T> & {
 
 	GlobalStateProcessor: (updateData: globalUpdateData, lock: () -> (), remove: () -> ()) -> (),
 
-	IsActive: (self: keep<T>) -> boolean,
-	Identify: (self: keep<T>) -> string,
-	GetKeyInfo: (self: keep<T>) -> DataStoreKeyInfo,
+	IsActive: (self: keep<T, R>) -> boolean,
+	Identify: (self: keep<T, R>) -> string,
+	GetKeyInfo: (self: keep<T, R>) -> DataStoreKeyInfo,
 
-	Save: (self: keep<T>) -> PromiseTypes.Promise,
-	Release: (self: keep<T>) -> PromiseTypes.Promise,
-	Overwrite: (self: keep<T>, shouldKeepExistingSession: boolean?) -> PromiseTypes.Promise,
-	Destroy: (self: keep<T>) -> (),
+	Save: (self: keep<T, R>) -> PromiseTypes.Promise,
+	Release: (self: keep<T, R>) -> PromiseTypes.Promise,
+	Overwrite: (self: keep<T, R>, shouldKeepExistingSession: boolean?) -> PromiseTypes.Promise,
+	Destroy: (self: keep<T, R>) -> (),
 
-	Reconcile: (self: keep<T>) -> (),
-	AddUserId: (self: keep<T>, userId: number) -> (),
-	RemoveUserId: (self: keep<T>, userId: number) -> (),
+	Reconcile: (self: keep<T, R>) -> (),
+	AddUserId: (self: keep<T, R>, userId: number) -> (),
+	RemoveUserId: (self: keep<T, R>, userId: number) -> (),
 
-	GetVersions: (self: keep<T>, minDate: number?, maxDate: number?) -> PromiseTypes.TypedPromise<iterator<T>>,
-	SetVersion: (self: keep<T>, version: string, migrateProcessor: ((versionKeep: keep<T>) -> keep<T>)?) -> PromiseTypes.TypedPromise<keep<T>>,
+	GetVersions: (self: keep<T, R>, minDate: number?, maxDate: number?) -> PromiseTypes.TypedPromise<iterator<T>>,
+	SetVersion: (self: keep<T, R>, version: string, migrateProcessor: ((versionKeep: keep<T, R>) -> keep<T, R>)?) -> PromiseTypes.TypedPromise<keep<T, R>>,
 
-	GetActiveGlobalUpdates: (self: keep<T>) -> { globalUpdate },
-	GetLockedGlobalUpdates: (self: keep<T>) -> { globalUpdate },
-	ClearLockedUpdate: (self: keep<T>, id: number) -> PromiseTypes.Promise,
-}
+	GetActiveGlobalUpdates: (self: keep<T, R>) -> { globalUpdate },
+	GetLockedGlobalUpdates: (self: keep<T, R>) -> { globalUpdate },
+	ClearLockedUpdate: (self: keep<T, R>, id: number) -> PromiseTypes.Promise,
+} & R
 
 export type iterator<T> = {
 	Current: () -> DataStoreObjectVersionInfo?,

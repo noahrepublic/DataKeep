@@ -5,7 +5,7 @@ return function()
 		Coins = 0,
 	}
 
-	local store = datakeep.GetStore("Test", dataTemplate):expect()
+	local store = datakeep.GetStore("Test", dataTemplate, datakeep.Wrapper):expect()
 
 	describe("store", function()
 		it("should be mock", function()

@@ -16,11 +16,14 @@ local Signals = require(script.Signals)
 local States = require(script.States)
 local Store = require(script.Store)
 local Types = require(script.Types)
+local Wrapper = require(script.Wrapper)
 
 --> Structure
 
 local DataKeep = {
 	LoadMethods = Config.loadMethods,
+
+	Wrapper = Wrapper,
 
 	IssueSignal = Signals.IssueSignal, -- fires when we enter critical state
 	CriticalStateSignal = Signals.CriticalStateSignal, -- fires when we have an issue (issue logging)
@@ -29,9 +32,9 @@ local DataKeep = {
 --> Types
 
 export type LoadMethods = typeof(Config.loadMethods)
-export type Store<T> = Types.store<T>
-export type MockStore<T> = Types.mockStore<T>
-export type Keep<T> = Types.keep<T>
+export type Store<T, R> = Types.store<T, R>
+export type MockStore<T, R> = Types.mockStore<T, R>
+export type Keep<T, R> = Types.keep<T, R>
 
 export type Promise = PromiseTypes.Promise
 export type TypedPromise<T...> = PromiseTypes.TypedPromise<T...>
@@ -62,7 +65,23 @@ export type Status = PromiseTypes.Status
 ]=]
 
 --[=[
+	@type Wrapper { [string]: <T>(self: Keep, ...T) -> () }
+	@within DataKeep
+
+	Wrapper functions that are inheritted by Keeps when they are loaded
+
+	:::info
+	Any wrapper changes after [.GetStore()](#GetStore) will not apply to that store but the next one.
+	:::info
+]=]
+
+--[=[
 	@prop LoadMethods LoadMethods
+	@within DataKeep
+]=]
+
+--[=[
+	@prop Wrapper Wrapper
 	@within DataKeep
 ]=]
 
@@ -137,19 +156,22 @@ end)
 
 	@param storeInfo StoreInfo | string
 	@param dataTemplate { [string]: any }
+	@param wrapper Wrapper | {}
 
 	@return Promise<Store>
 
 	Loads a store from a [DataStoreService:GetDataStore()](https://create.roblox.com/docs/reference/engine/classes/DataStoreService#GetDataStore) and returns a Store object
 
 	```lua
-	local keepStore = DataKeep.GetStore("TestStore", {
+	local dataTemplate = {
 		Test = "Hello World!",
-	}):expect()
+	}
+
+	local keepStore = DataKeep.GetStore("TestStore", dataTemplate, {}):expect()
 	```
 ]=]
 
-function DataKeep.GetStore<T>(storeInfo: Types.storeInfo | string, dataTemplate: Types.dataTemplate<T>): PromiseTypes.TypedPromise<Store<T>>
+function DataKeep.GetStore<T, R>(storeInfo: Types.storeInfo | string, dataTemplate: Types.dataTemplate<T>, wrapper: R): PromiseTypes.TypedPromise<Store<T, R>>
 	local info
 
 	if typeof(storeInfo) == "string" then
@@ -168,7 +190,7 @@ function DataKeep.GetStore<T>(storeInfo: Types.storeInfo | string, dataTemplate:
 	end
 
 	return mockStoreCheck:andThen(function()
-		local self = Store.new(info, dataTemplate)
+		local self = Store.new(info, dataTemplate, wrapper)
 
 		loadedStores[id] = self._store
 

@@ -113,7 +113,7 @@ local overwriteCache = {} -- used to cache in progress overwrite promises
 	```
 ]=]
 
-function Keep.new<T>(structure: Types.keepStruct<T>, dataTemplate: Types.dataTemplate<T>): Types.keep<T>
+function Keep.new<T, R>(structure: Types.keepStruct<T>, dataTemplate: Types.dataTemplate<T>): Types.keep<T, R>
 	local self = {
 		Data = structure.Data,
 		MetaData = structure.MetaData,
@@ -163,7 +163,7 @@ function Keep._isThisSession(session: Types.session)
 	return session.PlaceId == game.PlaceId and session.JobId == game.JobId
 end
 
-local function processGlobalUpdates<T>(keep: Types.keep<T>, latestData: Types.keepStruct<T>)
+local function processGlobalUpdates<T, R>(keep: Types.keep<T, R>, latestData: Types.keepStruct<T>)
 	-- this handles full profiles and if there are only global updates (globals posted with never loaded)
 
 	local finalGlobals = latestData.GlobalUpdates -- the final global updates to save
@@ -280,7 +280,7 @@ local function processGlobalUpdates<T>(keep: Types.keep<T>, latestData: Types.ke
 	end
 end
 
-local function release<T>(self: Types.keep<T>, updater: PromiseTypes.Promise): PromiseTypes.Promise
+local function release<T, R>(self: Types.keep<T, R>, updater: PromiseTypes.Promise): PromiseTypes.Promise
 	if releaseCache[self:Identify()] then -- already releasing
 		return releaseCache[self:Identify()]
 	end
@@ -316,7 +316,7 @@ local function release<T>(self: Types.keep<T>, updater: PromiseTypes.Promise): P
 	return updater
 end
 
-local function save<T>(keep: Types.keep<T>, isReleasing: boolean): PromiseTypes.Promise
+local function save<T, R>(keep: Types.keep<T, R>, isReleasing: boolean): PromiseTypes.Promise
 	local keepStore = keep._keep_store
 
 	if keep._viewOnly then
@@ -453,7 +453,7 @@ end
 	:::warning
 ]=]
 
-function Keep.Save<T>(self: Types.keep<T>): PromiseTypes.Promise
+function Keep.Save<T, R>(self: Types.keep<T, R>): PromiseTypes.Promise
 	if saveCache[self:Identify()] then -- already saving
 		return saveCache[self:Identify()]
 	end
@@ -496,7 +496,7 @@ end
 	:::warning
 ]=]
 
-function Keep.Release<T>(self: Types.keep<T>): PromiseTypes.Promise
+function Keep.Release<T, R>(self: Types.keep<T, R>): PromiseTypes.Promise
 	if releaseCache[self:Identify()] then -- already releasing
 		return releaseCache[self:Identify()]
 	end
@@ -537,7 +537,7 @@ end
 	```shouldKeepExistingSession``` controls the behavior of the server with the active session lock, defaults to ```false```
 ]=]
 
-function Keep.Overwrite<T>(self: Types.keep<T>, shouldKeepExistingSession: boolean?): PromiseTypes.Promise
+function Keep.Overwrite<T, R>(self: Types.keep<T, R>, shouldKeepExistingSession: boolean?): PromiseTypes.Promise
 	if overwriteCache[self:Identify()] then -- already overwriting
 		return overwriteCache[self:Identify()]
 	end
@@ -620,7 +620,7 @@ end
 	Destroys the Keep, removing all signals connections. Should be used only for cleaning view-only Keeps
 ]=]
 
-function Keep.Destroy<T>(self: Types.keep<T>): ()
+function Keep.Destroy<T, R>(self: Types.keep<T, R>): ()
 	if self._destroyed then
 		return
 	end
@@ -642,7 +642,7 @@ end
 	Returns ```true``` if the Keep is active in the session (not locked by another server)
 ]=]
 
-function Keep.IsActive<T>(self: Types.keep<T>): boolean
+function Keep.IsActive<T, R>(self: Types.keep<T, R>): boolean
 	local activeSession = self.MetaData.ActiveSession
 
 	if not activeSession then
@@ -661,7 +661,7 @@ end
 	Returns the string identifier for the Keep
 ]=]
 
-function Keep.Identify<T>(self: Types.keep<T>): string
+function Keep.Identify<T, R>(self: Types.keep<T, R>): string
 	return `{self._storeInfo.Name}/{self._storeInfo.Scope or ""}{if self._storeInfo.Scope ~= "" then "/" else ""}{self._key}`
 end
 
@@ -674,7 +674,7 @@ end
 	Returns the ```DataStoreKeyInfo``` for the Keep
 ]=]
 
-function Keep.GetKeyInfo<T>(self: Types.keep<T>): DataStoreKeyInfo
+function Keep.GetKeyInfo<T, R>(self: Types.keep<T, R>): DataStoreKeyInfo
 	return self._keyInfo
 end
 
@@ -685,7 +685,7 @@ end
 	Fills in any missing data in the Keep, using the data template
 ]=]
 
-function Keep.Reconcile<T>(self: Types.keep<T>): ()
+function Keep.Reconcile<T, R>(self: Types.keep<T, R>): ()
 	local function reconcileData(data: any, template: any)
 		if typeof(data) ~= "table" then
 			return template
@@ -715,7 +715,7 @@ end
 	Associates a ```userId``` to a datastore to assist with GDPR requests (The right to erasure)
 ]=]
 
-function Keep.AddUserId<T>(self: Types.keep<T>, userId: number): ()
+function Keep.AddUserId<T, R>(self: Types.keep<T, R>, userId: number): ()
 	if table.find(self.UserIds, userId) then
 		return
 	end
@@ -732,7 +732,7 @@ end
 	Unassociates a ```userId``` from a datastore
 ]=]
 
-function Keep.RemoveUserId<T>(self: Types.keep<T>, userId: number): ()
+function Keep.RemoveUserId<T, R>(self: Types.keep<T, R>, userId: number): ()
 	local index = table.find(self.UserIds, userId)
 
 	if not index then
@@ -794,7 +794,7 @@ end
 	```
 ]=]
 
-function Keep.GetVersions<T>(self: Types.keep<T>, minDate: number?, maxDate: number?): PromiseTypes.Promise
+function Keep.GetVersions<T, R>(self: Types.keep<T, R>, minDate: number?, maxDate: number?): PromiseTypes.Promise
 	return Promise.new(function(resolve)
 		local versions = self._store:ListVersionsAsync(self._key, Enum.SortDirection.Ascending, minDate, maxDate) -- we don't have to worry about order, the iterator will handle that
 
@@ -932,7 +932,7 @@ end
 	:::caution
 ]=]
 
-function Keep.SetVersion<T>(self: Types.keep<T>, version: string, migrateProcessor: ((versionKeep: Types.keep<T>) -> Types.keep<T>)?): PromiseTypes.TypedPromise<Types.keep<T>>
+function Keep.SetVersion<T, R>(self: Types.keep<T, R>, version: string, migrateProcessor: ((versionKeep: Types.keep<T, R>) -> Types.keep<T, R>)?): PromiseTypes.TypedPromise<Types.keep<T, R>>
 	if migrateProcessor == nil then
 		migrateProcessor = function(versionKeep)
 			return versionKeep
@@ -987,7 +987,7 @@ end
 	Returns an array of active global updates (not locked/processed)
 ]=]
 
-function Keep.GetActiveGlobalUpdates<T>(self: Types.keep<T>): { Types.globalUpdate }
+function Keep.GetActiveGlobalUpdates<T, R>(self: Types.keep<T, R>): { Types.globalUpdate }
 	local activeUpdates = {}
 
 	for _, update in self.GlobalUpdates.Updates do
@@ -1014,7 +1014,7 @@ end
 	:::caution
 ]=]
 
-function Keep.GetLockedGlobalUpdates<T>(self: Types.keep<T>): { Types.globalUpdate }
+function Keep.GetLockedGlobalUpdates<T, R>(self: Types.keep<T, R>): { Types.globalUpdate }
 	local lockedUpdates = {}
 
 	for _, update in self.GlobalUpdates.Updates do
@@ -1043,7 +1043,7 @@ end
 	:::warning
 ]=]
 
-function Keep.ClearLockedUpdate<T>(self: Types.keep<T>, id: number): PromiseTypes.Promise
+function Keep.ClearLockedUpdate<T, R>(self: Types.keep<T, R>, id: number): PromiseTypes.Promise
 	return Promise.new(function(resolve, reject)
 		if not self:IsActive() then
 			return reject()

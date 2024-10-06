@@ -11,7 +11,7 @@ local states = {
 
 	cachedKeepPromises = {},
 
-	loadedKeeps = {} :: { [string]: Types.keep<{}> },
+	loadedKeeps = {} :: { [string]: Types.keep<{}, {}> },
 
 	issueQueue = {} :: { number },
 	criticalStateStartTime = 0,
