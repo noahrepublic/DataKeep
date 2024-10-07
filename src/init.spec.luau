@@ -5,7 +5,7 @@ return function()
 		Coins = 0,
 	}
 
-	local store = datakeep.GetStore("Test", dataTemplate):expect()
+	local store = datakeep.GetStore("Test", dataTemplate, datakeep.Wrapper):expect()
 
 	describe("store", function()
 		it("should be mock", function()
@@ -83,7 +83,7 @@ return function()
 			local viewKeep = store:ViewKeep("Data2"):expect()
 			viewKeep.Data.Coins = 100
 
-			viewKeep:Save():await() -- not sure how to catch this. this doesn't error but processError does.
+			viewKeep:Save():await() -- not sure how to catch this. this doesn't error but ProcessError does.
 
 			local testDataStoreRaw = store._store:GetAsync("Data2")
 			expect(testDataStoreRaw).to.equal(nil)
@@ -236,7 +236,7 @@ return function()
 			store
 				:PostGlobalUpdate("Data", function(globalUpdates)
 					for i, globalUpdate in globalUpdates:GetActiveUpdates() do
-						globalUpdates:ChangeActiveUpdate(globalUpdate.ID, {
+						globalUpdates:ChangeActiveUpdate(globalUpdate.Id, {
 							Message = `{globalUpdate.Data.Message}Goodbye`,
 						})
 
@@ -268,7 +268,7 @@ return function()
 					expect(#globalUpdates:GetActiveUpdates()).to.equal(1)
 
 					for _, globalUpdate in globalUpdates:GetActiveUpdates() do
-						globalUpdates:RemoveActiveUpdate(globalUpdate.ID)
+						globalUpdates:RemoveActiveUpdate(globalUpdate.Id)
 
 						expect(#globalUpdates:GetActiveUpdates()).to.equal(0)
 					end
@@ -297,7 +297,7 @@ return function()
 			expect(#keep:GetLockedGlobalUpdates()).to.equal(1)
 
 			for _, update in keep:GetLockedGlobalUpdates() do
-				keep:ClearLockedUpdate(update.ID):await()
+				keep:ClearLockedUpdate(update.Id):await()
 			end
 
 			keep:Save():await()

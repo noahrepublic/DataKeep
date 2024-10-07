@@ -21,7 +21,7 @@ local dataTemplate = {
 
 local loadedKeeps = {}
 
-local keepStore = DataKeep.GetStore("PlayerData", dataTemplate) -- generally you can just :expect() I just want to showcase Promises to those unfamiliar
+local keepStore = DataKeep.GetStore("PlayerData", dataTemplate, {}) -- generally you can just :expect() I just want to showcase Promises to those unfamiliar
 
 local function onPlayerAdded(player: Player)
     keepStore:LoadKeep(`Player_{player.UserId}`):andThen(function(keep)
@@ -111,7 +111,7 @@ Player.__index = Player
 
 --> Variables
 
-local keepStore = DataKeep.GetStore("PlayerData", DataTemplate):expect()
+local keepStore = DataKeep.GetStore("PlayerData", DataTemplate, {}):expect()
 
 --> Private Functions
 

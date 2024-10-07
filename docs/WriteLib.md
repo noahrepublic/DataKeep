@@ -28,9 +28,9 @@ local dataTemplate = {
     Coins = 0
 }
 
-local keepStore = DataKeep.GetStore("PlayerData", dataTemplate):expect()
+local wrapper = require(path_to_custom_WriteLib)
 
-keepStore.Wrapper = require(path_to_custom_WriteLib)
+local keepStore = DataKeep.GetStore("PlayerData", dataTemplate, wrapper):expect()
 
 keepStore:LoadKeep(`Player_{player.UserId}`):andThen(function(keep)
     keep:AddCoins(100)

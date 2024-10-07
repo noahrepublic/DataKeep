@@ -19,12 +19,6 @@ function MockStore.new()
 	}, MockStore)
 end
 
---> Types
-
-export type MockStore = typeof(MockStore.new()) & {
-	_data: any,
-}
-
 --> Private Functions
 
 local function didyield(f, ...)
@@ -83,6 +77,13 @@ function MockStore:UpdateAsync(key: string, callback: (any) -> any)
 
 	local newVersion = self:SetAsync(key, newValue)
 	return DeepCopy(self._data[key]), newVersion
+end
+
+function MockStore:RemoveAsync(key: string)
+	local oldData = DeepCopy(self._data[key])
+	self._data[key] = nil
+
+	return oldData, createNewVersion(self, key, nil)
 end
 
 function MockStore:ListVersionsAsync(key: string, sortDirection: Enum.SortDirection, minDate: number, maxDate: number, limit: number)

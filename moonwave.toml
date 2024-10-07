@@ -1,8 +1,6 @@
-
 changelog = true
 
-classOrder = ["Store", "Keep", "GlobalUpdates"]
-
+classOrder = ["DataKeep", "Store", "Keep", "GlobalUpdates"]
 
 gitSourceBranch = "main"
 
