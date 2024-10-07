@@ -27,7 +27,13 @@ local DataKeep = {
 
 	IssueSignal = Signals.IssueSignal, -- fires when we enter critical state
 	CriticalStateSignal = Signals.CriticalStateSignal, -- fires when we have an issue (issue logging)
+
+	IsCriticalState = States.isCriticalState,
 }
+
+Signals.CriticalStateSignal:Connect(function(isCriticalState)
+	DataKeep.IsCriticalState = isCriticalState
+end)
 
 --> Types
 
