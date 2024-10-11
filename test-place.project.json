@@ -1,5 +1,5 @@
 {
-	"name": "DataKeep",
+	"name": "unit-tests",
 	"tree": {
 		"$className": "DataModel",
 		"ServerScriptService": {

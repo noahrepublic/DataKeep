@@ -111,7 +111,7 @@ local keyPrefix = "Player_"
 
 local loadedKeeps = {}
 
-local keepStore = DataKeep.GetStore("PlayerData", dataTemplate):expect()
+local keepStore = DataKeep.GetStore("PlayerData", dataTemplate, {}):expect()
 
 local function onPlayerAdded(player: Player)
 	keepStore:LoadKeep(keyPrefix .. player.UserId):andThen(function(keep)

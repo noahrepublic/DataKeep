@@ -9,15 +9,6 @@ local DeepCopy = require(script.Parent.Parent.Utils.DeepCopy)
 local MockStorePages = {}
 MockStorePages.__index = MockStorePages
 
---> Types
-
-export type MockStore = typeof(setmetatable({}, MockStorePages)) & {
-	_data: any,
-	_currentPage: number,
-	_pageSize: number,
-	IsFinished: boolean,
-}
-
 --> Public Methods
 
 function MockStorePages:GetCurrentPage()
@@ -38,7 +29,7 @@ end
 
 function MockStorePages:AdvanceToNextPageAsync()
 	if self.IsFinished then
-		warn("Cannot advance to next page, already finished")
+		warn("[DataKeep MockStore] Cannot advance to next page, already finished")
 		return
 	end
 

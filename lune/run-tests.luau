@@ -1,22 +1,31 @@
+--!nocheck
+
 -- selene: allow(incorrect_standard_library_use)
 
 local process = require("@lune/process")
 
-process.spawn("wally", { "install" }, {
+local installResult = process.spawn("lune", { "run", "lune/install-packages.luau" }, {
 	cwd = process.cwd,
+	stdio = "inherit",
 })
 
-print("Installed all packages")
+if not installResult.ok then
+	process.exit(1)
+end
 
-process.spawn("rojo", {
-	"build",
-	"-o",
-	"unit-tests.rbxl",
-	"test-place.project.json",
+local buildResult = process.spawn("rojo", { "build", "-o", "unit-tests.rbxl", "test-place.project.json" }, {
+	stdio = "inherit",
 })
 
-print("Built test place")
+if not buildResult.ok then
+	process.exit(1)
+end
 
-local result = process.spawn("run-in-roblox", { "--script", "ci/unit.server.luau", "--place", "unit-tests.rbxl" })
+local runResult = process.spawn("run-in-roblox", { "--script", "ci/unit.server.luau", "--place", "unit-tests.rbxl" })
 
-print(result.stdout)
+if runResult.ok then
+	print(runResult.stdout)
+else
+	print(runResult.stderr)
+	process.exit(1)
+end
