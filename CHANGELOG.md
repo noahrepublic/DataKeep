@@ -1,5 +1,16 @@
 # DataKeep
 
+## [version 4.0.0](https://github.com/noahrepublic/DataKeep/releases/tag/v4.0.0): 10/06/2024
+
+- [Types Rewrite](https://github.com/noahrepublic/DataKeep/pull/32)
+
+#### Breaking Changes ! !
+- Changed `globalUpdate.ID` -> `globalUpdate.Id`
+- DataKeep:LoadStore() requires wrapper as third parameter (for strict types)
+- Default Wrapper now moved to `DataKeep.Wrapper`
+- `CriticalStateSignal` and `IssueSignal` moved to `DataKeep.CriticalStateSignal` and `DataKeep.IssueSignal`
+- `.CriticalState` -> `.IsCriticalState`
+
 ## [version 3.2.1](https://github.com/noahrepublic/DataKeep/releases/tag/v3.2.1): 09/29/2024
 
 - Fixed no waiting between failed saves
