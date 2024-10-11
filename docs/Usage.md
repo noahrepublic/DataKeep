@@ -101,8 +101,7 @@ local Players = game:GetService("Players")
 --> Includes
 
 local DataKeep = require(path_to_datakeep)
-
-local DataTemplate = require(script.Parent.DataTemplate)
+local DataTemplate = require(path_to_datatemplate)
 
 --> Module Definition
 
@@ -199,7 +198,7 @@ end
 
 --> Constructor
 
-function Player.new(player)
+function Player.new(player: Player)
 	local self = setmetatable({
 		Player = player,
 
