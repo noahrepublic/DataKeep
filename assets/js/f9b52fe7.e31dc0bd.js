@@ -1,1 +1,0 @@
-"use strict";(self.webpackChunkdocs=self.webpackChunkdocs||[]).push([[198],{63891:e=>{e.exports=JSON.parse('{"sourceUrl":"https://github.com/noahrepublic/DataKeep/blob/main","baseUrl":"/DataKeep/","classOrder":["Store","Keep","GlobalUpdates"],"apiCategories":[]}')}}]);
