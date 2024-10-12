@@ -513,7 +513,7 @@ end
 	```
 ]=]
 
-function Store.PreLoad<T, R>(self: Types.store<T, R>, callback: (Types.data<T>) -> Types.data<T>): ()
+function Store.PreLoad<T, R>(self: Types.store<T, R>, callback: (Types.data<T>) -> Types.data<T>)
 	assert(self._preLoad == nil, "[DataKeep] :PreLoad() can only be set once")
 	assert(callback and typeof(callback) == "function", "[DataKeep] :PreLoad() callback must be a function")
 
@@ -551,7 +551,7 @@ end
 	```
 ]=]
 
-function Store.PreSave<T, R>(self: Types.store<T, R>, callback: (Types.data<T>) -> Types.data<T>): ()
+function Store.PreSave<T, R>(self: Types.store<T, R>, callback: (Types.data<T>) -> Types.data<T>)
 	assert(self._preSave == nil, "[DataKeep] :PreSave() can only be set once")
 	assert(callback and typeof(callback) == "function", "[DataKeep] :PreSave() callback must be a function")
 

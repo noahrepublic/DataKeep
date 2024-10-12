@@ -57,8 +57,8 @@ type storeBase<T, R> = {
 	LoadKeep: (self: storeBase<T, R>, key: string, unreleasedHandler: unreleasedHandler?) -> PromiseTypes.TypedPromise<keep<T, R>>,
 	ViewKeep: (self: storeBase<T, R>, key: string, version: string?) -> PromiseTypes.TypedPromise<keep<T, R>>,
 
-	PreLoad: (self: storeBase<T, R>, callback: <T>(data<T>) -> data<T>) -> (),
-	PreSave: (self: storeBase<T, R>, callback: <T>(data<T>) -> data<T>) -> (),
+	PreLoad: (self: storeBase<T, R>, callback: (data<T>) -> data<T>) -> (),
+	PreSave: (self: storeBase<T, R>, callback: (data<T>) -> data<T>) -> (),
 
 	PostGlobalUpdate: (self: storeBase<T, R>, key: string, updateHandler: (globalUpdatesClass) -> ()) -> PromiseTypes.Promise,
 }
@@ -167,7 +167,7 @@ export type keep<T, R> = keepStruct<T> & {
 	AddUserId: (self: keep<T, R>, userId: number) -> (),
 	RemoveUserId: (self: keep<T, R>, userId: number) -> (),
 
-	GetVersions: (self: keep<T, R>, minDate: number?, maxDate: number?) -> PromiseTypes.TypedPromise<iterator<T>>,
+	GetVersions: (self: keep<T, R>, minDate: number?, maxDate: number?) -> PromiseTypes.TypedPromise<iterator>,
 	SetVersion: (self: keep<T, R>, version: string, migrateProcessor: ((versionKeep: keep<T, R>) -> keep<T, R>)?) -> PromiseTypes.TypedPromise<keep<T, R>>,
 
 	GetActiveGlobalUpdates: (self: keep<T, R>) -> { globalUpdate },
@@ -175,7 +175,7 @@ export type keep<T, R> = keepStruct<T> & {
 	ClearLockedUpdate: (self: keep<T, R>, id: number) -> PromiseTypes.Promise,
 } & R
 
-export type iterator<T> = {
+export type iterator = {
 	Current: () -> DataStoreObjectVersionInfo?,
 	Next: () -> DataStoreObjectVersionInfo?,
 	Previous: () -> DataStoreObjectVersionInfo?,

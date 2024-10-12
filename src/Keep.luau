@@ -620,7 +620,7 @@ end
 	Destroys the Keep, removing all signals connections. Should be used only for cleaning view-only Keeps
 ]=]
 
-function Keep.Destroy<T, R>(self: Types.keep<T, R>): ()
+function Keep.Destroy<T, R>(self: Types.keep<T, R>)
 	if self._destroyed then
 		return
 	end
@@ -685,7 +685,7 @@ end
 	Fills in any missing data in the Keep, using the data template
 ]=]
 
-function Keep.Reconcile<T, R>(self: Types.keep<T, R>): ()
+function Keep.Reconcile<T, R>(self: Types.keep<T, R>)
 	local function reconcileData(data: any, template: any)
 		if typeof(data) ~= "table" then
 			return template
@@ -715,7 +715,7 @@ end
 	Associates a ```userId``` to a datastore to assist with GDPR requests (The right to erasure)
 ]=]
 
-function Keep.AddUserId<T, R>(self: Types.keep<T, R>, userId: number): ()
+function Keep.AddUserId<T, R>(self: Types.keep<T, R>, userId: number)
 	if table.find(self.UserIds, userId) then
 		return
 	end
@@ -732,7 +732,7 @@ end
 	Unassociates a ```userId``` from a datastore
 ]=]
 
-function Keep.RemoveUserId<T, R>(self: Types.keep<T, R>, userId: number): ()
+function Keep.RemoveUserId<T, R>(self: Types.keep<T, R>, userId: number)
 	local index = table.find(self.UserIds, userId)
 
 	if not index then
@@ -794,7 +794,7 @@ end
 	```
 ]=]
 
-function Keep.GetVersions<T, R>(self: Types.keep<T, R>, minDate: number?, maxDate: number?): PromiseTypes.Promise
+function Keep.GetVersions<T, R>(self: Types.keep<T, R>, minDate: number?, maxDate: number?): PromiseTypes.TypedPromise<Types.iterator>
 	return Promise.new(function(resolve)
 		local versions = self._store:ListVersionsAsync(self._key, Enum.SortDirection.Ascending, minDate, maxDate) -- we don't have to worry about order, the iterator will handle that
 
