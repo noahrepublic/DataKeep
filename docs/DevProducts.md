@@ -7,12 +7,27 @@ sidebar_position: 5
 The following example shows how you would handle developer product purchases:
 
 ```lua
+-- DataTemplate.luau
+
+local dataTemplate = {
+	PurchaseHistory = {},
+
+	Coins = 0,
+}
+
+export type template = typeof(dataTemplate)
+
+return table.freeze(dataTemplate)
+```
+
+```lua
 -- DevProducts.luau
 
 local DataKeep = require(path_to_datakeep)
+local DataTemplate = require(path_to_datatemplate)
 
 local devProducts = {
-    [product_id_here] = function(player: Player, keep: DataKeep.Keep)
+    [product_id_here] = function(player: Player, keep: DataKeep.Keep<DataTemplate.template, {}>)
         keep.Data.Coins += 100
 
 		print(`{player.Name} purchased some coins!`)
@@ -29,11 +44,12 @@ local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 
 local DataKeep = require(path_to_datakeep)
+local DataTemplate = require(path_to_datatemplate)
 local DevProducts = require(path_to_devproducts)
 
 local purchaseHistoryLimit = 50
 
-local function setProcessReceipt(store: DataKeep.Store, keyPrefix: string)
+local function setProcessReceipt(store: DataKeep.Store<DataTemplate.template, {}>, keyPrefix: string)
 	local function processReceipt(receiptInfo): Enum.ProductPurchaseDecision
 		local player = Players:GetPlayerByUserId(receiptInfo.PlayerId)
 
@@ -104,14 +120,14 @@ return setProcessReceipt
 local Players = game:GetService("Players")
 
 local DataKeep = require(path_to_datakeep)
+local DataTemplate = require(path_to_datatemplate)
 local SetProcessReceipt = require(path_to_setprocessreceipt)
 
-local dataTemplate = { Coins = 0 }
 local keyPrefix = "Player_"
 
 local loadedKeeps = {}
 
-local keepStore = DataKeep.GetStore("PlayerData", dataTemplate, {}):expect()
+local keepStore = DataKeep.GetStore("PlayerData", DataTemplate, {}):expect()
 
 local function onPlayerAdded(player: Player)
 	keepStore:LoadKeep(keyPrefix .. player.UserId):andThen(function(keep)
