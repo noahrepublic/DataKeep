@@ -240,7 +240,7 @@ function DataKeep.SetConfig(overwrites: config)
 			continue
 		end
 
-		if not (typeof(Config[key]) == value) then
+		if not (typeof(value) == typeof(Config[key])) then
 			continue
 		end
 
