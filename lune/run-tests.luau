@@ -23,9 +23,8 @@ end
 
 local runResult = process.spawn("run-in-roblox", { "--script", "ci/unit.server.luau", "--place", "unit-tests.rbxl" })
 
-if runResult.ok then
-	print(runResult.stdout)
-else
-	print(runResult.stderr)
+print(runResult.stdout)
+
+if not runResult.ok then
 	process.exit(1)
 end
