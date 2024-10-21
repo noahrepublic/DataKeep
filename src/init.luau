@@ -204,6 +204,50 @@ function DataKeep.GetStore<T, R>(storeInfo: Types.storeInfo | string, dataTempla
 	end)
 end
 
+type config = {
+	assumeDeadLock: number?,
+	internalKeepCleanupInterval: number?,
+	saveInterval: number?,
+	forceLoadMaxAttempts: number?,
+	releaseRetryMaxAttempts: number?,
+	criticalStateThreshold: number?,
+	maxIssueTime: number?,
+	maxCriticalStateTime: number?,
+}
+
+--[=[
+	@function SetConfig
+	@within DataKeep
+
+	@param overwrites { assumeDeadLock: number?, internalKeepCleanupInterval: number?, saveInterval: number?, forceLoadMaxAttempts: number?, releaseRetryMaxAttempts: number?, criticalStateThreshold: number?, maxIssueTime: number?, maxCriticalStateTime: number? }
+
+	Allows to overwrite default config values. Only for experienced developers
+
+	```lua
+	DataKeep.SetConfig({
+		saveInterval = 60
+	})
+	```
+]=]
+
+function DataKeep.SetConfig(overwrites: config)
+	for key, value in overwrites do
+		if key == "loadMethods" then -- ignore loadMethods
+			continue
+		end
+
+		if not Config[key] then
+			continue
+		end
+
+		if not (typeof(value) == typeof(Config[key])) then
+			continue
+		end
+
+		Config[key] = value
+	end
+end
+
 game:BindToClose(function()
 	States.isServiceDone = true
 	States.isUseMockStore = true -- mock any new stores

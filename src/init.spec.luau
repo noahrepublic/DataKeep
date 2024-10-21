@@ -7,6 +7,27 @@ return function()
 
 	local store = datakeep.GetStore("Test", dataTemplate, datakeep.Wrapper):expect()
 
+	describe("datakeep", function()
+		it("should only allow existing config values", function()
+			local config = require(script.Parent.Config)
+
+			local defaultAssumeDeadLock = config.assumeDeadLock
+
+			datakeep.SetConfig({
+				someRandomValue = "someRandomValue",
+				assumeDeadLock = defaultAssumeDeadLock - 1,
+			})
+
+			expect((config :: any).someRandomValue).to.equal(nil)
+			expect(config.assumeDeadLock).never.to.equal(defaultAssumeDeadLock)
+
+			-- return back to defaults
+			datakeep.SetConfig({
+				assumeDeadLock = defaultAssumeDeadLock,
+			})
+		end)
+	end)
+
 	describe("store", function()
 		it("should be mock", function()
 			expect(store._isMockEnabled).to.equal(true)

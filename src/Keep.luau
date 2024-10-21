@@ -147,8 +147,8 @@ function Keep.new<T, R>(structure: Types.keepStruct<T>, dataTemplate: Types.data
 		Saving = Signal.new(),
 
 		_storeInfo = { Name = "", Scope = "" },
-		_keep_store = nil :: any, -- the store class that created the keep
-		_store = nil :: any,
+		_keep_store = nil, -- the store class that created the keep
+		_store = nil,
 		_key = "", -- the scope of the keep, used for the store class to know where to save it
 
 		_dataTemplate = dataTemplate,
