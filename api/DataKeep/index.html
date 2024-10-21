@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v2.3.1">
 <title data-rh="true">DataKeep | DataKeep</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://noahrepublic.github.io/DataKeep/api/DataKeep"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docusaurus_tag" content="default"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docsearch:docusaurus_tag" content="default"><meta data-rh="true" property="og:title" content="DataKeep | DataKeep"><link data-rh="true" rel="canonical" href="https://noahrepublic.github.io/DataKeep/api/DataKeep"><link data-rh="true" rel="alternate" href="https://noahrepublic.github.io/DataKeep/api/DataKeep" hreflang="en"><link data-rh="true" rel="alternate" href="https://noahrepublic.github.io/DataKeep/api/DataKeep" hreflang="x-default"><link rel="stylesheet" href="/DataKeep/assets/css/styles.fdfd902f.css">
-<link rel="preload" href="/DataKeep/assets/js/runtime~main.b96188de.js" as="script">
-<link rel="preload" href="/DataKeep/assets/js/main.617aabd7.js" as="script">
+<link rel="preload" href="/DataKeep/assets/js/runtime~main.6f64ef2f.js" as="script">
+<link rel="preload" href="/DataKeep/assets/js/main.205d0eb6.js" as="script">
 </head>
 <body class="navigation-with-keyboard">
 <script>!function(){function e(e){document.documentElement.setAttribute("data-theme",e)}var t=function(){var e=null;try{e=localStorage.getItem("theme")}catch(e){}return e}();null!==t?e(t):window.matchMedia("(prefers-color-scheme: dark)").matches?e("dark"):(window.matchMedia("(prefers-color-scheme: light)").matches,e("light"))}()</script><div id="__docusaurus">
@@ -52,6 +52,12 @@
 
 <span class="token keyword">local</span> keepStore <span class="token operator">=</span> DataKeep<span class="token punctuation">.</span><span class="token function">GetStore</span><span class="token punctuation">(</span><span class="token string">"TestStore"</span><span class="token punctuation">,</span> dataTemplate<span class="token punctuation">,</span> <span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">:</span><span class="token function">expect</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 </code></pre>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="SetConfig"><code style="text-decoration:none">SetConfig</code><a href="#SetConfig" class="hash-link" aria-label="Direct link to SetConfig" title="Direct link to SetConfig">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/init.luau#L232"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>DataKeep<!-- -->.</code><code class="green_DgR4">SetConfig</code><code>(</code><code>overwrites<!-- -->: </code><code class="purple_ieR2">{</code><div class="inset_uKQm"><code>assumeDeadLock<!-- -->: </code><code class="blue_P4bS">number?</code><code class="purple_ieR2">,</code></div><div class="inset_uKQm"><code>internalKeepCleanupInterval<!-- -->: </code><code class="blue_P4bS">number?</code><code class="purple_ieR2">,</code></div><div class="inset_uKQm"><code>saveInterval<!-- -->: </code><code class="blue_P4bS">number?</code><code class="purple_ieR2">,</code></div><div class="inset_uKQm"><code>forceLoadMaxAttempts<!-- -->: </code><code class="blue_P4bS">number?</code><code class="purple_ieR2">,</code></div><div class="inset_uKQm"><code>releaseRetryMaxAttempts<!-- -->: </code><code class="blue_P4bS">number?</code><code class="purple_ieR2">,</code></div><div class="inset_uKQm"><code>criticalStateThreshold<!-- -->: </code><code class="blue_P4bS">number?</code><code class="purple_ieR2">,</code></div><div class="inset_uKQm"><code>maxIssueTime<!-- -->: </code><code class="blue_P4bS">number?</code><code class="purple_ieR2">,</code></div><div class="inset_uKQm"><code>maxCriticalStateTime<!-- -->: </code><code class="blue_P4bS">number?</code></div><code class="purple_ieR2">}</code><code>) → </code><code>(</code><code>)</code></div><div>
+<p>Allows to overwrite default config values. Only for experienced developers</p>
+<pre class="language-lua"><code class="language-lua">DataKeep<span class="token punctuation">.</span><span class="token function">SetConfig</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+	saveInterval <span class="token operator">=</span> <span class="token number">60</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+</code></pre>
 </div></div></article></div><details><summary>Show raw api</summary><pre style="max-width:100%;white-space:pre-wrap">{
     &quot;functions&quot;: [
         {
@@ -83,6 +89,23 @@
             &quot;function_type&quot;: &quot;static&quot;,
             &quot;source&quot;: {
                 &quot;line&quot;: 179,
+                &quot;path&quot;: &quot;src/init.luau&quot;
+            }
+        },
+        {
+            &quot;name&quot;: &quot;SetConfig&quot;,
+            &quot;desc&quot;: &quot;Allows to overwrite default config values. Only for experienced developers\n\n```lua\nDataKeep.SetConfig({\n\tsaveInterval = 60\n})\n```&quot;,
+            &quot;params&quot;: [
+                {
+                    &quot;name&quot;: &quot;overwrites&quot;,
+                    &quot;desc&quot;: &quot;&quot;,
+                    &quot;lua_type&quot;: &quot;{ assumeDeadLock: number?, internalKeepCleanupInterval: number?, saveInterval: number?, forceLoadMaxAttempts: number?, releaseRetryMaxAttempts: number?, criticalStateThreshold: number?, maxIssueTime: number?, maxCriticalStateTime: number? }&quot;
+                }
+            ],
+            &quot;returns&quot;: [],
+            &quot;function_type&quot;: &quot;static&quot;,
+            &quot;source&quot;: {
+                &quot;line&quot;: 232,
                 &quot;path&quot;: &quot;src/init.luau&quot;
             }
         }
@@ -154,8 +177,8 @@
         &quot;line&quot;: 53,
         &quot;path&quot;: &quot;src/init.luau&quot;
     }
-}</pre></details></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#types" class="table-of-contents__link toc-highlight">Types</a><ul><li><a href="#LoadMethods" class="table-of-contents__link toc-highlight">LoadMethods</a></li><li><a href="#Wrapper" class="table-of-contents__link toc-highlight">Wrapper</a></li></ul></li><li><a href="#properties" class="table-of-contents__link toc-highlight">Properties</a><ul><li><a href="#CriticalStateSignal" class="table-of-contents__link toc-highlight">CriticalStateSignal</a></li><li><a href="#IssueSignal" class="table-of-contents__link toc-highlight">IssueSignal</a></li><li><a href="#LoadMethods" class="table-of-contents__link toc-highlight">LoadMethods</a></li><li><a href="#Wrapper" class="table-of-contents__link toc-highlight">Wrapper</a></li></ul></li><li><a href="#functions" class="table-of-contents__link toc-highlight">Functions</a><ul><li><a href="#GetStore" class="table-of-contents__link toc-highlight">.GetStore</a></li></ul></li></ul></div></div></div></div></main></div></div><footer class="footer footer--dark"><div class="container container-fluid"><div class="footer__bottom text--center"><div class="footer__copyright">Copyright © 2024 noahrepublic. Built with Moonwave and Docusaurus.</div></div></div></footer></div>
-<script src="/DataKeep/assets/js/runtime~main.b96188de.js"></script>
-<script src="/DataKeep/assets/js/main.617aabd7.js"></script>
+}</pre></details></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#types" class="table-of-contents__link toc-highlight">Types</a><ul><li><a href="#LoadMethods" class="table-of-contents__link toc-highlight">LoadMethods</a></li><li><a href="#Wrapper" class="table-of-contents__link toc-highlight">Wrapper</a></li></ul></li><li><a href="#properties" class="table-of-contents__link toc-highlight">Properties</a><ul><li><a href="#CriticalStateSignal" class="table-of-contents__link toc-highlight">CriticalStateSignal</a></li><li><a href="#IssueSignal" class="table-of-contents__link toc-highlight">IssueSignal</a></li><li><a href="#LoadMethods" class="table-of-contents__link toc-highlight">LoadMethods</a></li><li><a href="#Wrapper" class="table-of-contents__link toc-highlight">Wrapper</a></li></ul></li><li><a href="#functions" class="table-of-contents__link toc-highlight">Functions</a><ul><li><a href="#GetStore" class="table-of-contents__link toc-highlight">.GetStore</a></li><li><a href="#SetConfig" class="table-of-contents__link toc-highlight">.SetConfig</a></li></ul></li></ul></div></div></div></div></main></div></div><footer class="footer footer--dark"><div class="container container-fluid"><div class="footer__bottom text--center"><div class="footer__copyright">Copyright © 2024 noahrepublic. Built with Moonwave and Docusaurus.</div></div></div></footer></div>
+<script src="/DataKeep/assets/js/runtime~main.6f64ef2f.js"></script>
+<script src="/DataKeep/assets/js/main.205d0eb6.js"></script>
 </body>
 </html>
