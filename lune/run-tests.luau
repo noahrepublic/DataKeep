@@ -21,9 +21,9 @@ if not buildResult.ok then
 	process.exit(1)
 end
 
-local runResult = process.spawn("run-in-roblox", { "--script", "ci/unit.server.luau", "--place", "unit-tests.rbxl" })
-
-print(runResult.stdout)
+local runResult = process.spawn("run-in-roblox", { "--script", "ci/unit.server.luau", "--place", "unit-tests.rbxl" }, {
+	stdio = "forward",
+})
 
 if not runResult.ok then
 	process.exit(1)
