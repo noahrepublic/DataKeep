@@ -1,5 +1,9 @@
 # DataKeep
 
+## [version 4.1.0](https://github.com/noahrepublic/DataKeep/releases/tag/v4.1.0): 10/22/2024
+
+- Add DataKeep.SetConfig()
+
 ## [version 4.0.0](https://github.com/noahrepublic/DataKeep/releases/tag/v4.0.0): 10/11/2024
 
 - [Types Rewrite](https://github.com/noahrepublic/DataKeep/pull/32)
