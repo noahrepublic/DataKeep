@@ -10,8 +10,10 @@ local RunService = game:GetService("RunService")
 local Promise = require(script.Parent.Promise)
 
 local Config = require(script.Config)
+local Enums = require(script.Enums)
+local Log = require(script.Utils.Log)
 local PromiseTypes = require(script.PromiseTypes)
-local ReleaseKeepInternally = require(script.Utils.ReleaseKeepInternally)
+local RemoveKeepInternally = require(script.Utils.RemoveKeepInternally)
 local Signals = require(script.Signals)
 local States = require(script.States)
 local Store = require(script.Store)
@@ -21,7 +23,10 @@ local Wrapper = require(script.Wrapper)
 --> Structure
 
 local DataKeep = {
-	LoadMethods = Config.loadMethods,
+	Enums = Enums,
+
+	--- deprecated, use .Enums
+	LoadMethods = Enums.LoadMethod,
 
 	Wrapper = Wrapper,
 
@@ -37,7 +42,6 @@ end)
 
 --> Types
 
-export type LoadMethods = typeof(Config.loadMethods)
 export type Store<T, R> = Types.store<T, R>
 export type MockStore<T, R> = Types.mockStore<T, R>
 export type Keep<T, R> = Types.keep<T, R>
@@ -52,29 +56,10 @@ export type Status = PromiseTypes.Status
 ]=]
 
 --[=[
-	@type LoadMethods { ForceLoad: string, Steal: string, Cancel: string }
-	@within DataKeep
-
-	### "ForceLoad" (default)
-
-	Attempts to load the Keep. If the Keep is session-locked, it will either be released for that remote server or "stolen" if it's not responding (possibly in dead lock).
-
-
-	### "Steal"
-
-	Loads keep immediately, ignoring an existing remote session lock and applying a session lock for this session.
-
-
-	### "Cancel"
-
-	Cancels the load of the Keep
-]=]
-
---[=[
 	@type Wrapper { [string]: <T>(self: Keep, ...T) -> () }
 	@within DataKeep
 
-	Wrapper functions that are inheritted by Keeps when they are loaded
+	Wrapper functions that are inheritted by Keeps when they are loaded.
 
 	:::info
 	Any wrapper changes after [.GetStore()](#GetStore) will not apply to that store but the next one.
@@ -82,8 +67,20 @@ export type Status = PromiseTypes.Status
 ]=]
 
 --[=[
-	@prop LoadMethods LoadMethods
+	@type Enums { LoadMethod: LoadMethod, LogLevel: LogLevel }
 	@within DataKeep
+]=]
+
+--[=[
+	@prop Enums Enums
+	@within DataKeep
+]=]
+
+--[=[
+	@prop LoadMethods LoadMethod
+	@within DataKeep
+
+	@deprecated 4.2.0 -- Use .Enums instead
 ]=]
 
 --[=[
@@ -95,7 +92,7 @@ export type Status = PromiseTypes.Status
 	@prop IssueSignal Signal<string>
 	@within DataKeep
 
-	Fired when an issue occurs, like a failed request
+	Fired when an issue occurs, like a failed request.
 
 	```lua
 	DataKeep.IssueSignal:Connect(function(err)
@@ -108,7 +105,7 @@ export type Status = PromiseTypes.Status
 	@prop CriticalStateSignal Signal<boolean>
 	@within DataKeep
 
-	Fired when the store enters or exits critical state. After it has failed many requests and maybe dangerous to proceed with purchases or other important actions
+	Fired when the store enters or exits critical state. After it has failed many requests and maybe dangerous to proceed with purchases or other important actions.
 
 	```lua
 	DataKeep.CriticalStateSignal:Connect(function(isInCriticalState)
@@ -128,33 +125,38 @@ local internalKeepCleanupCycle = 0
 local loadedStores = {} -- list of stores that are currently loaded
 
 local mockStoreCheck = Promise.new(function(resolve)
-	if game.GameId == 0 then
-		print("[DataKeep] Local file, using mock store")
-		return resolve(false)
-	end
+	-- defer in case .SetConfig() was called
 
-	local success, message = pcall(function()
-		return DataStoreService:GetDataStore("__LiveCheck"):SetAsync("__LiveCheck", os.time())
-	end)
+	task.defer(function()
+		if game.GameId == 0 then
+			Log.warn("[DataKeep] Local file, using mock store")
+			resolve(false)
+			return
+		end
 
-	if success then
-		print("[DataKeep] Datastores are available, using real store")
-	else
-		if message then
-			if string.find(message, "ConnectFail", 1, true) then
-				warn("[DataKeep] No internet connection, using mock store")
-			else
-				print("[DataKeep] Datastores are not available, using mock store")
+		local success, message = pcall(function()
+			return DataStoreService:GetDataStore("__LiveCheck"):SetAsync("__LiveCheck", os.time())
+		end)
+
+		if success then
+			Log.print("[DataKeep] Datastores are available, using real store")
+		else
+			if message then
+				if string.find(message, "ConnectFail", 1, true) then
+					Log.warn("[DataKeep] No internet connection, using mock store")
+				else
+					Log.warn("[DataKeep] Datastores are not available, using mock store")
+				end
 			end
 		end
-	end
 
-	return resolve(success)
+		resolve(success)
+	end)
 end):andThen(function(isLive)
 	States.isUseMockStore = if not States.isServiceDone then not isLive else true -- check for States.isServiceDone to prevent loading keeps during BindToClose()
 end)
 
---> Public Functions
+--> Public Methods
 
 --[=[
 	@function GetStore
@@ -166,14 +168,14 @@ end)
 
 	@return Promise<Store>
 
-	Loads a store from a [DataStoreService:GetDataStore()](https://create.roblox.com/docs/reference/engine/classes/DataStoreService#GetDataStore) and returns a Store object
+	Loads a store from a [DataStoreService:GetDataStore()](https://create.roblox.com/docs/reference/engine/classes/DataStoreService#GetDataStore) and returns a Store object.
 
 	```lua
 	local dataTemplate = {
 		Test = "Hello World!",
 	}
 
-	local keepStore = DataKeep.GetStore("TestStore", dataTemplate, {}):expect()
+	local store = DataKeep.GetStore("TestStore", dataTemplate, {}):expect()
 	```
 ]=]
 
@@ -189,7 +191,7 @@ function DataKeep.GetStore<T, R>(storeInfo: Types.storeInfo | string, dataTempla
 		info = storeInfo
 	end
 
-	local id = `{info.Name}{info.Scope or ""}`
+	local id = `{info.Name}/{info.Scope or ""}`
 
 	if loadedStores[id] then
 		return Promise.resolve(loadedStores[id])
@@ -198,7 +200,7 @@ function DataKeep.GetStore<T, R>(storeInfo: Types.storeInfo | string, dataTempla
 	return mockStoreCheck:andThen(function()
 		local self = Store.new(info, dataTemplate, wrapper)
 
-		loadedStores[id] = self._store
+		loadedStores[id] = self
 
 		return Promise.resolve(self)
 	end)
@@ -213,29 +215,31 @@ type config = {
 	criticalStateThreshold: number?,
 	maxIssueTime: number?,
 	maxCriticalStateTime: number?,
+	logLevel: string?,
 }
 
 --[=[
 	@function SetConfig
 	@within DataKeep
 
-	@param overwrites { assumeDeadLock: number?, internalKeepCleanupInterval: number?, saveInterval: number?, forceLoadMaxAttempts: number?, releaseRetryMaxAttempts: number?, criticalStateThreshold: number?, maxIssueTime: number?, maxCriticalStateTime: number? }
+	@param overwrites { assumeDeadLock: number?, internalKeepCleanupInterval: number?, saveInterval: number?, forceLoadMaxAttempts: number?, releaseRetryMaxAttempts: number?, criticalStateThreshold: number?, maxIssueTime: number?, maxCriticalStateTime: number?, logLevel: string? }
 
-	Allows to overwrite default config values. Only for experienced developers
+	Allows to overwrite default config values. Only for experienced developers.
+
+	:::info
+	Should be used before any other functions.
+	:::info
 
 	```lua
 	DataKeep.SetConfig({
-		saveInterval = 60
+		logLevel = DataKeep.Enums.LogLevel.All,
+		saveInterval = 60,
 	})
 	```
 ]=]
 
 function DataKeep.SetConfig(overwrites: config)
 	for key, value in overwrites do
-		if key == "loadMethods" then -- ignore loadMethods
-			continue
-		end
-
 		if not Config[key] then
 			continue
 		end
@@ -244,11 +248,19 @@ function DataKeep.SetConfig(overwrites: config)
 			continue
 		end
 
+		if key == "logLevel" then
+			if not Enums.LogLevel[value] then
+				continue
+			end
+		end
+
 		Config[key] = value
 	end
 end
 
 game:BindToClose(function()
+	Log.print("[DataKeep] Server is closing, releasing all loaded keeps")
+
 	States.isServiceDone = true
 	States.isUseMockStore = true -- mock any new stores
 
@@ -292,7 +304,7 @@ local function runAutoSave(deltaTime: number)
 		end
 
 		keep:Save():timeout(Config.saveInterval):catch(function(err)
-			warn(`[DataKeep] Auto save failed for {keep:Identify()}. {err}`)
+			Log.warn(`[DataKeep] Auto save failed for {keep:Identify()}. {err}`)
 		end)
 	end
 end
@@ -314,7 +326,8 @@ local function runKeepCleanup(deltaTime: number)
 			continue
 		end
 
-		ReleaseKeepInternally(keep :: any) -- Internal error: Code is too complex to typecheck! Consider adding type annotations around this
+		RemoveKeepInternally(keep :: any) -- Internal error: Code is too complex to typecheck! Consider adding type annotations around this
+		Log.print(`[DataKeep] Removed {keep:Identify()} internally`)
 	end
 end
 

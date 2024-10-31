@@ -3,6 +3,7 @@
 --> Includes
 
 local DeepCopy = require(script.Parent.Parent.Utils.DeepCopy)
+local Log = require(script.Parent.Parent.Utils.Log)
 
 --> Structure
 
@@ -29,7 +30,7 @@ end
 
 function MockStorePages:AdvanceToNextPageAsync()
 	if self.IsFinished then
-		warn("[DataKeep MockStore] Cannot advance to next page, already finished")
+		Log.warn("[DataKeep MockStore] Cannot advance to next page, already finished")
 		return
 	end
 

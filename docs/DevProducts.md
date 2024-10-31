@@ -127,10 +127,10 @@ local keyPrefix = "Player_"
 
 local loadedKeeps = {}
 
-local keepStore = DataKeep.GetStore("PlayerData", DataTemplate, {}):expect()
+local store = DataKeep.GetStore("PlayerData", DataTemplate, {}):expect()
 
 local function onPlayerAdded(player: Player)
-	keepStore:LoadKeep(keyPrefix .. player.UserId):andThen(function(keep)
+	store:LoadKeep(keyPrefix .. player.UserId):andThen(function(keep)
 		if keep == nil then
 			player:Kick("Session lock interrupted!")
 		end
@@ -162,7 +162,7 @@ end
 
 -- SetProcessReceipt() must be called before the onPlayerAdded(),
 -- otherwise the player's existing receipts won't be processed.
-SetProcessReceipt(keepStore, keyPrefix)
+SetProcessReceipt(store, keyPrefix)
 
 -- loop through already connected players in case they joined before DataKeep loaded
 for _, player in Players:GetPlayers() do

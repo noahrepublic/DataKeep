@@ -30,9 +30,9 @@ local dataTemplate = {
 
 local wrapper = require(path_to_custom_WriteLib)
 
-local keepStore = DataKeep.GetStore("PlayerData", dataTemplate, wrapper):expect()
+local store = DataKeep.GetStore("PlayerData", dataTemplate, wrapper):expect()
 
-keepStore:LoadKeep(`Player_{player.UserId}`):andThen(function(keep)
+store:LoadKeep(`Player_{player.UserId}`):andThen(function(keep)
     keep:AddCoins(100)
     keep:RemoveCoins(50)
 end)

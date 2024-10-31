@@ -1,6 +1,6 @@
 local Signal = require(script.Parent.Parent.Signal)
 
-local function getOrCreateListener(self, dataPath)
+local function getOrCreateListener(self, dataPath: string)
 	if not self._listeners then
 		self._listeners = {}
 

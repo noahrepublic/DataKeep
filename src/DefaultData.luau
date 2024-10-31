@@ -13,7 +13,8 @@ local defaultMetaData: Types.metaData = {
 }
 
 local defaultGlobalUpdates: Types.globalUpdates = {
-	Id = 0, -- [recentUpdateId] newest global update id to process in order
+	--- [recentUpdateId] newest global update id to process in order
+	Id = 0,
 	Updates = {},
 }
 

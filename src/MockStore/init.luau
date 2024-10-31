@@ -3,6 +3,7 @@
 --> Includes
 
 local DeepCopy = require(script.Parent.Utils.DeepCopy)
+local Log = require(script.Parent.Utils.Log)
 local MockStorePages = require(script.MockStorePages)
 
 --> Structure
@@ -67,7 +68,7 @@ function MockStore:UpdateAsync(key: string, callback: (any) -> any)
 	local yielded, newValue = didyield(callback, value)
 
 	if yielded then
-		error("UpdateAsync yielded!")
+		Log.error("[DataKeep MockStore] UpdateAsync yielded!")
 		return value
 	end
 

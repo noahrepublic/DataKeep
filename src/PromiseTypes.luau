@@ -42,7 +42,7 @@ export type TypedPromise<T...> = {
 
 	getStatus: (self: Promise) -> Status,
 	now: (self: Promise, rejectionValue: any?) -> Promise,
-	tap: (self: Promise, tapHandler: (T...) -> ...any) -> Promise,
+	tap: (self: Promise, tapHandler: (T...) -> ...any) -> TypedPromise<T...>,
 	timeout: (self: Promise, seconds: number, rejectionValue: any?) -> Promise,
 }
 

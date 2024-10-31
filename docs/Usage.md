@@ -16,74 +16,73 @@ local Players = game:GetService("Players")
 local DataKeep = require(path_to_datakeep)
 
 local dataTemplate = {
-    Coins = 0,
+	Coins = 0,
 }
 
 local loadedKeeps = {}
 
-local keepStore = DataKeep.GetStore("PlayerData", dataTemplate, {}) -- generally you can just :expect() I just want to showcase Promises to those unfamiliar
+local store = DataKeep.GetStore("PlayerData", dataTemplate, {}):expect()
 
 local function onPlayerAdded(player: Player)
-    keepStore:LoadKeep(`Player_{player.UserId}`):andThen(function(keep)
-        if keep == nil then
-            player:Kick("Session lock interrupted!")
-        end
+	store:LoadKeep(`Player_{player.UserId}`):andThen(function(keep)
+		if keep == nil then
+			player:Kick("Session lock interrupted!")
+		end
 
-        keep:Reconcile()
-        keep:AddUserId(player.UserId) -- help with GDPR requests
+		keep:Reconcile()
+		keep:AddUserId(player.UserId) -- help with GDPR requests
 
-        keep.Releasing:Connect(function(state) -- don't have to clean up, it cleans up internally
-            print(`{player.Name}'s Keep is releasing!`)
+		keep.Releasing:Connect(function(state) -- don't have to clean up, it cleans up internally
+			print(`{player.Name}'s Keep is releasing!`)
 
-            state:andThen(function()
-                print(`{player.Name}'s Keep has been released!`)
+			state
+				:andThen(function()
+					print(`{player.Name}'s Keep has been released!`)
 
-                player:Kick("Session released!")
-				loadedKeeps[player] = nil
-            end):catch(function(err)
-                warn(`{player.Name}'s Keep failed to release!`, err)
-            end)
-        end)
+					player:Kick("Session released!")
+					loadedKeeps[player] = nil
+				end)
+				:catch(function(err)
+					warn(`{player.Name}'s Keep failed to release!`, err)
+				end)
+		end)
 
-        if not player:IsDescendantOf(Players) then
-            keep:Release()
-            return
-        end
+		if not player:IsDescendantOf(Players) then
+			keep:Release()
+			return
+		end
 
-        loadedKeeps[player] = keep
+		loadedKeeps[player] = keep
 
-        local leaderstats = Instance.new("Folder")
-        leaderstats.Name = "leaderstats"
+		local leaderstats = Instance.new("Folder")
+		leaderstats.Name = "leaderstats"
 
-        local coins = Instance.new("NumberValue")
-        coins.Name = "Coins"
-        coins.Value = keep.Data.Coins
+		local coins = Instance.new("NumberValue")
+		coins.Name = "Coins"
+		coins.Value = keep.Data.Coins
+		coins.Parent = leaderstats
 
-        leaderstats.Parent = player
+		leaderstats.Parent = player
 
-        print(`Loaded {player.Name}'s Keep!`)
-    end)
+		print(`Loaded {player.Name}'s Keep!`)
+	end)
 end
 
-keepStore:andThen(function(store)
-    keepStore = store
+-- loop through already connected players in case they joined before DataKeep loaded
+for _, player in Players:GetPlayers() do
+	task.spawn(onPlayerAdded, player)
+end
 
-	-- loop through already connected players in case they joined before DataKeep loaded
-    for _, player in Players:GetPlayers() do
-        task.spawn(onPlayerAdded, player)
-    end
-
-    Players.PlayerAdded:Connect(onPlayerAdded)
-end)
+Players.PlayerAdded:Connect(onPlayerAdded)
 
 Players.PlayerRemoving:Connect(function(player)
-    local keep = loadedKeeps[player]
+	local keep = loadedKeeps[player]
 
-    if not keep then
+	if not keep then
 		return
 	end
 
-    keep:Release()
+	keep:Release()
 end)
 ```
 
@@ -110,7 +109,7 @@ Player.__index = Player
 
 --> Variables
 
-local keepStore = DataKeep.GetStore("PlayerData", DataTemplate, {}):expect()
+local store = DataKeep.GetStore("PlayerData", DataTemplate, {}):expect()
 
 --> Private Functions
 
@@ -164,7 +163,7 @@ end
 local function loadKeep(playerClass)
 	local player = playerClass.Player
 
-	local keep = keepStore:LoadKeep(`Player_{player.UserId}`)
+	local keep = store:LoadKeep(`Player_{player.UserId}`)
 
 	keep:andThen(function(dataKeep)
 		if dataKeep == nil then
