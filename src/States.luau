@@ -6,10 +6,10 @@ local states = {
 	--- enabled when DataStoreService is not available (Studio)
 	isUseMockStore = false,
 
-	--- is shutting down?
+	--- is server shutting down?
 	isServiceDone = false,
 
-	--- closet thing to tracking if they are down, will be set to true after many failed requests
+	--- will be set to true after many failed datastore requests
 	isCriticalState = false,
 
 	activeSaveJobs = 0,
@@ -21,6 +21,7 @@ local states = {
 	--- queue used for critical state
 	issueQueue = {} :: { number },
 
+	--- os.time() when DataKeep entered critical state
 	criticalStateStartTime = 0,
 }
 

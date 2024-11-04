@@ -76,7 +76,7 @@ end
 	Useful for stacking updates to save space for Keeps that maybe receiving lots of globals. Ex. a content creator receiving gifts.
 ]=]
 
-function GlobalUpdates:ChangeActiveUpdate(updateId: number, globalData: {}): PromiseTypes.Promise
+function GlobalUpdates:ChangeActiveUpdate(updateId: number, globalData: {}): PromiseTypes.TypedPromise<()>
 	return Promise.new(function(resolve, reject)
 		if not updateId or not (typeof(updateId) == "number") then
 			return reject()
@@ -121,7 +121,7 @@ end
 	```
 ]=]
 
-function GlobalUpdates:RemoveActiveUpdate(updateId: number): PromiseTypes.Promise
+function GlobalUpdates:RemoveActiveUpdate(updateId: number): PromiseTypes.TypedPromise<()>
 	return Promise.new(function(resolve, reject)
 		if not updateId or not (typeof(updateId) == "number") then
 			return reject()

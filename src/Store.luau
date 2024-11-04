@@ -451,6 +451,8 @@ function Store.ViewKeep<T, R>(self: Types.store<T, R>, key: string, version: str
 	end
 
 	return Promise.new(function(resolve, reject)
+		-- uses :GetAsync()
+
 		local loadedData, dataStoreKeyInfo = UpdateKeepAsync(key, self._datastore, {
 			onMissing = function(latestData)
 				latestData.Data = DeepCopy(self._dataTemplate)

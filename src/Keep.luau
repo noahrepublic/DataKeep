@@ -443,7 +443,7 @@ end
 	:::warning
 ]=]
 
-function Keep.Save<T, R>(self: Types.keep<T, R>): PromiseTypes.Promise
+function Keep.Save<T, R>(self: Types.keep<T, R>): PromiseTypes.TypedPromise<()>
 	if self._viewOnly then
 		return Promise.try(function()
 			Log.error(`[DataKeep] Attempted to save {self:Identify()} which is a view-only keep, do you mean :Overwrite()?`)
@@ -498,7 +498,7 @@ end
 	:::warning
 ]=]
 
-function Keep.Release<T, R>(self: Types.keep<T, R>): PromiseTypes.Promise
+function Keep.Release<T, R>(self: Types.keep<T, R>): PromiseTypes.TypedPromise<()>
 	if self._viewOnly then
 		return Promise.try(function()
 			Log.error(`[DataKeep] Attempted to release {self:Identify()} which is a view-only keep`)
@@ -549,7 +549,7 @@ end
 	```shouldKeepExistingSession``` controls the behavior of the server with the active session lock, defaults to ```false```.
 ]=]
 
-function Keep.Overwrite<T, R>(self: Types.keep<T, R>, shouldKeepExistingSession: boolean?): PromiseTypes.Promise
+function Keep.Overwrite<T, R>(self: Types.keep<T, R>, shouldKeepExistingSession: boolean?): PromiseTypes.TypedPromise<()>
 	if not self._viewOnly then
 		return Promise.try(function()
 			Log.error(`[DataKeep] Attempted to overwrite {self:Identify()} which is not a view-only keep, do you mean :Save()?`)
@@ -1067,7 +1067,7 @@ end
 	:::warning
 ]=]
 
-function Keep.ClearLockedUpdate<T, R>(self: Types.keep<T, R>, id: number): PromiseTypes.Promise
+function Keep.ClearLockedUpdate<T, R>(self: Types.keep<T, R>, id: number): PromiseTypes.TypedPromise<()>
 	return Promise.new(function(resolve, reject)
 		if not self:IsActive() then
 			return reject()

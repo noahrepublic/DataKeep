@@ -116,7 +116,7 @@ type storeBase<T, R> = {
 	PreLoad: (self: storeBase<T, R>, callback: (data<T>) -> data<T>) -> (),
 	PreSave: (self: storeBase<T, R>, callback: (data<T>) -> data<T>) -> (),
 
-	PostGlobalUpdate: (self: storeBase<T, R>, key: string, updateHandler: (globalUpdatesClass) -> ()) -> PromiseTypes.Promise,
+	PostGlobalUpdate: (self: storeBase<T, R>, key: string, updateHandler: (globalUpdatesClass) -> ()) -> PromiseTypes.TypedPromise<()>,
 }
 
 --[=[
@@ -220,21 +220,21 @@ export type keep<T, R> = keepBase<T, R> & {
 	_pending_global_locks: { number },
 	_pending_global_lock_removes: { number },
 
-	Saving: Signal.ScriptSignal<PromiseTypes.Promise>,
-	Releasing: Signal.ScriptSignal<PromiseTypes.Promise>,
+	Saving: Signal.ScriptSignal<PromiseTypes.TypedPromise<()>>,
+	Releasing: Signal.ScriptSignal<PromiseTypes.TypedPromise<()>>,
 	Overwritten: Signal.ScriptSignal<boolean>,
 	OnGlobalUpdate: Signal.ScriptSignal<globalUpdateData, number>,
 
 	GlobalStateProcessor: (updateData: globalUpdateData, lock: () -> (), remove: () -> ()) -> (),
 
-	Save: (self: keep<T, R>) -> PromiseTypes.Promise,
-	Release: (self: keep<T, R>) -> PromiseTypes.Promise,
+	Save: (self: keep<T, R>) -> PromiseTypes.TypedPromise<()>,
+	Release: (self: keep<T, R>) -> PromiseTypes.TypedPromise<()>,
 
-	ClearLockedUpdate: (self: keep<T, R>, id: number) -> PromiseTypes.Promise,
+	ClearLockedUpdate: (self: keep<T, R>, id: number) -> PromiseTypes.TypedPromise<()>,
 }
 
 export type viewOnlyKeep<T, R> = keepBase<T, R> & {
-	Overwrite: (self: keep<T, R>, shouldKeepExistingSession: boolean?) -> PromiseTypes.Promise,
+	Overwrite: (self: keep<T, R>, shouldKeepExistingSession: boolean?) -> PromiseTypes.TypedPromise<()>,
 }
 
 export type iterator = {
@@ -279,8 +279,8 @@ export type globalUpdates = {
 
 export type globalUpdatesClass = typeof(setmetatable({}, {})) & {
 	AddGlobalUpdate: (self: globalUpdatesClass, globalData: {}) -> PromiseTypes.TypedPromise<number>,
-	ChangeActiveUpdate: (self: globalUpdatesClass, updateId: number, globalData: {}) -> PromiseTypes.Promise,
-	RemoveActiveUpdate: (self: globalUpdatesClass, updateId: number) -> PromiseTypes.Promise,
+	ChangeActiveUpdate: (self: globalUpdatesClass, updateId: number, globalData: {}) -> PromiseTypes.TypedPromise<()>,
+	RemoveActiveUpdate: (self: globalUpdatesClass, updateId: number) -> PromiseTypes.TypedPromise<()>,
 	GetActiveUpdates: (self: globalUpdatesClass) -> { globalUpdate },
 }
 
