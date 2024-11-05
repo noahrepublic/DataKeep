@@ -235,7 +235,7 @@ export type keep<T, R> = keepBase<T, R> & {
 }
 
 export type viewOnlyKeep<T, R> = keepBase<T, R> & {
-	Overwrite: (self: keep<T, R>, shouldKeepExistingSession: boolean?) -> PromiseTypes.TypedPromise<()>,
+	Overwrite: (self: viewOnlyKeep<T, R>, shouldKeepExistingSession: boolean?) -> PromiseTypes.TypedPromise<()>,
 }
 
 export type iterator = {
