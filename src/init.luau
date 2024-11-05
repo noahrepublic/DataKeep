@@ -38,6 +38,8 @@ local DataKeep = {
 
 Signals.CriticalStateSignal:Connect(function(isCriticalState)
 	DataKeep.IsCriticalState = isCriticalState
+
+	Log.print(`[DataKeep] Is in critical state: {isCriticalState}`)
 end)
 
 --> Types
@@ -282,6 +284,8 @@ game:BindToClose(function()
 	while States.activeDataStoreJobs > 0 do
 		task.wait()
 	end
+
+	Log.print("[DataKeep] Released all loaded keeps")
 end)
 
 local function runAutoSave(deltaTime: number)
