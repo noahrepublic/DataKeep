@@ -91,6 +91,24 @@ return function()
 			expect(keep ~= nil).to.be.ok()
 			expect(keep.Data.Money).to.equal(50)
 		end)
+
+		it("should remove saved keep", function()
+			local keep = store:LoadKeep("removeTest"):expect()
+			keep.Data.Money = 50
+
+			keep:Release():await()
+
+			local testDataStoreRaw = store._datastore:GetAsync("removeTest")
+			expect(testDataStoreRaw).to.be.a("table")
+			expect(testDataStoreRaw.Data.Money).to.equal(50)
+
+			local oldData, dataStoreKeyInfo = store:RemoveKeep("removeTest"):expect()
+			expect(oldData ~= nil).to.be.ok()
+			expect(dataStoreKeyInfo ~= nil).to.be.ok()
+
+			testDataStoreRaw = store._datastore:GetAsync("removeTest")
+			expect(testDataStoreRaw).to.equal(nil)
+		end)
 	end)
 
 	describe("keep", function()

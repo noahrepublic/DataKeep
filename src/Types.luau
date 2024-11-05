@@ -83,7 +83,7 @@ export type storeInfo = {
 	:::info
 ]=]
 
-export type unreleasedHandler = (session) -> string -- function for any purposes: logging, whitelist only certain places, etc.
+export type unreleasedHandler = (session: session) -> string -- function for any purposes: logging, whitelist only certain places, etc.
 
 export type dataTemplate<T> = T
 
@@ -101,8 +101,8 @@ type storeBase<T, R> = {
 	_datastore: DataStore,
 	_isMockEnabled: boolean,
 
-	_preLoad: (any) -> any,
-	_preSave: (any) -> any,
+	_preLoad: (data: data<T>) -> data<T>,
+	_preSave: (data: data<T>) -> data<T>,
 
 	_wrapper: wrapper<R>,
 
@@ -112,11 +112,12 @@ type storeBase<T, R> = {
 
 	LoadKeep: (self: storeBase<T, R>, key: string, unreleasedHandler: unreleasedHandler?) -> PromiseTypes.TypedPromise<keep<T, R>>,
 	ViewKeep: (self: storeBase<T, R>, key: string, version: string?) -> PromiseTypes.TypedPromise<viewOnlyKeep<T, R>>,
+	RemoveKeep: (self: storeBase<T, R>, key: string) -> PromiseTypes.TypedPromise<any, DataStoreKeyInfo>,
 
-	PreLoad: (self: storeBase<T, R>, callback: (data<T>) -> data<T>) -> (),
-	PreSave: (self: storeBase<T, R>, callback: (data<T>) -> data<T>) -> (),
+	PreLoad: (self: storeBase<T, R>, callback: (data: data<T>) -> data<T>) -> (),
+	PreSave: (self: storeBase<T, R>, callback: (data: data<T>) -> data<T>) -> (),
 
-	PostGlobalUpdate: (self: storeBase<T, R>, key: string, updateHandler: (globalUpdatesClass) -> ()) -> PromiseTypes.TypedPromise<()>,
+	PostGlobalUpdate: (self: storeBase<T, R>, key: string, updateHandler: (globalUpdates: globalUpdatesClass) -> ()) -> PromiseTypes.TypedPromise<any, DataStoreKeyInfo>,
 }
 
 --[=[
@@ -210,7 +211,7 @@ export type keepBase<T, R> = keepStruct<T> & {
 } & R
 
 --[=[
-	@type Keep { Data: { [string]: any }, MetaData: MetaData, GlobalUpdates: GlobalUpdates, UserIds: { number }, OnGlobalUpdate: Signal<GlobalUpdateData, number>, Releasing: Signal<Promise>, Saving: Signal<Promise>, Overwritten: Signal<boolean> }
+	@type Keep { Data: { [string]: any }, MetaData: MetaData, GlobalUpdates: GlobalUpdates, UserIds: { number }, OnGlobalUpdate: Signal<GlobalUpdateData, number>, Releasing: Signal<Promise<()>>, Saving: Signal<Promise<()>>, Overwritten: Signal<boolean> }
 	@within Keep
 ]=]
 
@@ -225,7 +226,7 @@ export type keep<T, R> = keepBase<T, R> & {
 	Overwritten: Signal.ScriptSignal<boolean>,
 	OnGlobalUpdate: Signal.ScriptSignal<globalUpdateData, number>,
 
-	GlobalStateProcessor: (updateData: globalUpdateData, lock: () -> (), remove: () -> ()) -> (),
+	GlobalStateProcessor: (globalUpdateData: globalUpdateData, lock: () -> (), remove: () -> ()) -> (),
 
 	Save: (self: keep<T, R>) -> PromiseTypes.TypedPromise<()>,
 	Release: (self: keep<T, R>) -> PromiseTypes.TypedPromise<()>,
@@ -252,7 +253,7 @@ export type iterator = {
 	@within GlobalUpdates
 ]=]
 
-type globalUpdateData = { [any]: any }
+export type globalUpdateData = { [any]: any }
 
 --[=[
 	@type GlobalUpdate { Id: number, Locked: boolean, Data: GlobalUpdateData }
@@ -277,9 +278,9 @@ export type globalUpdates = {
 	Updates: { globalUpdate },
 }
 
-export type globalUpdatesClass = typeof(setmetatable({}, {})) & {
-	AddGlobalUpdate: (self: globalUpdatesClass, globalData: {}) -> PromiseTypes.TypedPromise<number>,
-	ChangeActiveUpdate: (self: globalUpdatesClass, updateId: number, globalData: {}) -> PromiseTypes.TypedPromise<()>,
+export type globalUpdatesClass = {
+	AddGlobalUpdate: (self: globalUpdatesClass, globalUpdateData: globalUpdateData) -> PromiseTypes.TypedPromise<number>,
+	ChangeActiveUpdate: (self: globalUpdatesClass, updateId: number, globalUpdateData: globalUpdateData) -> PromiseTypes.TypedPromise<()>,
 	RemoveActiveUpdate: (self: globalUpdatesClass, updateId: number) -> PromiseTypes.TypedPromise<()>,
 	GetActiveUpdates: (self: globalUpdatesClass) -> { globalUpdate },
 }

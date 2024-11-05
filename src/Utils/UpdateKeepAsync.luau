@@ -4,15 +4,6 @@ local DeepCopy = require(script.Parent.Parent.Utils.DeepCopy)
 local DefaultData = require(script.Parent.Parent.DefaultData)
 local Types = require(script.Parent.Parent.Types)
 
-local function isDataEmpty<T>(latestData: Types.keepStruct<T>)
-	-- someone wants to fix this mess??
-
-	return latestData == nil
-		or typeof(latestData) ~= "table"
-		or typeof(latestData.Data) ~= "table" and latestData.Data == nil and latestData.MetaData == nil and latestData.GlobalUpdates == nil -- might be global updates there
-		or typeof(latestData.MetaData) ~= "table"
-end
-
 local function reconcileGlobalUpdates(newGlobalUpdates: Types.globalUpdates)
 	local finalGlobals = DeepCopy(DefaultData.GlobalUpdates)
 
@@ -33,6 +24,7 @@ local function updateAsync<T>(
 	key: string,
 	store: DataStore,
 	updateSettings: {
+		onCheck: (() -> boolean)?,
 		onExisting: ((latestData: Types.keepStruct<T>) -> boolean)?,
 		onMissing: ((latestData: Types.keepStruct<T>) -> boolean)?,
 		edit: ((latestData: Types.keepStruct<T>) -> boolean)?,
@@ -40,17 +32,24 @@ local function updateAsync<T>(
 	useGet: { version: string? }?
 )
 	local function transformUpdate(latestData: Types.keepStruct<T>): (Types.keepStruct<T>?, Types.userIds?)
-		local isEmpty = isDataEmpty(latestData)
+		local onCheck = if typeof(updateSettings.onCheck) == "function" then updateSettings.onCheck else nil
 
-		if not latestData then
-			latestData = {} :: any
+		if onCheck then
+			local shouldCancelOperation = onCheck() == true
+
+			if shouldCancelOperation then
+				return nil
+			end
 		end
+
+		local isEmpty = false
 
 		local globalUpdates = DeepCopy(DefaultData.GlobalUpdates)
 
 		if typeof(latestData) == "table" then
 			if typeof(latestData.Data) == "table" and typeof(latestData.MetaData) == "table" and typeof(latestData.GlobalUpdates) == "table" then
 				-- keep was loaded before
+
 				globalUpdates = reconcileGlobalUpdates(latestData.GlobalUpdates)
 				latestData.GlobalUpdates = globalUpdates
 
@@ -65,12 +64,16 @@ local function updateAsync<T>(
 				end
 			elseif latestData.Data == nil and latestData.MetaData == nil and typeof(latestData.GlobalUpdates) == "table" then
 				-- keep was not loaded before but GlobalUpdate data exists
-				globalUpdates = reconcileGlobalUpdates(latestData.GlobalUpdates) -- latestData.GlobalUpdates will get updated inside if isEmpty then block
+
+				-- latestData.GlobalUpdates will get updated inside if isEmpty then block
+				globalUpdates = reconcileGlobalUpdates(latestData.GlobalUpdates)
 
 				isEmpty = true
 			else
 				isEmpty = true
 			end
+		else
+			isEmpty = true
 		end
 
 		if isEmpty then

@@ -29,7 +29,7 @@ Keep.__index = Keep
 ]=]
 
 --[=[
-	@prop GlobalStateProcessor (updateData: GlobalUpdateData, lock: () -> (), remove: () -> ()) -> ()
+	@prop GlobalStateProcessor (globalUpdateData: GlobalUpdateData, lock: () -> (), remove: () -> ()) -> ()
 	@within Keep
 
 	Define how to process global updates, by default just locks the global update (this is only ran if the Keep is online).
@@ -57,7 +57,7 @@ Keep.__index = Keep
 ]=]
 
 --[=[
-	@prop Releasing Signal<Promise>
+	@prop Releasing Signal<Promise<()>>
 	@within Keep
 
 	Fired when the Keep is releasing (fires before internally released, but during session release).
@@ -76,7 +76,7 @@ Keep.__index = Keep
 ]=]
 
 --[=[
-	@prop Saving Signal<Promise>
+	@prop Saving Signal<Promise<()>>
 	@within Keep
 
 	Fired when the Keep is saving, resolves on complete.
@@ -139,7 +139,7 @@ function Keep.new<T, R>(structure: Types.keepStruct<T>, dataTemplate: Types.data
 		Overwritten = Signal.new(),
 
 		OnGlobalUpdate = Signal.new(), -- fires on a new locked global update (ready to be processed)
-		GlobalStateProcessor = function(_globalUpdate: Types.globalUpdate, lock: () -> (), _remove: () -> ()) -- by default just locks the global update (this is only ran if the keep is online)
+		GlobalStateProcessor = function(_globalUpdateData: Types.globalUpdateData, lock: () -> (), _remove: () -> ()) -- by default just locks the global update (this is only ran if the keep is online)
 			lock()
 		end,
 
@@ -277,39 +277,7 @@ local function processGlobalUpdates<T, R>(keep: Types.keep<T, R>, latestData: Ty
 	end
 end
 
-local function release<T, R>(self: Types.keep<T, R>, updater: PromiseTypes.Promise): PromiseTypes.Promise
-	if releaseCache[self:Identify()] then -- already releasing
-		return releaseCache[self:Identify()]
-	end
-
-	if self._released then
-		return Promise.resolve(self)
-	end
-
-	States.activeSaveJobs += 1
-
-	self._releasing = true
-	self.Releasing:Fire(updater) -- unlocked, but not removed internally
-
-	updater:finally(function()
-		-- mark the keep as released
-
-		States.cachedKeepPromises[self:Identify()] = nil
-		self._released = true
-
-		releaseCache[self:Identify()] = nil
-
-		States.activeSaveJobs -= 1
-	end)
-
-	if updater:getStatus() == Promise.Status.Started then
-		releaseCache[self:Identify()] = updater
-	end
-
-	return updater
-end
-
-local function save<T, R>(keep: Types.keep<T, R>, isReleasing: boolean): PromiseTypes.Promise
+local function save<T, R>(keep: Types.keep<T, R>, isReleasing: boolean): PromiseTypes.TypedPromise<()>
 	local isOverwritten = false
 	local isReleasingOnOverwrite = false
 
@@ -327,7 +295,7 @@ local function save<T, R>(keep: Types.keep<T, R>, isReleasing: boolean): Promise
 					-- session locked on a different server, data will not be saved
 					Log.print(`[DataKeep] {keep:Identify()}'s session is no longer owned by this server and it will be marked for release`)
 
-					release(keep, Promise.resolve(keep))
+					Keep._release(keep, Promise.resolve())
 					return true -- cancel :UpdateAsync() operation
 				end
 
@@ -338,7 +306,7 @@ local function save<T, R>(keep: Types.keep<T, R>, isReleasing: boolean): Promise
 						isForceLoadRequested = true
 					else
 						-- ForceLoad interrupted by another server
-						release(keep, Promise.resolve(keep))
+						Keep._release(keep, Promise.resolve())
 						return true -- cancel :UpdateAsync() operation
 					end
 				end
@@ -390,7 +358,7 @@ local function save<T, R>(keep: Types.keep<T, R>, isReleasing: boolean): Promise
 
 						if latestData.MetaData.ForceLoad or isOverwriting then
 							-- mark server as ready for cleanup
-							release(keep, Promise.resolve(keep))
+							Keep._release(keep, Promise.resolve())
 						end
 					elseif isOverwriting and not shouldReleaseSessionOnOverwrite then
 						-- keep active session on this server
@@ -424,13 +392,45 @@ function Keep._isThisSession(session: Types.session)
 	return session.PlaceId == game.PlaceId and session.JobId == game.JobId
 end
 
+function Keep._release<T, R>(self: Types.keep<T, R>, updater: PromiseTypes.TypedPromise<()>): PromiseTypes.TypedPromise<()>
+	if releaseCache[self:Identify()] then -- already releasing
+		return releaseCache[self:Identify()]
+	end
+
+	if self._released then
+		return Promise.resolve(self)
+	end
+
+	States.activeDataStoreJobs += 1
+
+	self._releasing = true
+	self.Releasing:Fire(updater) -- unlocked, but not removed internally
+
+	updater:finally(function()
+		-- mark the keep as released
+
+		States.cachedKeepPromises[self:Identify()] = nil
+		self._released = true
+
+		releaseCache[self:Identify()] = nil
+
+		States.activeDataStoreJobs -= 1
+	end)
+
+	if updater:getStatus() == Promise.Status.Started then
+		releaseCache[self:Identify()] = updater
+	end
+
+	return updater
+end
+
 --> Public Methods
 
 --[=[
 	@method Save
 	@within Keep
 
-	@return Promise
+	@return Promise<()>
 
 	Performs a manual save.
 
@@ -459,7 +459,7 @@ function Keep.Save<T, R>(self: Types.keep<T, R>): PromiseTypes.TypedPromise<()>
 		return Promise.resolve()
 	end
 
-	States.activeSaveJobs += 1
+	States.activeDataStoreJobs += 1
 
 	local savingState = save(self, false)
 		:tap(function()
@@ -473,7 +473,7 @@ function Keep.Save<T, R>(self: Types.keep<T, R>): PromiseTypes.TypedPromise<()>
 
 			saveCache[self:Identify()] = nil
 
-			States.activeSaveJobs -= 1
+			States.activeDataStoreJobs -= 1
 		end)
 
 	self.Saving:Fire(savingState)
@@ -489,7 +489,7 @@ end
 	@method Release
 	@within Keep
 
-	@return Promise
+	@return Promise<()>
 
 	Releases the session lock to allow other servers to access the Keep.
 
@@ -514,7 +514,7 @@ function Keep.Release<T, R>(self: Types.keep<T, R>): PromiseTypes.TypedPromise<(
 		return Promise.resolve()
 	end
 
-	States.activeSaveJobs += 1
+	States.activeDataStoreJobs += 1
 
 	local updater = Promise.retry(function()
 		return save(self, true)
@@ -528,12 +528,12 @@ function Keep.Release<T, R>(self: Types.keep<T, R>): PromiseTypes.TypedPromise<(
 		:finally(function()
 			self._lastSaveAttempt = os.clock() -- reset the auto save timer
 
-			States.activeSaveJobs -= 1
+			States.activeDataStoreJobs -= 1
 		end)
 
 	self.Saving:Fire(updater)
 
-	return release(self, updater)
+	return Keep._release(self, updater)
 end
 
 --[=[
@@ -542,7 +542,7 @@ end
 
 	@param shouldKeepExistingSession boolean?
 
-	@return Promise
+	@return Promise<()>
 
 	Used to overwrite a view-only Keep.
 
@@ -565,7 +565,7 @@ function Keep.Overwrite<T, R>(self: Types.keep<T, R>, shouldKeepExistingSession:
 
 	local shouldReleaseSession = shouldKeepExistingSession == false
 
-	States.activeSaveJobs += 1
+	States.activeDataStoreJobs += 1
 
 	local overwritingState = Promise.try(function()
 		return UpdateKeepAsync(self._key, self._datastore, {
@@ -623,7 +623,7 @@ function Keep.Overwrite<T, R>(self: Types.keep<T, R>, shouldKeepExistingSession:
 
 			overwriteCache[self:Identify()] = nil
 
-			States.activeSaveJobs -= 1
+			States.activeDataStoreJobs -= 1
 		end)
 
 	if overwritingState:getStatus() == Promise.Status.Started then
@@ -1058,7 +1058,7 @@ end
 
 	@param id number
 
-	@return Promise
+	@return Promise<()>
 
 	Clears a locked global update after being used.
 

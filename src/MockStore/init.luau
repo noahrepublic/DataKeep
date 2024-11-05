@@ -84,7 +84,10 @@ function MockStore:RemoveAsync(key: string)
 	local oldData = DeepCopy(self._data[key])
 	self._data[key] = nil
 
-	return oldData, createNewVersion(self, key, nil)
+	local versionData = createNewVersion(self, key, nil)
+	versionData.Deleted = true
+
+	return oldData, versionData
 end
 
 function MockStore:ListVersionsAsync(key: string, sortDirection: Enum.SortDirection, minDate: number, maxDate: number, limit: number)

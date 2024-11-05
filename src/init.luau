@@ -177,6 +177,10 @@ end)
 
 	local store = DataKeep.GetStore("TestStore", dataTemplate, {}):expect()
 	```
+
+	:::info
+	Stores can be loaded multiple times as they are cached.
+	:::info
 ]=]
 
 function DataKeep.GetStore<T, R>(storeInfo: Types.storeInfo | string, dataTemplate: Types.dataTemplate<T>, wrapper: R): PromiseTypes.TypedPromise<Store<T, R>>
@@ -274,8 +278,8 @@ game:BindToClose(function()
 		keep:Release()
 	end
 
-	-- delay server closing process until all save jobs are completed
-	while States.activeSaveJobs > 0 do
+	-- delay server closing process until all datastore jobs are completed
+	while States.activeDataStoreJobs > 0 do
 		task.wait()
 	end
 end)

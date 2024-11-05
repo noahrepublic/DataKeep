@@ -28,22 +28,24 @@ GlobalUpdates.__index = GlobalUpdates
 	@method AddGlobalUpdate
 	@within GlobalUpdates
 
-	@param globalData {}
+	@param globalUpdateData { [any]: any }
 
 	@return Promise<number>
 
 	Adds a global update to the Keep.
 
 	```lua
-	globalUpdates:AddGlobalUpdate({
-		Hello = "World!",
-	}):andThen(function(updateId)
-		print("Added Global Update!", updateId)
+	store:PostGlobalUpdate(function(globalUpdates)
+		globalUpdates:AddGlobalUpdate({
+			Hello = "World!",
+		}):andThen(function(updateId)
+			print("Added Global Update!", updateId)
+		end)
 	end)
 	```
 ]=]
 
-function GlobalUpdates:AddGlobalUpdate(globalData: {}): PromiseTypes.TypedPromise<number>
+function GlobalUpdates:AddGlobalUpdate(globalUpdateData: Types.globalUpdateData): PromiseTypes.TypedPromise<number>
 	return Promise.new(function(resolve)
 		local globalUpdates = self._updates
 
@@ -55,7 +57,7 @@ function GlobalUpdates:AddGlobalUpdate(globalData: {}): PromiseTypes.TypedPromis
 		table.insert(globalUpdates.Updates, {
 			Id = updateId,
 			Locked = false,
-			Data = globalData,
+			Data = globalUpdateData,
 		})
 
 		return resolve(updateId)
@@ -67,16 +69,16 @@ end
 	@within GlobalUpdates
 
 	@param updateId number
-	@param globalData {}
+	@param globalUpdateData { [any]: any }
 
-	@return Promise
+	@return Promise<()>
 
 	Change an **active** global update's data to the new data.
 
 	Useful for stacking updates to save space for Keeps that maybe receiving lots of globals. Ex. a content creator receiving gifts.
 ]=]
 
-function GlobalUpdates:ChangeActiveUpdate(updateId: number, globalData: {}): PromiseTypes.TypedPromise<()>
+function GlobalUpdates:ChangeActiveUpdate(updateId: number, globalUpdateData: Types.globalUpdateData): PromiseTypes.TypedPromise<()>
 	return Promise.new(function(resolve, reject)
 		if not updateId or not (typeof(updateId) == "number") then
 			return reject()
@@ -90,7 +92,7 @@ function GlobalUpdates:ChangeActiveUpdate(updateId: number, globalData: {}): Pro
 
 		for _, update in globalUpdates.Updates do
 			if update.Id == updateId and not update.Locked then
-				update.Data = globalData
+				update.Data = globalUpdateData
 
 				return resolve()
 			end
@@ -106,7 +108,7 @@ end
 
 	@param updateId number
 
-	@return Promise
+	@return Promise<()>
 
 	Removes an active global update.
 

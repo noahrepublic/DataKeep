@@ -3,7 +3,7 @@
 local Types = require(script.Parent.Types)
 
 local states = {
-	--- enabled when DataStoreService is not available (Studio)
+	--- enabled when DataStoreService is not available (Studio) or when server is closing
 	isUseMockStore = false,
 
 	--- is server shutting down?
@@ -12,7 +12,8 @@ local states = {
 	--- will be set to true after many failed datastore requests
 	isCriticalState = false,
 
-	activeSaveJobs = 0,
+	--- indicator for :BindToClose() that not everything is done yet
+	activeDataStoreJobs = 0,
 
 	cachedKeepPromises = {},
 
