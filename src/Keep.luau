@@ -12,7 +12,7 @@ local Log = require(script.Parent.Utils.Log)
 local PromiseTypes = require(script.Parent.PromiseTypes)
 local States = require(script.Parent.States)
 local Types = require(script.Parent.Types)
-local UpdateKeepAsync = require(script.Parent.Utils.UpdateKeepAsync)
+local UpdateAsync = require(script.Parent.Utils.UpdateAsync)
 
 --> Structure
 
@@ -282,7 +282,7 @@ local function save<T, R>(keep: Types.keep<T, R>, isReleasing: boolean): Promise
 	local isReleasingOnOverwrite = false
 
 	return Promise.try(function()
-		return UpdateKeepAsync(keep._key, keep._datastore, {
+		return UpdateAsync(keep._key, keep._datastore, {
 			edit = function(latestData)
 				isOverwritten = latestData.MetaData.IsOverwriting == true
 				isReleasingOnOverwrite = latestData.MetaData.ReleaseSessionOnOverwrite == true
@@ -376,10 +376,10 @@ local function save<T, R>(keep: Types.keep<T, R>, isReleasing: boolean): Promise
 
 				return false
 			end,
-		})
-	end):andThen(function(_latestData, dataStoreKeyInfo)
-		if dataStoreKeyInfo then
-			keep._keyInfo = dataStoreKeyInfo
+		}, {})
+	end):andThen(function(_latestData, datastoreKeyInfo)
+		if datastoreKeyInfo then
+			keep._keyInfo = datastoreKeyInfo
 		end
 
 		if isOverwritten then
@@ -568,7 +568,7 @@ function Keep.Overwrite<T, R>(self: Types.keep<T, R>, shouldKeepExistingSession:
 	States.activeDataStoreJobs += 1
 
 	local overwritingState = Promise.try(function()
-		return UpdateKeepAsync(self._key, self._datastore, {
+		return UpdateAsync(self._key, self._datastore, {
 			edit = function(latestData)
 				if typeof(latestData.Data) == "table" and typeof(latestData.MetaData) == "table" then -- full profile
 					local valid, err = self._store.validate(self.Data) -- validate data before saving
@@ -605,11 +605,11 @@ function Keep.Overwrite<T, R>(self: Types.keep<T, R>, shouldKeepExistingSession:
 
 				return false
 			end,
-		})
+		}, {})
 	end)
-		:andThen(function(_latestData, dataStoreKeyInfo)
-			if dataStoreKeyInfo then
-				self._keyInfo = dataStoreKeyInfo
+		:andThen(function(_latestData, datastoreKeyInfo)
+			if datastoreKeyInfo then
+				self._keyInfo = datastoreKeyInfo
 			end
 		end)
 		:tap(function()

@@ -20,7 +20,7 @@ local PromiseTypes = require(script.Parent.PromiseTypes)
 local RemoveKeepInternally = require(script.Parent.Utils.RemoveKeepInternally)
 local States = require(script.Parent.States)
 local Types = require(script.Parent.Types)
-local UpdateKeepAsync = require(script.Parent.Utils.UpdateKeepAsync)
+local UpdateAsync = require(script.Parent.Utils.UpdateAsync)
 
 --> Structure
 
@@ -242,85 +242,111 @@ function Store.LoadKeep<T, R>(self: Types.store<T, R>, key: string, unreleasedHa
 			local shouldStealSessionOnForceLoad = false -- used only with ForceLoad
 			local shouldStealSession = false -- unreleasedHandler() == Enums.LoadMethod.Steal
 
-			local forceLoadAttempts = 0
+			return Promise.try(function(): { loadedData: any, datastoreKeyInfo: DataStoreKeyInfo }?
+				local forceLoadAttempts = 0
+				local forceLoadWaitTime = 1
 
-			return Promise.try(function(): { loadedData: any, dataStoreKeyInfo: DataStoreKeyInfo }?
+				--- time to wait between failed datastore calls (exponential backoff)
+				local waitTime = 1
+				local startTime = os.clock()
+
 				while true do
-					local loadedData, dataStoreKeyInfo = UpdateKeepAsync(key, self._datastore, {
-						onCheck = function()
-							return States.isServiceDone
-						end,
-						onExisting = function(latestData)
-							local activeSession = latestData.MetaData.ActiveSession
-							local forceLoadSession = latestData.MetaData.ForceLoad
+					local success, loadedData, datastoreKeyInfo = Promise.try(function()
+						return UpdateAsync(key, self._datastore, {
+							onCheck = function()
+								return States.isServiceDone
+							end,
+							onExisting = function(latestData)
+								local activeSession = latestData.MetaData.ActiveSession
+								local forceLoadSession = latestData.MetaData.ForceLoad
 
-							if activeSession == nil then
-								latestData.MetaData.ActiveSession = DeepCopy(DefaultData.MetaData.ActiveSession)
-								latestData.MetaData.ForceLoad = nil
-							elseif typeof(activeSession) == "table" then
-								if not Keep._isThisSession(activeSession) then
-									local lastUpdate = latestData.MetaData.LastUpdate
-
-									if lastUpdate ~= nil then
-										if os.time() - lastUpdate > Config.assumeDeadLock then
-											shouldStealSession = true
-										end
-									end
-
-									if shouldStealSessionOnForceLoad or shouldStealSession then
-										local forceLoadInterrupted = false
-
-										if forceLoadSession ~= nil then
-											forceLoadInterrupted = Keep._isThisSession(forceLoadSession) == false
-										end
-
-										if not forceLoadInterrupted or shouldStealSession then
-											latestData.MetaData.ActiveSession = DeepCopy(DefaultData.MetaData.ActiveSession)
-											latestData.MetaData.ForceLoad = nil
-										end
-									elseif requestForceLoad then
-										latestData.MetaData.ForceLoad = DeepCopy(DefaultData.MetaData.ActiveSession)
-									end
-								else
+								if activeSession == nil then
+									latestData.MetaData.ActiveSession = DeepCopy(DefaultData.MetaData.ActiveSession)
 									latestData.MetaData.ForceLoad = nil
-								end
-							end
+								elseif typeof(activeSession) == "table" then
+									if not Keep._isThisSession(activeSession) then
+										local lastUpdate = latestData.MetaData.LastUpdate
 
-							return false
-						end,
-						onMissing = function(latestData)
-							latestData.Data = DeepCopy(self._dataTemplate)
-							latestData.MetaData = DeepCopy(DefaultData.MetaData)
-							latestData.MetaData.Created = os.time()
-							latestData.UserIds = DeepCopy(DefaultData.UserIds)
+										if lastUpdate ~= nil then
+											if os.time() - lastUpdate > Config.assumeDeadLock then
+												shouldStealSession = true
+											end
+										end
 
-							return false
-						end,
-						edit = function(latestData)
-							local activeSession = latestData.MetaData.ActiveSession
+										if shouldStealSessionOnForceLoad or shouldStealSession then
+											local forceLoadInterrupted = false
 
-							if activeSession ~= nil and Keep._isThisSession(activeSession) then
-								latestData.MetaData.LoadCount += 1
-								latestData.MetaData.LastUpdate = os.time()
+											if forceLoadSession ~= nil then
+												forceLoadInterrupted = Keep._isThisSession(forceLoadSession) == false
+											end
 
-								if self._preLoad then
-									local processedData = self._preLoad(DeepCopy(latestData.Data))
-
-									if not processedData then
-										Log.error("[DataKeep] :PreLoad() must return a table")
-										return true
+											if not forceLoadInterrupted or shouldStealSession then
+												latestData.MetaData.ActiveSession = DeepCopy(DefaultData.MetaData.ActiveSession)
+												latestData.MetaData.ForceLoad = nil
+											end
+										elseif requestForceLoad then
+											latestData.MetaData.ForceLoad = DeepCopy(DefaultData.MetaData.ActiveSession)
+										end
+									else
+										latestData.MetaData.ForceLoad = nil
 									end
-
-									latestData.Data = processedData
 								end
-							end
 
-							return false
-						end,
-					})
+								return false
+							end,
+							onMissing = function(latestData)
+								latestData.Data = DeepCopy(self._dataTemplate)
+								latestData.MetaData = DeepCopy(DefaultData.MetaData)
+								latestData.MetaData.Created = os.time()
+								latestData.UserIds = DeepCopy(DefaultData.UserIds)
 
-					if not loadedData or not dataStoreKeyInfo then
-						-- cancel :LoadKeep() attempt
+								return false
+							end,
+							edit = function(latestData)
+								local activeSession = latestData.MetaData.ActiveSession
+
+								if activeSession ~= nil and Keep._isThisSession(activeSession) then
+									latestData.MetaData.LoadCount += 1
+									latestData.MetaData.LastUpdate = os.time()
+
+									if self._preLoad then
+										local processedData = self._preLoad(DeepCopy(latestData.Data))
+
+										if not processedData then
+											Log.error("[DataKeep] :PreLoad() must return a table")
+											return true
+										end
+
+										latestData.Data = processedData
+									end
+								end
+
+								return false
+							end,
+						}, {})
+					end):await()
+
+					local currentTime = os.clock()
+
+					if not success then
+						if currentTime - startTime >= Config.loadKeepDataStoreFailTimeout then
+							-- datastores were unavailable for too long
+							return nil
+						end
+
+						-- :UpdateAsync() failed, wait and retry
+						task.wait(waitTime)
+						waitTime = math.min(20, waitTime * 2)
+						continue
+					elseif currentTime - startTime >= 60 then
+						-- reset the time after one minute to prevent exceeding the datastore limits in case if some of the requests fail and some not
+
+						waitTime = 1
+						startTime = currentTime
+					end
+
+					if not loadedData or not datastoreKeyInfo then
+						-- :UpdateAsync() was canceled
 						return nil
 					end
 
@@ -334,7 +360,7 @@ function Store.LoadKeep<T, R>(self: Types.store<T, R>, key: string, unreleasedHa
 					if Keep._isThisSession(activeSession) then
 						return {
 							loadedData = loadedData,
-							dataStoreKeyInfo = dataStoreKeyInfo,
+							datastoreKeyInfo = datastoreKeyInfo,
 						}
 					end
 
@@ -351,18 +377,21 @@ function Store.LoadKeep<T, R>(self: Types.store<T, R>, key: string, unreleasedHa
 							return nil
 						end
 
-						if not requestForceLoad then
-							forceLoadAttempts += 1
-
-							if forceLoadAttempts == Config.forceLoadMaxAttempts then
-								shouldStealSessionOnForceLoad = true
-							else
-								local attemptsLeft = Config.forceLoadMaxAttempts - forceLoadAttempts
-								task.wait(2 ^ (Config.forceLoadMaxAttempts - attemptsLeft)) -- don't ask why, it just works :)
-							end
+						if requestForceLoad then
+							-- only request a force load once
+							requestForceLoad = false
+							continue
 						end
 
-						requestForceLoad = false -- only request a force load once
+						forceLoadAttempts += 1
+
+						if forceLoadAttempts >= Config.forceLoadMaxAttempts then
+							shouldStealSessionOnForceLoad = true
+						else
+							-- delay next attempt
+							task.wait(forceLoadWaitTime)
+							forceLoadWaitTime = math.min(20, forceLoadWaitTime * 2)
+						end
 					else
 						local handler = unreleasedHandler :: Types.unreleasedHandler
 						local loadMethod = handler(activeSession)
@@ -384,20 +413,20 @@ function Store.LoadKeep<T, R>(self: Types.store<T, R>, key: string, unreleasedHa
 					end
 				end
 			end)
-				:andThen(function(keepData)
+				:andThen(function(data: { loadedData: any, datastoreKeyInfo: DataStoreKeyInfo }?)
 					States.cachedKeepPromises[id] = nil
 
-					if not keepData then
+					if not data then
 						return nil
 					end
 
-					local loadedData = keepData.loadedData
-					local dataStoreKeyInfo = keepData.dataStoreKeyInfo
+					local loadedData = data.loadedData
+					local datastoreKeyInfo = data.datastoreKeyInfo
 
 					local keepClass = Keep.new(loadedData, self._dataTemplate)
 
-					if dataStoreKeyInfo then
-						keepClass._keyInfo = dataStoreKeyInfo
+					if datastoreKeyInfo then
+						keepClass._keyInfo = datastoreKeyInfo
 					end
 
 					keepClass._key = key
@@ -473,7 +502,7 @@ function Store.ViewKeep<T, R>(self: Types.store<T, R>, key: string, version: str
 	return Promise.new(function(resolve, reject)
 		-- uses :GetAsync()
 
-		local loadedData, dataStoreKeyInfo = UpdateKeepAsync(key, self._datastore, {
+		local loadedData, datastoreKeyInfo = UpdateAsync(key, self._datastore, {
 			onMissing = function(latestData)
 				latestData.Data = DeepCopy(self._dataTemplate)
 				latestData.MetaData = DeepCopy(DefaultData.MetaData)
@@ -484,7 +513,9 @@ function Store.ViewKeep<T, R>(self: Types.store<T, R>, key: string, version: str
 
 				return false
 			end,
-		}, { version = version })
+		}, {
+			useGet = { version = version },
+		})
 
 		if self._preLoad then
 			local processedData = self._preLoad(DeepCopy(loadedData.Data))
@@ -499,13 +530,13 @@ function Store.ViewKeep<T, R>(self: Types.store<T, R>, key: string, version: str
 
 		local keepClass = Keep.new(loadedData, self._dataTemplate)
 
-		if dataStoreKeyInfo then
-			keepClass._keyInfo = dataStoreKeyInfo
+		if datastoreKeyInfo then
+			keepClass._keyInfo = datastoreKeyInfo
 		end
 
 		keepClass._viewOnly = true
 		keepClass._releasing = true
-		keepClass._released = true -- incase they call :Release() and it tries to save
+		keepClass._released = true -- in case they call :Release() and it tries to save
 
 		keepClass._key = key
 		keepClass._datastore = self._datastore -- mock datastore or real datastore
@@ -694,7 +725,7 @@ function Store.PostGlobalUpdate<T, R>(self: Types.store<T, R>, key: string, upda
 	States.activeDataStoreJobs += 1
 
 	return Promise.try(function()
-		return UpdateKeepAsync(key, self._datastore, {
+		return UpdateAsync(key, self._datastore, {
 			edit = function(latestData)
 				local globalUpdateObject = {
 					_updates = latestData.GlobalUpdates,
@@ -706,7 +737,7 @@ function Store.PostGlobalUpdate<T, R>(self: Types.store<T, R>, key: string, upda
 
 				return false
 			end,
-		})
+		}, {})
 	end)
 		:tap(function()
 			Log.print(`[DataKeep] Posted global update to {self:Identify()}/{key}`)

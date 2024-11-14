@@ -29,7 +29,9 @@ local function updateAsync<T>(
 		onMissing: ((latestData: Types.keepStruct<T>) -> boolean)?,
 		edit: ((latestData: Types.keepStruct<T>) -> boolean)?,
 	},
-	useGet: { version: string? }?
+	options: {
+		useGet: { version: string? }?,
+	}
 )
 	local function transformUpdate(latestData: Types.keepStruct<T>): (Types.keepStruct<T>?, Types.userIds?)
 		local onCheck = if typeof(updateSettings.onCheck) == "function" then updateSettings.onCheck else nil
@@ -105,16 +107,16 @@ local function updateAsync<T>(
 		return latestData, latestData.UserIds
 	end
 
-	if useGet then
+	if options.useGet then
 		local getData, getDataStoreKeyInfo
 
-		if useGet.version then
-			getData, getDataStoreKeyInfo = store:GetVersionAsync(key, useGet.version)
+		if options.useGet.version then
+			getData, getDataStoreKeyInfo = store:GetVersionAsync(key, options.useGet.version)
 		else
-			local dataStoreGetOptions = Instance.new("DataStoreGetOptions")
-			dataStoreGetOptions.UseCache = false
+			local datastoreGetOptions = Instance.new("DataStoreGetOptions")
+			datastoreGetOptions.UseCache = false
 
-			getData, getDataStoreKeyInfo = store:GetAsync(key, dataStoreGetOptions)
+			getData, getDataStoreKeyInfo = store:GetAsync(key, datastoreGetOptions)
 		end
 
 		getData = transformUpdate(getData)

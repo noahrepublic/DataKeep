@@ -9,11 +9,14 @@ local config = {
 	--- used to clean up released keeps
 	internalKeepCleanupInterval = 2,
 
+	--- for how long attempt to retry failed datastore calls in :LoadKeep() (only applies when every datastore call fails)
+	loadKeepDataStoreFailTimeout = 2 * 60,
+
 	--- how long to wait between auto saves
 	saveInterval = 30,
 
 	--- attempts taken before ForceLoad request steals the active session for a keep
-	forceLoadMaxAttempts = 6,
+	forceLoadMaxAttempts = 7,
 
 	--- retry attempts taken before keep:Release() will be marked as failed
 	releaseRetryMaxAttempts = 5,

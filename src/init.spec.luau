@@ -102,9 +102,9 @@ return function()
 			expect(testDataStoreRaw).to.be.a("table")
 			expect(testDataStoreRaw.Data.Money).to.equal(50)
 
-			local oldData, dataStoreKeyInfo = store:RemoveKeep("removeTest"):expect()
+			local oldData, datastoreKeyInfo = store:RemoveKeep("removeTest"):expect()
 			expect(oldData ~= nil).to.be.ok()
-			expect(dataStoreKeyInfo ~= nil).to.be.ok()
+			expect(datastoreKeyInfo ~= nil).to.be.ok()
 
 			testDataStoreRaw = store._datastore:GetAsync("removeTest")
 			expect(testDataStoreRaw).to.equal(nil)
@@ -238,8 +238,8 @@ return function()
 			local keep = store:LoadKeep("OfflineKeep"):expect()
 			keep:Release():await()
 
-			local dataStoreRaw = store._datastore:GetAsync("OfflineKeep")
-			expect(#dataStoreRaw.GlobalUpdates.Updates).to.equal(0)
+			local datastoreRaw = store._datastore:GetAsync("OfflineKeep")
+			expect(#datastoreRaw.GlobalUpdates.Updates).to.equal(0)
 
 			store
 				:PostGlobalUpdate("OfflineKeep", function(globalUpdates)
@@ -251,8 +251,8 @@ return function()
 				end)
 				:await()
 
-			dataStoreRaw = store._datastore:GetAsync("OfflineKeep")
-			expect(dataStoreRaw.GlobalUpdates.Updates[1].Data.Message).to.equal("HelloWorld")
+			datastoreRaw = store._datastore:GetAsync("OfflineKeep")
+			expect(datastoreRaw.GlobalUpdates.Updates[1].Data.Message).to.equal("HelloWorld")
 		end)
 
 		it("should add an global update to already loaded keep", function()

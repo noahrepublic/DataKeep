@@ -8,6 +8,8 @@ type enums = {
 	LoadMethod: Types.loadMethod,
 }
 
+-- Note: values have to be the same as keys!
+
 local enums: enums = {
 	LogLevel = {
 		All = "All",
