@@ -36,13 +36,13 @@ Keep.__index = Keep
 
 	The function reveals the lock and remove global update function through the parameters.
 
-	:::caution
+	:::warning
 	Updates **must** be locked eventually in order for [.OnGlobalUpdate](#OnGlobalUpdate) to get fired.
-	:::caution
+	:::
 
-	:::warning
+	:::danger
 	The lock and remove function revealed here are **NOT** the same as the ones in the Keep class, they are only for this function.
-	:::warning
+	:::
 ]=]
 
 --[=[
@@ -51,9 +51,9 @@ Keep.__index = Keep
 
 	Fired when a new global update is locked and ready to be processed, which can happen only during save.
 
-	:::caution
+	:::warning
 	**ONLY** locked globals are fired.
-	:::caution
+	:::
 ]=]
 
 --[=[
@@ -434,13 +434,13 @@ end
 
 	Performs a manual save.
 
-	:::caution
+	:::warning
 	Calling ```:Save()``` manually will reset the auto save timer on the Keep.
-	:::caution
+	:::
 
-	:::warning
+	:::danger
 	Using ```:Save()``` on a **view-only Keep** will error. Use [:Overwrite()](#Overwrite) instead.
-	:::warning
+	:::
 ]=]
 
 function Keep.Save<T, R>(self: Types.keep<T, R>): PromiseTypes.TypedPromise<()>
@@ -493,9 +493,9 @@ end
 
 	Releases the session lock to allow other servers to access the Keep.
 
-	:::warning
+	:::danger
 	This is called before internal release, but after session release, no edits can be made after this point.
-	:::warning
+	:::
 ]=]
 
 function Keep.Release<T, R>(self: Types.keep<T, R>): PromiseTypes.TypedPromise<()>
@@ -943,13 +943,13 @@ end
 
 	Returns a Promise that resolves to the old Keep (before the migration) This is the **last** time the old Keep's GlobalUpdates will be accessible before **permanently** being removed.
 
-	:::warning
+	:::danger
 	Will not save until the next loop unless otherwise called using [:Save()](#Save) or [:Overwrite()](#Overwrite) for view-only Keeps.
-	:::warning
+	:::
 
-	:::caution
+	:::warning
 	Any global updates not taken care of in ```migrateProcessor``` will be lost.
-	:::caution
+	:::
 ]=]
 
 function Keep.SetVersion<T, R>(self: Types.keep<T, R>, version: string, migrateProcessor: ((versionKeep: Types.keep<T, R>) -> Types.keep<T, R>)?): PromiseTypes.TypedPromise<Types.keep<T, R>>
@@ -1033,9 +1033,9 @@ end
 
 	Returns an array of locked global updates (processed).
 
-	:::caution
+	:::warning
 	Lock updates can **not** be changed, only cleared after done being used.
-	:::caution
+	:::
 ]=]
 
 function Keep.GetLockedGlobalUpdates<T, R>(self: Types.keep<T, R>): { Types.globalUpdate }
@@ -1062,9 +1062,9 @@ end
 
 	Clears a locked global update after being used.
 
-	:::warning
+	:::danger
 	Passing an **active** global update id will throw an error & reject the Promise.
-	:::warning
+	:::
 ]=]
 
 function Keep.ClearLockedUpdate<T, R>(self: Types.keep<T, R>, id: number): PromiseTypes.TypedPromise<()>

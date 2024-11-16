@@ -8,7 +8,8 @@
 
 - [Types Rewrite](https://github.com/noahrepublic/DataKeep/pull/32)
 
-#### Breaking Changes ! !
+### Breaking Changes
+
 - Changed `globalUpdate.ID` -> `globalUpdate.Id`
 - DataKeep:LoadStore() requires wrapper as third parameter (for strict types)
 - Default Wrapper now moved to `DataKeep.Wrapper`
@@ -34,9 +35,9 @@
 
 ## [version 3.1.2](https://github.com/noahrepublic/DataKeep/releases/tag/v3.1.2): 05/28/2024
 
-- Fix a few things by @FireBird702 in <https://github.com/noahrepublic/DataKeep/pull/20>
-- Fix for #22 by @FireBird702 in <https://github.com/noahrepublic/DataKeep/pull/23>
-- `:SetAsync()` in mock store should deep copy value by @FireBird702 in <https://github.com/noahrepublic/DataKeep/pull/26>
+- [Fix a few things](https://github.com/noahrepublic/DataKeep/pull/20) by @FireBird702
+- Fix for [#22](https://github.com/noahrepublic/DataKeep/pull/23) by @FireBird702
+- [`:SetAsync()` in mock store should deep copy value](https://github.com/noahrepublic/DataKeep/pull/26) by @FireBird702
 
 ## [version 3.1.1](https://github.com/noahrepublic/DataKeep/releases/tag/v3.1.1): 03/17/2024
 
@@ -54,7 +55,7 @@
 
 - Mock detection fix
 
-### SLIGHT BREAKING CHANGE
+### Slight Breaking Change
 
 - GetStore now waits for mockstore detection to finish. Players.PlayerAdded events may fire before getstore is ready. Use a loop of current players first. (See Example)
 
@@ -93,15 +94,13 @@
 
 ## [version 3.0.0](https://github.com/noahrepublic/DataKeep/releases/tag/v3.0.0): 12/22/2023
 
-**API Breaking Change**
-
 ### Added
 
 - Documented IssueSignal, CriticalState, & CriticalStateSignal
 - Added 'Saving' signal to Keep
 - Mockstore didyield detection for more accurate development testing
 
-### Changes
+### Breaking Changes
 
 - DataKeep.Wrapper is now: DataStore.Wrapper (independant wrappers supported)
 - OnRelease -> Releasing (signal) to address [#13](https://github.com/noahrepublic/DataKeep/issues/13)
@@ -112,8 +111,6 @@
 - Wrapper type warning
 
 ## [version 2.1.1](https://github.com/noahrepublic/DataKeep/releases/tag/v2.1.1): 12/17/2023
-
-## **API Breaking Change**
 
 ### Fixed
 
@@ -137,9 +134,9 @@
 
 ## [version 2.0.0](https://github.com/noahrepublic/DataKeep/releases/tag/v2.0.0): 11/28/2023
 
-API Breaking Change
+### API Breaking Change
 
-:AttachSave -> :PreSave & :PreLoad
+:AttachSave() -> :PreSave() & :PreLoad()
 
 Allows for more control and not limited to just compression/decompression but transforming the data however.
 
@@ -149,8 +146,7 @@ Allows for more control and not limited to just compression/decompression but tr
 
 ### Added
 
-- Finally added compression 'plugins' see <https://github.com/noahrepublic/DataKeep/issues/2>
-    :AttachToSave()
+- [Finally added compression 'plugins'](https://github.com/noahrepublic/DataKeep/issues/2)
 
 ## [version 1.2.2](https://github.com/noahrepublic/DataKeep/releases/tag/v1.2.2): 11/21/2023
 

@@ -65,7 +65,7 @@ export type Status = PromiseTypes.Status
 
 	:::info
 	Any wrapper changes after [.GetStore()](#GetStore) will not apply to that store but the next one.
-	:::info
+	:::
 ]=]
 
 --[=[
@@ -182,7 +182,7 @@ end)
 
 	:::info
 	Stores can be loaded multiple times as they are cached.
-	:::info
+	:::
 ]=]
 
 function DataKeep.GetStore<T, R>(storeInfo: Types.storeInfo | string, dataTemplate: Types.dataTemplate<T>, wrapper: R): PromiseTypes.TypedPromise<Store<T, R>>
@@ -233,16 +233,16 @@ type config = {
 
 	Allows to overwrite default config values. Only for experienced developers.
 
-	:::info
-	Should be used before any other functions.
-	:::info
-
 	```lua
 	DataKeep.SetConfig({
 		logLevel = DataKeep.Enums.LogLevel.All,
 		saveInterval = 60,
 	})
 	```
+
+	:::info
+	Should be used before any other functions.
+	:::
 ]=]
 
 function DataKeep.SetConfig(overwrites: config)

@@ -169,7 +169,7 @@ end
 
 	:::info
 	Keeps are cached, that way you can call [:LoadKeep()](#LoadKeep) multiple times and get the same Keeps.
-	:::info
+	:::
 ]=]
 
 function Store.LoadKeep<T, R>(self: Types.store<T, R>, key: string, unreleasedHandler: Types.unreleasedHandler?): PromiseTypes.TypedPromise<Types.keep<T, R>>
@@ -246,7 +246,7 @@ function Store.LoadKeep<T, R>(self: Types.store<T, R>, key: string, unreleasedHa
 				local forceLoadAttempts = 0
 				local forceLoadWaitTime = 1
 
-				--- time to wait between failed datastore calls (exponential backoff)
+				-- time to wait between failed datastore calls (exponential backoff)
 				local waitTime = 1
 				local startTime = os.clock()
 
@@ -478,13 +478,13 @@ end
 	end)
 	```
 
-	:::warning
+	:::danger
 	View-only Keeps are not cached!
-	:::warning
+	:::
 
-	:::warning
+	:::danger
 	[Keep:Destroy()](Keep#Destroy) must be called when view-only Keep is not needed anymore.
-	:::warning
+	:::
 ]=]
 
 function Store.ViewKeep<T, R>(self: Types.store<T, R>, key: string, version: string?): PromiseTypes.TypedPromise<Types.viewOnlyKeep<T, R>>
@@ -575,11 +575,11 @@ end
 
 	:::info
 	Calling ```:RemoveKeep()``` on the loaded Keep will release it (.Releasing signal will be fired) before removing.
-	:::info
+	:::
 
-	:::caution
+	:::warning
 	In live servers ```:RemoveKeep()``` must be used on Keeps created through mock stores.
-	:::caution
+	:::
 ]=]
 
 function Store.RemoveKeep<T, R>(self: Types.store<T, R>, key: string): PromiseTypes.TypedPromise<any, DataStoreKeyInfo>
@@ -616,14 +616,6 @@ end
 
 	Runs before loading a Keep, allowing you to modify the data before, like decompressing compressed data.
 
-	:::caution
-	Callback **must** return a new data table.
-	:::caution
-
-	:::warning
-	```:PreLoad()``` can only be set once.
-	:::warning
-
 	Decompression example:
 
 	```lua
@@ -637,6 +629,14 @@ end
 		return newData
 	end)
 	```
+
+	:::warning
+	Callback **must** return a new data table.
+	:::
+
+	:::danger
+	```:PreLoad()``` can only be set once.
+	:::
 ]=]
 
 function Store.PreLoad<T, R>(self: Types.store<T, R>, callback: (data: Types.data<T>) -> Types.data<T>)
@@ -654,14 +654,6 @@ end
 
 	Runs before saving a Keep, allowing you to modify the data before, like compressing data.
 
-	:::caution
-	Callback **must** return a new data table.
-	:::caution
-
-	:::warning
-	```:PreSave()``` can only be set once.
-	:::warning
-
 	Compression example:
 
 	```lua
@@ -675,6 +667,14 @@ end
 		return newData
 	end)
 	```
+
+	:::warning
+	Callback **must** return a new data table.
+	:::
+
+	:::danger
+	```:PreSave()``` can only be set once.
+	:::
 ]=]
 
 function Store.PreSave<T, R>(self: Types.store<T, R>, callback: (data: Types.data<T>) -> Types.data<T>)
@@ -707,11 +707,11 @@ end
 
 	:::info
 	Check [GlobalUpdates](GlobalUpdates) for more info.
-	:::info
+	:::
 
-	:::warning
+	:::danger
 	Yielding inside ```updateHandler``` is not allowed.
-	:::warning
+	:::
 ]=]
 
 function Store.PostGlobalUpdate<T, R>(self: Types.store<T, R>, key: string, updateHandler: (globalUpdates: Types.globalUpdatesClass) -> ()): PromiseTypes.TypedPromise<any, DataStoreKeyInfo>

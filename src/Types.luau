@@ -80,7 +80,7 @@ export type storeInfo = {
 
 	:::info
 	Check [LoadMethod] for more info.
-	:::info
+	:::
 ]=]
 
 export type unreleasedHandler = (session: session) -> string -- function for any purposes: logging, whitelist only certain places, etc.

@@ -6,9 +6,7 @@ sidebar_position: 5
 
 The following example shows how you would handle developer product purchases:
 
-```lua
--- DataTemplate.luau
-
+```lua title="DataTemplate.luau"
 local dataTemplate = {
 	PurchaseHistory = {},
 
@@ -20,9 +18,7 @@ export type template = typeof(dataTemplate)
 return table.freeze(dataTemplate)
 ```
 
-```lua
--- DevProducts.luau
-
+```lua title="DevProducts.luau"
 local DataKeep = require(path_to_datakeep)
 local DataTemplate = require(path_to_datatemplate)
 
@@ -37,9 +33,7 @@ local devProducts = {
 return devProducts
 ```
 
-```lua
--- SetProcessReceipt.luau
-
+```lua title="SetProcessReceipt.luau"
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 
@@ -114,9 +108,7 @@ end
 return setProcessReceipt
 ```
 
-```lua
--- Main.luau
-
+```lua title="Main.luau"
 local Players = game:GetService("Players")
 
 local DataKeep = require(path_to_datakeep)
