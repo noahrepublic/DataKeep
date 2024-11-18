@@ -561,14 +561,16 @@ function Keep.Overwrite<T, R>(self: Types.keep<T, R>, shouldKeepExistingSession:
 		return overwriteCache[self:Identify()]
 	end
 
-	shouldKeepExistingSession = if typeof(shouldKeepExistingSession) == "boolean" then shouldKeepExistingSession else false
-
-	local shouldReleaseSession = shouldKeepExistingSession == false
+	local shouldReleaseSession = if shouldKeepExistingSession then false else true
 
 	States.activeDataStoreJobs += 1
 
 	local overwritingState = Promise.try(function()
 		return UpdateAsync(self._key, self._datastore, {
+			onMissing = function()
+				-- cancel if keep is missing
+				return true
+			end,
 			edit = function(latestData)
 				if typeof(latestData.Data) == "table" and typeof(latestData.MetaData) == "table" then -- full profile
 					local valid, err = self._store.validate(self.Data) -- validate data before saving

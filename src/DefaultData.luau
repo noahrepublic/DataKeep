@@ -21,7 +21,7 @@ local defaultGlobalUpdates: Types.globalUpdates = {
 local defaultData: Types.keepStruct<{}> = {
 	Data = {},
 	MetaData = defaultMetaData, -- can future add metatags or whateva
-	GlobalUpdates = defaultGlobalUpdates, -- really like how profile service supports these, so adding to this module as I use them lots.
+	GlobalUpdates = defaultGlobalUpdates, -- really like how ProfileService supports these, so adding to this module as I use them lots.
 	UserIds = {},
 }
 

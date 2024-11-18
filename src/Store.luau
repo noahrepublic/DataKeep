@@ -575,7 +575,7 @@ end
 
 	@return Promise<previousData, DataStoreKeyInfo>
 
-	Removes the ```key```'s data from the DataStore.
+	Removes the ```key``` from the DataStore.
 
 	:::info
 	Calling ```:RemoveKeep()``` on the loaded Keep will release it (.Releasing signal will be fired) before removing.
