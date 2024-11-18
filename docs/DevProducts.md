@@ -127,7 +127,6 @@ local function onPlayerAdded(player: Player)
 			player:Kick("Session lock interrupted!")
 		end
 
-		keep:Reconcile()
 		keep:AddUserId(player.UserId) -- help with GDPR requests
 
 		keep.Releasing:Connect(function(state) -- don't have to clean up, it cleans up internally
