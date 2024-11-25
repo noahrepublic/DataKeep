@@ -2,7 +2,6 @@
 
 local Promise = require(script.Parent.Parent.Promise)
 
-local Log = require(script.Parent.Utils.Log)
 local PromiseTypes = require(script.Parent.PromiseTypes)
 local Types = require(script.Parent.Types)
 
@@ -149,8 +148,7 @@ function GlobalUpdates:RemoveActiveUpdate(updateId: number): PromiseTypes.TypedP
 		end
 
 		if globalUpdates.Updates[globalUpdateIndex].Locked then
-			Log.error("[DataKeep] Unable to remove active update on a locked update")
-			return reject()
+			error(`[DataKeep] Unable to remove {updateId} which is a locked update`)
 		end
 
 		-- instantly removes internally, unlike locked updates. This is because locked updates can still be deleted mid-processing

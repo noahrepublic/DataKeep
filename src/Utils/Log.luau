@@ -33,11 +33,11 @@ local function debugPrint(message: string, shouldEmitIssueSignal: boolean?)
 
 	local allowedLogLevels = { Enums.LogLevel.All }
 
-	if not table.find(allowedLogLevels, Config.logLevel) then
-		return
+	if table.find(allowedLogLevels, Config.logLevel) then
+		print(message)
 	end
 
-	print(message)
+	return message
 end
 
 local function debugWarn(message: string, shouldEmitIssueSignal: boolean?)
@@ -47,12 +47,16 @@ local function debugWarn(message: string, shouldEmitIssueSignal: boolean?)
 
 	local allowedLogLevels = { Enums.LogLevel.All, Enums.LogLevel.Warn }
 
-	if not table.find(allowedLogLevels, Config.logLevel) then
-		return
+	if table.find(allowedLogLevels, Config.logLevel) then
+		warn(message)
 	end
 
-	warn(message)
+	return message
 end
+
+--[[
+	Note: this function does not error()
+]]
 
 local function debugError(message: string, shouldEmitIssueSignal: boolean?)
 	if shouldEmitIssueSignal then
@@ -61,11 +65,11 @@ local function debugError(message: string, shouldEmitIssueSignal: boolean?)
 
 	local allowedLogLevels = { Enums.LogLevel.All, Enums.LogLevel.Warn, Enums.LogLevel.Error }
 
-	if not table.find(allowedLogLevels, Config.logLevel) then
-		return
+	if table.find(allowedLogLevels, Config.logLevel) then
+		warn(message)
 	end
 
-	error(message)
+	return message
 end
 
 return table.freeze({

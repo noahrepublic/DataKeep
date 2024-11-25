@@ -108,19 +108,19 @@ local function updateAsync<T>(
 	end
 
 	if options.useGet then
-		local getData, getDataStoreKeyInfo
+		local latestData, dataStoreKeyInfo
 
 		if options.useGet.version then
-			getData, getDataStoreKeyInfo = store:GetVersionAsync(key, options.useGet.version)
+			latestData, dataStoreKeyInfo = store:GetVersionAsync(key, options.useGet.version)
 		else
 			local datastoreGetOptions = Instance.new("DataStoreGetOptions")
 			datastoreGetOptions.UseCache = false
 
-			getData, getDataStoreKeyInfo = store:GetAsync(key, datastoreGetOptions)
+			latestData, dataStoreKeyInfo = store:GetAsync(key, datastoreGetOptions)
 		end
 
-		getData = transformUpdate(getData)
-		return getData, getDataStoreKeyInfo
+		latestData = transformUpdate(latestData)
+		return latestData, dataStoreKeyInfo
 	else
 		return store:UpdateAsync(key, transformUpdate)
 	end

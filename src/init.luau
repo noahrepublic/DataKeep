@@ -312,8 +312,8 @@ local function runAutoSave(deltaTime: number)
 			continue
 		end
 
-		keep:Save():timeout(Config.saveInterval):catch(function(err)
-			Log.warn(`[DataKeep] Auto save failed for {keep:Identify()}. {err}`)
+		keep:Save():timeout(Config.saveInterval):catch(function()
+			Log.warn(`[DataKeep] Auto save failed for {keep:Identify()}.`)
 		end)
 	end
 end

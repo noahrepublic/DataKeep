@@ -123,10 +123,6 @@ local store = DataKeep.GetStore("PlayerData", DataTemplate, {}):expect()
 
 local function onPlayerAdded(player: Player)
 	store:LoadKeep(keyPrefix .. player.UserId):andThen(function(keep)
-		if keep == nil then
-			player:Kick("Session lock interrupted!")
-		end
-
 		keep:Reconcile()
 		keep:AddUserId(player.UserId) -- help with GDPR requests
 
@@ -149,6 +145,8 @@ local function onPlayerAdded(player: Player)
 		loadedKeeps[player] = keep
 
 		print(`Loaded {player.Name}'s Keep!`)
+	end):catch(function()
+		player:Kick("Data failed to load")
 	end)
 end
 

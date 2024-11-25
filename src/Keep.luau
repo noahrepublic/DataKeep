@@ -192,8 +192,7 @@ local function processGlobalUpdates<T, R>(keep: Types.keep<T, R>, latestData: Ty
 			end
 
 			if not globalUpdates[index].Locked and not keep._pending_global_locks[index] then
-				Log.error("[DataKeep] Attempted to remove a global update that was not locked")
-				return reject()
+				error("Attempted to remove a global update that was not locked")
 			end
 
 			if table.find(keep._pending_global_lock_removes, updateId) then
@@ -334,8 +333,7 @@ local function save<T, R>(keep: Types.keep<T, R>, isReleasing: boolean): Promise
 								local processedData = keep._store._preSave(DeepCopy(keep.Data))
 
 								if not processedData then
-									Log.error("[DataKeep] :PreSave() must return a table")
-									return true
+									error(":PreSave() must return a table")
 								end
 
 								latestData.Data = processedData
@@ -343,8 +341,7 @@ local function save<T, R>(keep: Types.keep<T, R>, isReleasing: boolean): Promise
 
 							latestData.UserIds = keep.UserIds
 						else
-							Log.warn(`[DataKeep] {keep:Identify()}'s data has not passed validation. {err}`)
-							return true
+							error(`{keep:Identify()}'s data has not passed validation. {err}`)
 						end
 					end
 
@@ -445,10 +442,7 @@ end
 
 function Keep.Save<T, R>(self: Types.keep<T, R>): PromiseTypes.TypedPromise<()>
 	if self._viewOnly then
-		return Promise.try(function()
-			Log.error(`[DataKeep] Attempted to save {self:Identify()} which is a view-only keep, do you mean :Overwrite()?`)
-			return Promise.reject()
-		end)
+		return Promise.reject(`[DataKeep] Attempted to save {self:Identify()} which is a view-only keep, do you mean :Overwrite()?`)
 	end
 
 	if saveCache[self:Identify()] then -- already saving
@@ -466,7 +460,7 @@ function Keep.Save<T, R>(self: Types.keep<T, R>): PromiseTypes.TypedPromise<()>
 			Log.print(`[DataKeep] Saved {self:Identify()}`)
 		end)
 		:catch(function(err)
-			Log.error(`[DataKeep] Failed to save {self:Identify()}. {err}`, true)
+			return Promise.reject(Log.error(`[DataKeep] Failed to save {self:Identify()}. {err}`, true))
 		end)
 		:finally(function()
 			self._lastSaveAttempt = os.clock() -- reset the auto save timer
@@ -500,10 +494,7 @@ end
 
 function Keep.Release<T, R>(self: Types.keep<T, R>): PromiseTypes.TypedPromise<()>
 	if self._viewOnly then
-		return Promise.try(function()
-			Log.error(`[DataKeep] Attempted to release {self:Identify()} which is a view-only keep`)
-			return Promise.reject()
-		end)
+		return Promise.reject(`[DataKeep] Attempted to release {self:Identify()} which is a view-only keep`)
 	end
 
 	if releaseCache[self:Identify()] then -- already releasing
@@ -523,7 +514,7 @@ function Keep.Release<T, R>(self: Types.keep<T, R>): PromiseTypes.TypedPromise<(
 			Log.print(`[DataKeep] Released {self:Identify()}`)
 		end)
 		:catch(function(err)
-			Log.error(`[DataKeep] Failed to release {self:Identify()}. {err}`, true)
+			return Promise.reject(Log.error(`[DataKeep] Failed to release {self:Identify()}. {err}`, true))
 		end)
 		:finally(function()
 			self._lastSaveAttempt = os.clock() -- reset the auto save timer
@@ -551,10 +542,7 @@ end
 
 function Keep.Overwrite<T, R>(self: Types.keep<T, R>, shouldKeepExistingSession: boolean?): PromiseTypes.TypedPromise<()>
 	if not self._viewOnly then
-		return Promise.try(function()
-			Log.error(`[DataKeep] Attempted to overwrite {self:Identify()} which is not a view-only keep, do you mean :Save()?`)
-			return Promise.reject()
-		end)
+		return Promise.reject(`[DataKeep] Attempted to overwrite {self:Identify()} which is not a view-only keep, do you mean :Save()?`)
 	end
 
 	if overwriteCache[self:Identify()] then -- already overwriting
@@ -582,8 +570,7 @@ function Keep.Overwrite<T, R>(self: Types.keep<T, R>, shouldKeepExistingSession:
 							local processedData = self._store._preSave(DeepCopy(self.Data))
 
 							if not processedData then
-								Log.error("[DataKeep] :PreSave() must return a table")
-								return true
+								error(":PreSave() must return a table")
 							end
 
 							latestData.Data = processedData
@@ -591,8 +578,7 @@ function Keep.Overwrite<T, R>(self: Types.keep<T, R>, shouldKeepExistingSession:
 
 						latestData.UserIds = self.UserIds
 					else
-						Log.warn(`[DataKeep] {self:Identify()}'s data has not passed validation. {err}`)
-						return true
+						error(`{self:Identify()}'s data has not passed validation. {err}`)
 					end
 				end
 
@@ -609,7 +595,11 @@ function Keep.Overwrite<T, R>(self: Types.keep<T, R>, shouldKeepExistingSession:
 			end,
 		}, {})
 	end)
-		:andThen(function(_latestData, datastoreKeyInfo)
+		:andThen(function(latestData, datastoreKeyInfo)
+			if not latestData then
+				return Promise.reject("Keep was never loaded before")
+			end
+
 			if datastoreKeyInfo then
 				self._keyInfo = datastoreKeyInfo
 			end
@@ -618,7 +608,7 @@ function Keep.Overwrite<T, R>(self: Types.keep<T, R>, shouldKeepExistingSession:
 			Log.print(`[DataKeep] Overwritten {self:Identify()}`)
 		end)
 		:catch(function(err)
-			Log.warn(`[DataKeep] Failed to overwrite {self:Identify()}. {err}`, true)
+			return Promise.reject(Log.error(`[DataKeep] Failed to overwrite {self:Identify()}. {err}`, true))
 		end)
 		:finally(function()
 			self._lastSaveAttempt = os.clock() -- reset the auto save timer
@@ -956,10 +946,7 @@ end
 
 function Keep.SetVersion<T, R>(self: Types.keep<T, R>, version: string, migrateProcessor: ((versionKeep: Types.keep<T, R>) -> Types.keep<T, R>)?): PromiseTypes.TypedPromise<Types.keep<T, R>>
 	if migrateProcessor ~= nil and typeof(migrateProcessor) ~= "function" then
-		return Promise.try(function()
-			Log.error("[DataKeep] migrateProcessor must be a function")
-			return Promise.reject()
-		end)
+		return Promise.reject("[DataKeep] migrateProcessor must be a function")
 	end
 
 	if migrateProcessor == nil then
@@ -987,8 +974,7 @@ function Keep.SetVersion<T, R>(self: Types.keep<T, R>, version: string, migrateP
 		versionKeep = processor(versionKeep) -- Global updates are still able to be edited here, after this they are gone if not processed.
 
 		if not versionKeep then
-			Log.error("[DataKeep] migrateProcessor must return the keep")
-			return reject()
+			error("[DataKeep] migrateProcessor must return the keep")
 		end
 
 		self.Data = DeepCopy(versionKeep.Data)
@@ -1093,8 +1079,7 @@ function Keep.ClearLockedUpdate<T, R>(self: Types.keep<T, R>, id: number): Promi
 			return resolve()
 		end
 
-		Log.error("[DataKeep] Unable to clear locked update on an active update")
-		return reject()
+		error("[DataKeep] Unable to clear locked update on an active update")
 	end)
 end
 

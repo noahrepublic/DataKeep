@@ -150,7 +150,7 @@ end
 	@param key string
 	@param unreleasedHandler unreleasedHandler?
 
-	@return Promise<Keep?>
+	@return Promise<Keep>
 
 	Loads a Keep from the store and returns a Keep object.
 
@@ -158,12 +158,9 @@ end
 	store:LoadKeep(`Player_{player.UserId}`, function()
 		return DataKeep.Enums.LoadMethod.ForceLoad
 	end)):andThen(function(keep)
-		if not keep then
-			player:Kick("Session lock interrupted!")
-			return
-		end
-
 		print(`Loaded {keep:Identify()}!`)
+	end):catch(function()
+		player:Kick("Data failed to load")
 	end)
 	```
 
@@ -174,10 +171,7 @@ end
 
 function Store.LoadKeep<T, R>(self: Types.store<T, R>, key: string, unreleasedHandler: Types.unreleasedHandler?): PromiseTypes.TypedPromise<Types.keep<T, R>>
 	if unreleasedHandler ~= nil and typeof(unreleasedHandler) ~= "function" then
-		return Promise.try(function()
-			Log.error("[DataKeep] unreleasedHandler must be a function")
-			return Promise.reject()
-		end)
+		return Promise.reject("[DataKeep] unreleasedHandler must be a function")
 	end
 
 	if unreleasedHandler == nil then
@@ -224,10 +218,7 @@ function Store.LoadKeep<T, R>(self: Types.store<T, R>, key: string, unreleasedHa
 			end
 
 			if States.isServiceDone then
-				return Promise.try(function()
-					Log.error(`[DataKeep] Server is closing, unable to load keep for {id}`)
-					return Promise.reject()
-				end)
+				error(`Server is closing, unable to load keep for {id}`)
 			end
 
 			if self._isMockEnabled then
@@ -313,8 +304,7 @@ function Store.LoadKeep<T, R>(self: Types.store<T, R>, key: string, unreleasedHa
 										local processedData = self._preLoad(DeepCopy(latestData.Data))
 
 										if not processedData then
-											Log.error("[DataKeep] :PreLoad() must return a table")
-											return true
+											error(":PreLoad() must return a table")
 										end
 
 										latestData.Data = processedData
@@ -331,7 +321,7 @@ function Store.LoadKeep<T, R>(self: Types.store<T, R>, key: string, unreleasedHa
 					if not success then
 						if currentTime - startTime >= Config.loadKeepDataStoreFailTimeout then
 							-- datastores were unavailable for too long
-							return nil
+							error("Datastores were unavailable for too long")
 						end
 
 						-- :UpdateAsync() failed, wait and retry
@@ -347,14 +337,14 @@ function Store.LoadKeep<T, R>(self: Types.store<T, R>, key: string, unreleasedHa
 
 					if not loadedData or not datastoreKeyInfo then
 						-- :UpdateAsync() was canceled
-						return nil
+						error(":UpdateAsync() was canceled")
 					end
 
 					local activeSession = loadedData.MetaData.ActiveSession
 
 					if not (typeof(activeSession) == "table") then
 						-- probably because of States.isServiceDone
-						return nil
+						error("Active session was not set")
 					end
 
 					if Keep._isThisSession(activeSession) then
@@ -374,7 +364,7 @@ function Store.LoadKeep<T, R>(self: Types.store<T, R>, key: string, unreleasedHa
 
 						if forceLoadInterrupted then
 							-- another session tried to force load this keep
-							return nil
+							error("ForceLoad was interrupted")
 						end
 
 						if requestForceLoad then
@@ -403,7 +393,7 @@ function Store.LoadKeep<T, R>(self: Types.store<T, R>, key: string, unreleasedHa
 						end
 
 						if loadMethod == Enums.LoadMethod.Cancel then
-							return nil
+							error("Operation was canceled")
 						elseif loadMethod == Enums.LoadMethod.ForceLoad then
 							shouldForceLoad = true
 							requestForceLoad = true
@@ -417,7 +407,7 @@ function Store.LoadKeep<T, R>(self: Types.store<T, R>, key: string, unreleasedHa
 					States.cachedKeepPromises[id] = nil
 
 					if not data then
-						return nil
+						error("Something went wrong")
 					end
 
 					local loadedData = data.loadedData
@@ -452,7 +442,7 @@ function Store.LoadKeep<T, R>(self: Types.store<T, R>, key: string, unreleasedHa
 				end)
 		end)
 		:catch(function(err)
-			Log.error(`[DataKeep] Unable to load keep for {id}: {err}`, true)
+			return Promise.reject(Log.error(`[DataKeep] Unable to load keep for {id}: {err}`, true))
 		end)
 
 	States.cachedKeepPromises[id] = promise
@@ -475,6 +465,8 @@ end
 	```lua
 	store:ViewKeep(`Player_{player.UserId}`):andThen(function(viewOnlyKeep)
 		print(`Viewing {viewOnlyKeep:Identify()}!`)
+	end):catch(function(err)
+		warn(`Something went wrong! {err}`)
 	end)
 	```
 
@@ -491,15 +483,16 @@ function Store.ViewKeep<T, R>(self: Types.store<T, R>, key: string, version: str
 	local id = `{self:Identify()}/{key}`
 
 	if States.isServiceDone then
-		return Promise.try(function()
-			Log.error(`[DataKeep] Server is closing, unable to view keep for {id}`)
-			return Promise.reject()
-		end)
+		return Promise.reject(`[DataKeep] Server is closing, unable to view keep for {id}`)
+	end
+
+	if self._isMockEnabled then
+		Log.print(`[DataKeep] Using mock store on {id}`)
 	end
 
 	States.activeDataStoreJobs += 1
 
-	return Promise.new(function(resolve, reject)
+	return Promise.try(function()
 		-- uses :GetAsync()
 
 		local loadedData, datastoreKeyInfo = UpdateAsync(key, self._datastore, {
@@ -513,19 +506,26 @@ function Store.ViewKeep<T, R>(self: Types.store<T, R>, key: string, version: str
 
 				return false
 			end,
+			edit = function(latestData)
+				if self._preLoad then
+					local processedData = self._preLoad(DeepCopy(latestData.Data))
+
+					if not processedData then
+						error(":PreLoad() must return a table")
+					end
+
+					latestData.Data = processedData
+				end
+
+				return false
+			end,
 		}, {
 			useGet = { version = version },
 		})
 
-		if self._preLoad then
-			local processedData = self._preLoad(DeepCopy(loadedData.Data))
-
-			if not processedData then
-				Log.error("[DataKeep] :PreLoad() must return a table")
-				return reject()
-			end
-
-			loadedData.Data = processedData
+		if not loadedData then
+			-- :UpdateAsync() was canceled
+			error("Operation was canceled")
 		end
 
 		local keepClass = Keep.new(loadedData, self._dataTemplate)
@@ -550,13 +550,13 @@ function Store.ViewKeep<T, R>(self: Types.store<T, R>, key: string, version: str
 			end
 		end
 
-		return resolve(keepClass)
+		return keepClass
 	end)
 		:tap(function(keep)
 			Log.print(`[DataKeep] Loaded view-only keep {keep:Identify()}`)
 		end)
 		:catch(function(err)
-			Log.error(`[DataKeep] Unable to view keep for {id}: {err}`, true)
+			return Promise.reject(Log.error(`[DataKeep] Unable to view keep for {id}: {err}`, true))
 		end)
 		:finally(function()
 			States.activeDataStoreJobs -= 1
@@ -601,7 +601,7 @@ function Store.RemoveKeep<T, R>(self: Types.store<T, R>, key: string): PromiseTy
 			Log.print(`[DataKeep] Removed {id}`)
 		end)
 		:catch(function(err)
-			Log.error(`[DataKeep] Unable to remove {id}: {err}`, true)
+			return Promise.reject(Log.error(`[DataKeep] Unable to remove {id}: {err}`, true))
 		end)
 		:finally(function()
 			States.activeDataStoreJobs -= 1
@@ -716,10 +716,11 @@ end
 
 function Store.PostGlobalUpdate<T, R>(self: Types.store<T, R>, key: string, updateHandler: (globalUpdates: Types.globalUpdatesClass) -> ()): PromiseTypes.TypedPromise<any, DataStoreKeyInfo>
 	if States.isServiceDone then
-		return Promise.try(function()
-			Log.error("[DataKeep] Server is closing, unable to post global update")
-			return Promise.reject()
-		end)
+		return Promise.reject("[DataKeep] Server is closing, unable to post global update")
+	end
+
+	if self._isMockEnabled then
+		Log.print(`[DataKeep] Using mock store on {self:Identify()}/{key}`)
 	end
 
 	States.activeDataStoreJobs += 1
@@ -743,7 +744,7 @@ function Store.PostGlobalUpdate<T, R>(self: Types.store<T, R>, key: string, upda
 			Log.print(`[DataKeep] Posted global update to {self:Identify()}/{key}`)
 		end)
 		:catch(function(err)
-			Log.error(`[DataKeep] Unable to post GlobalUpdate: {err}`, true)
+			return Promise.reject(Log.error(`[DataKeep] Unable to post GlobalUpdate: {err}`, true))
 		end)
 		:finally(function()
 			States.activeDataStoreJobs -= 1
