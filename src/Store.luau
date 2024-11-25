@@ -441,8 +441,6 @@ function Store.LoadKeep<T, R>(self: Types.store<T, R>, key: string, unreleasedHa
 						end
 					end
 
-					keepClass:Reconcile()
-
 					States.loadedKeeps[id] = keepClass
 
 					Log.print(`[DataKeep] Loaded keep {id}`)
@@ -551,8 +549,6 @@ function Store.ViewKeep<T, R>(self: Types.store<T, R>, key: string, version: str
 				end
 			end
 		end
-
-		keepClass:Reconcile()
 
 		return resolve(keepClass)
 	end)
