@@ -555,9 +555,17 @@ function Keep.Overwrite<T, R>(self: Types.keep<T, R>, shouldKeepExistingSession:
 
 	local overwritingState = Promise.try(function()
 		return UpdateAsync(self._key, self._datastore, {
-			onMissing = function()
-				-- cancel if keep is missing
-				return true
+			onMissing = function(latestData)
+				latestData.Data = DeepCopy(self._dataTemplate)
+				latestData.MetaData = DeepCopy(DefaultData.MetaData)
+				latestData.UserIds = DeepCopy(DefaultData.UserIds)
+
+				latestData.MetaData.ActiveSession = nil
+				latestData.MetaData.Created = os.time()
+
+				self.MetaData.Created = latestData.MetaData.Created
+
+				return false
 			end,
 			edit = function(latestData)
 				if typeof(latestData.Data) == "table" and typeof(latestData.MetaData) == "table" then -- full profile
@@ -588,8 +596,10 @@ function Keep.Overwrite<T, R>(self: Types.keep<T, R>, shouldKeepExistingSession:
 				end
 
 				latestData.MetaData.LoadCount += 1
+				latestData.MetaData.LastUpdate = os.time()
 
 				self.MetaData.LoadCount = latestData.MetaData.LoadCount
+				self.MetaData.LastUpdate = latestData.MetaData.LastUpdate
 
 				return false
 			end,
