@@ -3,7 +3,6 @@
 local Promise = require(script.Parent.Parent.Promise)
 
 local PromiseTypes = require(script.Parent.PromiseTypes)
-local States = require(script.Parent.States)
 local Types = require(script.Parent.Types)
 
 --> Structure
@@ -11,42 +10,42 @@ local Types = require(script.Parent.Types)
 local GlobalUpdates = {}
 GlobalUpdates.__index = GlobalUpdates
 
---> Global Updates
+--> Types
 
 --[=[
 	@class GlobalUpdates
 	@server
 
-	Used to add, lock and change global updates
+	Used to add, lock and change global updates.
 
-	Revealed through [:PostGlobalUpdate()](Store#PostGlobalUpdate)
+	Revealed through [:PostGlobalUpdate()](Store#PostGlobalUpdate).
 ]=]
+
+--> Public Methods
 
 --[=[
 	@method AddGlobalUpdate
 	@within GlobalUpdates
 
-	@param globalData {}
+	@param globalUpdateData { [any]: any }
 
 	@return Promise<number>
 
-	Adds a global update to the Keep
+	Adds a global update to the Keep.
 
 	```lua
-	globalUpdates:AddGlobalUpdate({
-		Hello = "World!",
-	}):andThen(function(updateId)
-		print("Added Global Update!")
+	store:PostGlobalUpdate(function(globalUpdates)
+		globalUpdates:AddGlobalUpdate({
+			Hello = "World!",
+		}):andThen(function(updateId)
+			print("Added Global Update!", updateId)
+		end)
 	end)
 	```
 ]=]
 
-function GlobalUpdates:AddGlobalUpdate(globalData: {}): PromiseTypes.TypedPromise<number>
-	return Promise.new(function(resolve, reject)
-		if States.isServiceDone then
-			return reject()
-		end
-
+function GlobalUpdates:AddGlobalUpdate(globalUpdateData: Types.globalUpdateData): PromiseTypes.TypedPromise<number>
+	return Promise.new(function(resolve)
 		local globalUpdates = self._updates
 
 		local updateId: number = globalUpdates.Id
@@ -57,7 +56,7 @@ function GlobalUpdates:AddGlobalUpdate(globalData: {}): PromiseTypes.TypedPromis
 		table.insert(globalUpdates.Updates, {
 			Id = updateId,
 			Locked = false,
-			Data = globalData,
+			Data = globalUpdateData,
 		})
 
 		return resolve(updateId)
@@ -69,21 +68,17 @@ end
 	@within GlobalUpdates
 
 	@param updateId number
-	@param globalData {}
+	@param globalUpdateData { [any]: any }
 
-	@return Promise
+	@return Promise<()>
 
 	Change an **active** global update's data to the new data.
 
-	Useful for stacking updates to save space for Keeps that maybe receiving lots of globals. Ex. a content creator receiving gifts
+	Useful for stacking updates to save space for Keeps that maybe receiving lots of globals. Ex. a content creator receiving gifts.
 ]=]
 
-function GlobalUpdates:ChangeActiveUpdate(updateId: number, globalData: {}): PromiseTypes.Promise
+function GlobalUpdates:ChangeActiveUpdate(updateId: number, globalUpdateData: Types.globalUpdateData): PromiseTypes.TypedPromise<()>
 	return Promise.new(function(resolve, reject)
-		if States.isServiceDone then
-			return reject()
-		end
-
 		if not updateId or not (typeof(updateId) == "number") then
 			return reject()
 		end
@@ -96,7 +91,7 @@ function GlobalUpdates:ChangeActiveUpdate(updateId: number, globalData: {}): Pro
 
 		for _, update in globalUpdates.Updates do
 			if update.Id == updateId and not update.Locked then
-				update.Data = globalData
+				update.Data = globalUpdateData
 
 				return resolve()
 			end
@@ -112,9 +107,9 @@ end
 
 	@param updateId number
 
-	@return Promise
+	@return Promise<()>
 
-	Removes an active global update
+	Removes an active global update.
 
 	```lua
 	local updates = globalUpdates:GetActiveUpdates()
@@ -127,12 +122,8 @@ end
 	```
 ]=]
 
-function GlobalUpdates:RemoveActiveUpdate(updateId: number): PromiseTypes.Promise
+function GlobalUpdates:RemoveActiveUpdate(updateId: number): PromiseTypes.TypedPromise<()>
 	return Promise.new(function(resolve, reject)
-		if States.isServiceDone then
-			return reject()
-		end
-
 		if not updateId or not (typeof(updateId) == "number") then
 			return reject()
 		end
@@ -157,11 +148,11 @@ function GlobalUpdates:RemoveActiveUpdate(updateId: number): PromiseTypes.Promis
 		end
 
 		if globalUpdates.Updates[globalUpdateIndex].Locked then
-			error("[DataKeep] Unable to remove active update on a locked update")
-			return reject()
+			error(`[DataKeep] Unable to remove {updateId} which is a locked update`)
 		end
 
-		table.remove(globalUpdates.Updates, globalUpdateIndex) -- instantly removes internally, unlike locked updates. This is because locked updates can still be deleted mid-processing
+		-- instantly removes internally, unlike locked updates. This is because locked updates can still be deleted mid-processing
+		table.remove(globalUpdates.Updates, globalUpdateIndex)
 		return resolve()
 	end)
 end
@@ -172,7 +163,7 @@ end
 
 	@return { GlobalUpdate }
 
-	Returns all **active** global updates
+	Returns all **active** global updates.
 
 	```lua
 	local updates = globalUpdates:GetActiveUpdates()
@@ -184,10 +175,6 @@ end
 ]=]
 
 function GlobalUpdates:GetActiveUpdates(): { Types.globalUpdate }
-	if States.isServiceDone then
-		warn("[DataKeep] Server is closing, unable to get active updates") -- maybe shouldn't error incase they don't :catch()?
-	end
-
 	local globalUpdates = self._updates
 
 	local updates = {}

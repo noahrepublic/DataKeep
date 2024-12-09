@@ -6,9 +6,7 @@ sidebar_position: 5
 
 The following example shows how you would handle developer product purchases:
 
-```lua
--- DataTemplate.luau
-
+```lua title="DataTemplate.luau"
 local dataTemplate = {
 	PurchaseHistory = {},
 
@@ -20,9 +18,7 @@ export type template = typeof(dataTemplate)
 return table.freeze(dataTemplate)
 ```
 
-```lua
--- DevProducts.luau
-
+```lua title="DevProducts.luau"
 local DataKeep = require(path_to_datakeep)
 local DataTemplate = require(path_to_datatemplate)
 
@@ -37,9 +33,7 @@ local devProducts = {
 return devProducts
 ```
 
-```lua
--- SetProcessReceipt.luau
-
+```lua title="SetProcessReceipt.luau"
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 
@@ -114,9 +108,7 @@ end
 return setProcessReceipt
 ```
 
-```lua
--- Main.luau
-
+```lua title="Main.luau"
 local Players = game:GetService("Players")
 
 local DataKeep = require(path_to_datakeep)
@@ -127,14 +119,10 @@ local keyPrefix = "Player_"
 
 local loadedKeeps = {}
 
-local keepStore = DataKeep.GetStore("PlayerData", DataTemplate, {}):expect()
+local store = DataKeep.GetStore("PlayerData", DataTemplate, {}):expect()
 
 local function onPlayerAdded(player: Player)
-	keepStore:LoadKeep(keyPrefix .. player.UserId):andThen(function(keep)
-		if keep == nil then
-			player:Kick("Session lock interrupted!")
-		end
-
+	store:LoadKeep(keyPrefix .. player.UserId):andThen(function(keep)
 		keep:Reconcile()
 		keep:AddUserId(player.UserId) -- help with GDPR requests
 
@@ -157,12 +145,14 @@ local function onPlayerAdded(player: Player)
 		loadedKeeps[player] = keep
 
 		print(`Loaded {player.Name}'s Keep!`)
+	end):catch(function()
+		player:Kick("Data failed to load")
 	end)
 end
 
 -- SetProcessReceipt() must be called before the onPlayerAdded(),
 -- otherwise the player's existing receipts won't be processed.
-SetProcessReceipt(keepStore, keyPrefix)
+SetProcessReceipt(store, keyPrefix)
 
 -- loop through already connected players in case they joined before DataKeep loaded
 for _, player in Players:GetPlayers() do

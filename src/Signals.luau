@@ -8,8 +8,11 @@ type signals = {
 }
 
 local signals: signals = {
-	CriticalStateSignal = Signal.new(), -- fires when we enter critical state
-	IssueSignal = Signal.new(), -- fires when we have an issue (issue logging)
+	--- fires when we enter critical state
+	CriticalStateSignal = Signal.new(),
+
+	--- fires when we have an issue (issue logging)
+	IssueSignal = Signal.new(),
 }
 
 return signals

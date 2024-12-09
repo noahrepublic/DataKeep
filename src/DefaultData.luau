@@ -13,14 +13,15 @@ local defaultMetaData: Types.metaData = {
 }
 
 local defaultGlobalUpdates: Types.globalUpdates = {
-	Id = 0, -- [recentUpdateId] newest global update id to process in order
+	--- [recentUpdateId] newest global update id to process in order
+	Id = 0,
 	Updates = {},
 }
 
 local defaultData: Types.keepStruct<{}> = {
 	Data = {},
 	MetaData = defaultMetaData, -- can future add metatags or whateva
-	GlobalUpdates = defaultGlobalUpdates, -- really like how profile service supports these, so adding to this module as I use them lots.
+	GlobalUpdates = defaultGlobalUpdates, -- really like how ProfileService supports these, so adding to this module as I use them lots.
 	UserIds = {},
 }
 

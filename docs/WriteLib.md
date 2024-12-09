@@ -8,9 +8,7 @@ WriteLib provides a way to give Keeps custom mutating functions. A [prebuilt Wri
 
 ## Defining a custom WriteLib
 
-```lua
--- WriteLib.luau
-
+```lua title="WriteLib.luau"
 return {
     AddCoins = function(self, amount: number)
         self.Data.Coins += amount
@@ -21,18 +19,16 @@ return {
 }
 ```
 
-```lua
--- Main.luau
-
+```lua title="Main.luau"
 local dataTemplate = {
     Coins = 0
 }
 
 local wrapper = require(path_to_custom_WriteLib)
 
-local keepStore = DataKeep.GetStore("PlayerData", dataTemplate, wrapper):expect()
+local store = DataKeep.GetStore("PlayerData", dataTemplate, wrapper):expect()
 
-keepStore:LoadKeep(`Player_{player.UserId}`):andThen(function(keep)
+store:LoadKeep(`Player_{player.UserId}`):andThen(function(keep)
     keep:AddCoins(100)
     keep:RemoveCoins(50)
 end)

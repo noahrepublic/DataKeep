@@ -1,6 +1,10 @@
 return function()
 	local datakeep = require(script.Parent)
 
+	datakeep.SetConfig({
+		logLevel = datakeep.Enums.LogLevel.All,
+	})
+
 	local dataTemplate = {
 		Coins = 0,
 	}
@@ -58,7 +62,7 @@ return function()
 
 			keep:Save():await()
 
-			local testDataStoreRaw = store._store:GetAsync("validateTest")
+			local testDataStoreRaw = store._datastore:GetAsync("validateTest")
 			expect(testDataStoreRaw.Data.Coins).to.be.a("number")
 
 			store.validate = function() -- revert to prevent other tests from failing
@@ -87,6 +91,24 @@ return function()
 			expect(keep ~= nil).to.be.ok()
 			expect(keep.Data.Money).to.equal(50)
 		end)
+
+		it("should remove saved keep", function()
+			local keep = store:LoadKeep("removeTest"):expect()
+			keep.Data.Money = 50
+
+			keep:Release():await()
+
+			local testDataStoreRaw = store._datastore:GetAsync("removeTest")
+			expect(testDataStoreRaw).to.be.a("table")
+			expect(testDataStoreRaw.Data.Money).to.equal(50)
+
+			local oldData, datastoreKeyInfo = store:RemoveKeep("removeTest"):expect()
+			expect(oldData ~= nil).to.be.ok()
+			expect(datastoreKeyInfo ~= nil).to.be.ok()
+
+			testDataStoreRaw = store._datastore:GetAsync("removeTest")
+			expect(testDataStoreRaw).to.equal(nil)
+		end)
 	end)
 
 	describe("keep", function()
@@ -96,28 +118,37 @@ return function()
 
 			keep:Save():await()
 
-			local testDataStoreRaw = store._store:GetAsync("Data")
+			local testDataStoreRaw = store._datastore:GetAsync("Data")
 			expect(testDataStoreRaw.Data.Coins).to.equal(100)
 		end)
 
-		--[[it("should not let view-only keep save data", function()
+		it("should not let view-only keep save data", function()
 			local viewKeep = store:ViewKeep("Data2"):expect()
 			viewKeep.Data.Coins = 100
 
-			viewKeep:Save():await() -- not sure how to catch this. this doesn't error but ProcessError does.
-
-			local testDataStoreRaw = store._store:GetAsync("Data2")
-			expect(testDataStoreRaw).to.equal(nil)
-		end)]]
+			local success = viewKeep:Save():await()
+			expect(success).to.equal(false)
+		end)
 
 		it("should not let view-only keep release", function()
 			local viewKeep = store:ViewKeep("Data3"):expect()
 			viewKeep.Data.Coins = 100
 
-			viewKeep:Release():await()
+			local success = viewKeep:Release():await()
+			expect(success).to.equal(false)
+		end)
 
-			local testDataStoreRaw = store._store:GetAsync("Data3")
-			expect(testDataStoreRaw).to.equal(nil)
+		it("should let view-only keeps overwrite data", function()
+			local viewKeep = store:ViewKeep("Data"):expect()
+			viewKeep.Data.Coins = 100
+
+			local success = viewKeep:Overwrite():await()
+			expect(success).to.equal(true)
+
+			expect(viewKeep.Data.Coins).to.equal(100)
+
+			local testDataStoreRaw = store._datastore:GetAsync("Data")
+			expect(testDataStoreRaw.Data.Coins).to.equal(100)
 		end)
 
 		it("should own session lock", function()
@@ -157,18 +188,6 @@ return function()
 			expect(keep.Data.Coins).to.equal(0)
 		end)
 
-		it("should let view-only keeps overwrite data", function()
-			local viewKeep = store:ViewKeep("Data"):expect()
-			viewKeep.Data.Coins = 100
-
-			viewKeep:Overwrite():await()
-
-			expect(viewKeep.Data.Coins).to.equal(100)
-
-			local testDataStoreRaw = store._store:GetAsync("Data")
-			expect(testDataStoreRaw.Data.Coins).to.equal(100)
-		end)
-
 		it("should be able to rollback versions", function()
 			local keep = store:LoadKeep("Data5"):expect()
 			keep.Data.Coins = 100
@@ -177,7 +196,7 @@ return function()
 
 			expect(keep.Data.Coins).to.equal(100)
 
-			local testDataStoreRaw = store._store:GetAsync("Data5")
+			local testDataStoreRaw = store._datastore:GetAsync("Data5")
 			expect(testDataStoreRaw.Data.Coins).to.equal(100)
 
 			local versions = keep:GetVersions()
@@ -194,7 +213,7 @@ return function()
 
 			keep:Release():await()
 
-			local testDataStoreRaw = store._store:GetAsync("Data")
+			local testDataStoreRaw = store._datastore:GetAsync("Data")
 			expect(testDataStoreRaw.MetaData.ActiveSession).to.equal(nil)
 		end)
 	end)
@@ -211,7 +230,7 @@ return function()
 				end)
 				:await()
 
-			local testDataStoreRaw = store._store:GetAsync("NewKeep")
+			local testDataStoreRaw = store._datastore:GetAsync("NewKeep")
 			expect(testDataStoreRaw.GlobalUpdates.Updates[1].Data.Message).to.equal("World")
 		end)
 
@@ -219,8 +238,8 @@ return function()
 			local keep = store:LoadKeep("OfflineKeep"):expect()
 			keep:Release():await()
 
-			local dataStoreRaw = store._store:GetAsync("OfflineKeep")
-			expect(#dataStoreRaw.GlobalUpdates.Updates).to.equal(0)
+			local datastoreRaw = store._datastore:GetAsync("OfflineKeep")
+			expect(#datastoreRaw.GlobalUpdates.Updates).to.equal(0)
 
 			store
 				:PostGlobalUpdate("OfflineKeep", function(globalUpdates)
@@ -232,8 +251,8 @@ return function()
 				end)
 				:await()
 
-			dataStoreRaw = store._store:GetAsync("OfflineKeep")
-			expect(dataStoreRaw.GlobalUpdates.Updates[1].Data.Message).to.equal("HelloWorld")
+			datastoreRaw = store._datastore:GetAsync("OfflineKeep")
+			expect(datastoreRaw.GlobalUpdates.Updates[1].Data.Message).to.equal("HelloWorld")
 		end)
 
 		it("should add an global update to already loaded keep", function()
@@ -249,7 +268,7 @@ return function()
 				end)
 				:await()
 
-			local testDataStoreRaw = store._store:GetAsync("Data")
+			local testDataStoreRaw = store._datastore:GetAsync("Data")
 			expect(testDataStoreRaw.GlobalUpdates.Updates[1].Data.Message).to.equal("Hello")
 		end)
 
@@ -267,7 +286,7 @@ return function()
 				end)
 				:await()
 
-			local testDataStoreRaw = store._store:GetAsync("Data")
+			local testDataStoreRaw = store._datastore:GetAsync("Data")
 			expect(#testDataStoreRaw.GlobalUpdates.Updates).to.equal(1)
 			expect(testDataStoreRaw.GlobalUpdates.Updates[1].Data.Message).to.equal("HelloGoodbye")
 		end)
@@ -296,7 +315,7 @@ return function()
 				end)
 				:await()
 
-			local testDataStoreRaw = store._store:GetAsync("Data")
+			local testDataStoreRaw = store._datastore:GetAsync("Data")
 			expect(#testDataStoreRaw.GlobalUpdates.Updates).to.equal(0)
 		end)
 

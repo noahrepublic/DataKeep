@@ -63,27 +63,29 @@ function MockStore:SetAsync(key: string, value: any)
 end
 
 function MockStore:UpdateAsync(key: string, callback: (any) -> any)
-	local value = DeepCopy(self._data[key])
+	local value = self:GetAsync(key)
 	local yielded, newValue = didyield(callback, value)
 
 	if yielded then
 		error("UpdateAsync yielded!")
-		return value
 	end
 
-	if not newValue then
-		return value
+	if not newValue then -- operation canceled
+		return nil
 	end
 
 	local newVersion = self:SetAsync(key, newValue)
-	return DeepCopy(self._data[key]), newVersion
+	return self:GetAsync(key), newVersion
 end
 
 function MockStore:RemoveAsync(key: string)
-	local oldData = DeepCopy(self._data[key])
+	local oldData = self:GetAsync(key)
 	self._data[key] = nil
 
-	return oldData, createNewVersion(self, key, nil)
+	local versionData = createNewVersion(self, key, nil)
+	versionData.Deleted = true
+
+	return oldData, versionData
 end
 
 function MockStore:ListVersionsAsync(key: string, sortDirection: Enum.SortDirection, minDate: number, maxDate: number, limit: number)

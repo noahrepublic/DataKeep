@@ -3,17 +3,26 @@
 local Types = require(script.Parent.Types)
 
 local states = {
-	isUseMockStore = false, -- enabled when DataStoreService is not available (Studio)
-	isServiceDone = false, -- is shutting down?
-	isCriticalState = false, -- closet thing to tracking if they are down, will be set to true after many failed requests
+	--- enabled when DataStoreService is not available (Studio) or when server is closing
+	isUseMockStore = false,
 
-	activeSaveJobs = 0,
+	--- is server shutting down?
+	isServiceDone = false,
+
+	--- will be set to true after many failed datastore requests
+	isCriticalState = false,
+
+	--- indicator for :BindToClose() that not everything is done yet
+	activeDataStoreJobs = 0,
 
 	cachedKeepPromises = {},
 
 	loadedKeeps = {} :: { [string]: Types.keep<{}, {}> },
 
+	--- queue used for critical state
 	issueQueue = {} :: { number },
+
+	--- os.time() when DataKeep entered critical state
 	criticalStateStartTime = 0,
 }
 
