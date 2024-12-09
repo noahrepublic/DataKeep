@@ -1,6 +1,6 @@
 # DataKeep
 
-## [version 5.0.0](https://github.com/noahrepublic/DataKeep/releases/tag/v5.0.0): 12/02/2024
+## [version 5.0.0](https://github.com/noahrepublic/DataKeep/releases/tag/v5.0.0): 12/09/2024
 
 - Add `DataKeep.Enums`
 - Default `logLevel` is now `DataKeep.Enums.LogLevel.Warn`
