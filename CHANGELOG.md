@@ -14,7 +14,7 @@
 ### Breaking Changes
 
 - Proper promise handling on loading, see basic usage docs
-- Removed `DataKeep.LoadMethods` became, `DataKeep.Enums.LoadMethod`
+- `DataKeep.LoadMethods` -> `DataKeep.Enums.LoadMethod`
 - Added customization of the verbosity of the logging via `DataKeep.Enums.LogLevel`
 
 ## [version 4.1.0](https://github.com/noahrepublic/DataKeep/releases/tag/v4.1.0): 10/22/2024
