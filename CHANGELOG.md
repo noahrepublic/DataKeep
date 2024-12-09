@@ -1,5 +1,22 @@
 # DataKeep
 
+## [version 5.0.0](https://github.com/noahrepublic/DataKeep/releases/tag/v5.0.0): 12/02/2024
+
+- Add `DataKeep.Enums`
+- Default `logLevel` is now `DataKeep.Enums.LogLevel.Warn`
+- Add `store:Identify()`
+- Add `store:RemoveKeep()`
+- Add `:LoadKeep()` retrying
+- Fix `.GetStore()` returning wrong cached value
+- Functions made only for specific keep type are only visible for that type
+- Types are `--!strict`
+
+### Breaking Changes
+
+- Proper promise handling on loading, see basic usage docs
+- Removed `DataKeep.LoadMethods` became, `DataKeep.Enums.LoadMethod`
+- Added customization of the verbosity of the logging via `DataKeep.Enums.LogLevel`
+
 ## [version 4.1.0](https://github.com/noahrepublic/DataKeep/releases/tag/v4.1.0): 10/22/2024
 
 - Add DataKeep.SetConfig()

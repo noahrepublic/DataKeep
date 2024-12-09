@@ -25,9 +25,6 @@ local Wrapper = require(script.Wrapper)
 local DataKeep = {
 	Enums = Enums,
 
-	--- deprecated, use .Enums
-	LoadMethods = Enums.LoadMethod,
-
 	Wrapper = Wrapper,
 
 	IssueSignal = Signals.IssueSignal, -- fires when we enter critical state
@@ -78,12 +75,6 @@ export type Status = PromiseTypes.Status
 	@within DataKeep
 ]=]
 
---[=[
-	@prop LoadMethods LoadMethod
-	@within DataKeep
-
-	@deprecated 4.2.0 -- Use .Enums instead
-]=]
 
 --[=[
 	@prop Wrapper Wrapper
