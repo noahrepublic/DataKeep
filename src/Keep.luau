@@ -485,6 +485,10 @@ end
 
 	Releases the session lock to allow other servers to access the Keep.
 
+	:::info
+	DataKeep will retry failed release attempts.
+	:::
+
 	:::danger
 	This is called before internal release, but after session release, no edits can be made after this point.
 	:::
