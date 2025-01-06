@@ -454,6 +454,7 @@ function Keep.Save<T, R>(self: Types.keep<T, R>): PromiseTypes.TypedPromise<()>
 	end
 
 	States.activeDataStoreJobs += 1
+	self._lastSaveAttempt = os.clock() -- reset the auto save timer
 
 	local savingState = save(self, false)
 		:tap(function()
@@ -463,10 +464,7 @@ function Keep.Save<T, R>(self: Types.keep<T, R>): PromiseTypes.TypedPromise<()>
 			return Promise.reject(Log.error(`[DataKeep] Failed to save {self:Identify()}. {err}`, true))
 		end)
 		:finally(function()
-			self._lastSaveAttempt = os.clock() -- reset the auto save timer
-
 			saveCache[self:Identify()] = nil
-
 			States.activeDataStoreJobs -= 1
 		end)
 
@@ -506,6 +504,7 @@ function Keep.Release<T, R>(self: Types.keep<T, R>): PromiseTypes.TypedPromise<(
 	end
 
 	States.activeDataStoreJobs += 1
+	self._lastSaveAttempt = os.clock() -- reset the auto save timer
 
 	local updater = Promise.retry(function()
 		return save(self, true)
@@ -517,8 +516,6 @@ function Keep.Release<T, R>(self: Types.keep<T, R>): PromiseTypes.TypedPromise<(
 			return Promise.reject(Log.error(`[DataKeep] Failed to release {self:Identify()}. {err}`, true))
 		end)
 		:finally(function()
-			self._lastSaveAttempt = os.clock() -- reset the auto save timer
-
 			States.activeDataStoreJobs -= 1
 		end)
 
@@ -552,6 +549,7 @@ function Keep.Overwrite<T, R>(self: Types.keep<T, R>, shouldKeepExistingSession:
 	local shouldReleaseSession = if shouldKeepExistingSession then false else true
 
 	States.activeDataStoreJobs += 1
+	self._lastSaveAttempt = os.clock() -- reset the auto save timer
 
 	local overwritingState = Promise.try(function()
 		return UpdateAsync(self._key, self._datastore, {
@@ -621,10 +619,7 @@ function Keep.Overwrite<T, R>(self: Types.keep<T, R>, shouldKeepExistingSession:
 			return Promise.reject(Log.error(`[DataKeep] Failed to overwrite {self:Identify()}. {err}`, true))
 		end)
 		:finally(function()
-			self._lastSaveAttempt = os.clock() -- reset the auto save timer
-
 			overwriteCache[self:Identify()] = nil
-
 			States.activeDataStoreJobs -= 1
 		end)
 
