@@ -68,7 +68,7 @@ Keep.__index = Keep
 
 		state:andThen(function()
 			print(`Released {keep:Identify()}`)
-		end, function()
+		end):catch(function()
 			print(`Failed to release {keep:Identify()}`)
 		end)
 	end)
@@ -401,7 +401,10 @@ function Keep._release<T, R>(self: Types.keep<T, R>, updater: PromiseTypes.Typed
 	States.activeDataStoreJobs += 1
 
 	self._releasing = true
-	self.Releasing:Fire(updater) -- unlocked, but not removed internally
+
+	self.Releasing:Fire(Promise.try(function() -- unlocked, but not removed internally
+		return updater:expect()
+	end))
 
 	updater:finally(function()
 		-- mark the keep as released
@@ -410,7 +413,6 @@ function Keep._release<T, R>(self: Types.keep<T, R>, updater: PromiseTypes.Typed
 		self._released = true
 
 		releaseCache[self:Identify()] = nil
-
 		States.activeDataStoreJobs -= 1
 	end)
 
@@ -464,11 +466,14 @@ function Keep.Save<T, R>(self: Types.keep<T, R>): PromiseTypes.TypedPromise<()>
 			return Promise.reject(Log.error(`[DataKeep] Failed to save {self:Identify()}. {err}`, true))
 		end)
 		:finally(function()
+			self._lastSaveAttempt = os.clock() -- reset the auto save timer
 			saveCache[self:Identify()] = nil
 			States.activeDataStoreJobs -= 1
 		end)
 
-	self.Saving:Fire(savingState)
+	self.Saving:Fire(Promise.try(function()
+		return savingState:expect()
+	end))
 
 	if savingState:getStatus() == Promise.Status.Started then
 		saveCache[self:Identify()] = savingState
@@ -520,10 +525,13 @@ function Keep.Release<T, R>(self: Types.keep<T, R>): PromiseTypes.TypedPromise<(
 			return Promise.reject(Log.error(`[DataKeep] Failed to release {self:Identify()}. {err}`, true))
 		end)
 		:finally(function()
+			self._lastSaveAttempt = os.clock() -- reset the auto save timer
 			States.activeDataStoreJobs -= 1
 		end)
 
-	self.Saving:Fire(updater)
+	self.Saving:Fire(Promise.try(function()
+		return updater:expect()
+	end))
 
 	return Keep._release(self, updater)
 end
@@ -623,6 +631,7 @@ function Keep.Overwrite<T, R>(self: Types.keep<T, R>, shouldKeepExistingSession:
 			return Promise.reject(Log.error(`[DataKeep] Failed to overwrite {self:Identify()}. {err}`, true))
 		end)
 		:finally(function()
+			self._lastSaveAttempt = os.clock() -- reset the auto save timer
 			overwriteCache[self:Identify()] = nil
 			States.activeDataStoreJobs -= 1
 		end)
