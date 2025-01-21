@@ -167,6 +167,10 @@ end
 	:::info
 	Keeps are cached, that way you can call [:LoadKeep()](#LoadKeep) multiple times and get the same Keeps.
 	:::
+
+	:::info
+	DataKeep will retry failed load attempts.
+	:::
 ]=]
 
 function Store.LoadKeep<T, R>(self: Types.store<T, R>, key: string, unreleasedHandler: Types.unreleasedHandler?): PromiseTypes.TypedPromise<Types.keep<T, R>>

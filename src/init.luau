@@ -75,7 +75,6 @@ export type Status = PromiseTypes.Status
 	@within DataKeep
 ]=]
 
-
 --[=[
 	@prop Wrapper Wrapper
 	@within DataKeep
@@ -226,7 +225,7 @@ type config = {
 
 	```lua
 	DataKeep.SetConfig({
-		logLevel = DataKeep.Enums.LogLevel.All,
+		logLevel = DataKeep.Enums.LogLevel.None,
 		saveInterval = 60,
 	})
 	```

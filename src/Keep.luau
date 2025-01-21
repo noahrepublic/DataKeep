@@ -68,7 +68,7 @@ Keep.__index = Keep
 
 		state:andThen(function()
 			print(`Released {keep:Identify()}`)
-		end, function()
+		end):catch(function()
 			print(`Failed to release {keep:Identify()}`)
 		end)
 	end)
@@ -401,7 +401,10 @@ function Keep._release<T, R>(self: Types.keep<T, R>, updater: PromiseTypes.Typed
 	States.activeDataStoreJobs += 1
 
 	self._releasing = true
-	self.Releasing:Fire(updater) -- unlocked, but not removed internally
+
+	self.Releasing:Fire(Promise.try(function() -- unlocked, but not removed internally
+		return updater:expect()
+	end))
 
 	updater:finally(function()
 		-- mark the keep as released
@@ -410,7 +413,6 @@ function Keep._release<T, R>(self: Types.keep<T, R>, updater: PromiseTypes.Typed
 		self._released = true
 
 		releaseCache[self:Identify()] = nil
-
 		States.activeDataStoreJobs -= 1
 	end)
 
@@ -454,6 +456,7 @@ function Keep.Save<T, R>(self: Types.keep<T, R>): PromiseTypes.TypedPromise<()>
 	end
 
 	States.activeDataStoreJobs += 1
+	self._lastSaveAttempt = os.clock() -- reset the auto save timer
 
 	local savingState = save(self, false)
 		:tap(function()
@@ -464,13 +467,13 @@ function Keep.Save<T, R>(self: Types.keep<T, R>): PromiseTypes.TypedPromise<()>
 		end)
 		:finally(function()
 			self._lastSaveAttempt = os.clock() -- reset the auto save timer
-
 			saveCache[self:Identify()] = nil
-
 			States.activeDataStoreJobs -= 1
 		end)
 
-	self.Saving:Fire(savingState)
+	self.Saving:Fire(Promise.try(function()
+		return savingState:expect()
+	end))
 
 	if savingState:getStatus() == Promise.Status.Started then
 		saveCache[self:Identify()] = savingState
@@ -486,6 +489,10 @@ end
 	@return Promise<()>
 
 	Releases the session lock to allow other servers to access the Keep.
+
+	:::info
+	DataKeep will retry failed release attempts.
+	:::
 
 	:::danger
 	This is called before internal release, but after session release, no edits can be made after this point.
@@ -506,6 +513,7 @@ function Keep.Release<T, R>(self: Types.keep<T, R>): PromiseTypes.TypedPromise<(
 	end
 
 	States.activeDataStoreJobs += 1
+	self._lastSaveAttempt = os.clock() -- reset the auto save timer
 
 	local updater = Promise.retry(function()
 		return save(self, true)
@@ -518,11 +526,12 @@ function Keep.Release<T, R>(self: Types.keep<T, R>): PromiseTypes.TypedPromise<(
 		end)
 		:finally(function()
 			self._lastSaveAttempt = os.clock() -- reset the auto save timer
-
 			States.activeDataStoreJobs -= 1
 		end)
 
-	self.Saving:Fire(updater)
+	self.Saving:Fire(Promise.try(function()
+		return updater:expect()
+	end))
 
 	return Keep._release(self, updater)
 end
@@ -552,6 +561,7 @@ function Keep.Overwrite<T, R>(self: Types.keep<T, R>, shouldKeepExistingSession:
 	local shouldReleaseSession = if shouldKeepExistingSession then false else true
 
 	States.activeDataStoreJobs += 1
+	self._lastSaveAttempt = os.clock() -- reset the auto save timer
 
 	local overwritingState = Promise.try(function()
 		return UpdateAsync(self._key, self._datastore, {
@@ -622,9 +632,7 @@ function Keep.Overwrite<T, R>(self: Types.keep<T, R>, shouldKeepExistingSession:
 		end)
 		:finally(function()
 			self._lastSaveAttempt = os.clock() -- reset the auto save timer
-
 			overwriteCache[self:Identify()] = nil
-
 			States.activeDataStoreJobs -= 1
 		end)
 
