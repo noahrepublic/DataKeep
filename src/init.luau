@@ -120,6 +120,12 @@ local mockStoreCheck = Promise.new(function(resolve)
 	-- defer in case .SetConfig() was called
 
 	task.defer(function()
+		if not RunService:IsStudio() then
+			Log.print("[DataKeep] Live server, using real store")
+			resolve(true)
+			return
+		end
+
 		if game.GameId == 0 then
 			Log.warn("[DataKeep] Local file, using mock store")
 			resolve(false)
