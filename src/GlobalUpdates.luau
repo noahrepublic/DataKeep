@@ -2,6 +2,7 @@
 
 local Promise = require(script.Parent.Parent.Promise)
 
+local Message = require(script.Parent.Utils.Message)
 local PromiseTypes = require(script.Parent.PromiseTypes)
 local Types = require(script.Parent.Types)
 
@@ -78,15 +79,15 @@ end
 ]=]
 
 function GlobalUpdates:ChangeActiveUpdate(updateId: number, globalUpdateData: Types.globalUpdateData): PromiseTypes.TypedPromise<()>
-	return Promise.new(function(resolve, reject)
+	return Promise.new(function(resolve)
 		if not updateId or not (typeof(updateId) == "number") then
-			return reject()
+			error(Message.new("updateId is not a number"))
 		end
 
 		local globalUpdates = self._updates
 
 		if globalUpdates.Id < updateId then
-			return reject()
+			error(Message.new("Invalid update id"))
 		end
 
 		for _, update in globalUpdates.Updates do
@@ -97,7 +98,7 @@ function GlobalUpdates:ChangeActiveUpdate(updateId: number, globalUpdateData: Ty
 			end
 		end
 
-		return reject()
+		error(Message.new("This global update is locked"))
 	end)
 end
 
@@ -123,15 +124,15 @@ end
 ]=]
 
 function GlobalUpdates:RemoveActiveUpdate(updateId: number): PromiseTypes.TypedPromise<()>
-	return Promise.new(function(resolve, reject)
+	return Promise.new(function(resolve)
 		if not updateId or not (typeof(updateId) == "number") then
-			return reject()
+			error(Message.new("updateId is not a number"))
 		end
 
 		local globalUpdates = self._updates
 
 		if globalUpdates.Id < updateId then
-			return reject()
+			error(Message.new("Invalid update id"))
 		end
 
 		local globalUpdateIndex = nil
@@ -144,11 +145,11 @@ function GlobalUpdates:RemoveActiveUpdate(updateId: number): PromiseTypes.TypedP
 		end
 
 		if globalUpdateIndex == nil then
-			return reject()
+			error(Message.new("Invalid update id"))
 		end
 
 		if globalUpdates.Updates[globalUpdateIndex].Locked then
-			error(`[DataKeep] Unable to remove {updateId} which is a locked update`)
+			error(`Unable to remove {updateId} which is a locked update`)
 		end
 
 		-- instantly removes internally, unlike locked updates. This is because locked updates can still be deleted mid-processing
