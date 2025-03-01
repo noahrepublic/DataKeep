@@ -748,7 +748,7 @@ function Store.PostGlobalUpdate<T, R>(self: Types.store<T, R>, key: string, upda
 			Log.print(`[DataKeep] Posted global update to {self:Identify()}/{key}`)
 		end)
 		:catch(function(err)
-			return Promise.reject(Log.error(`[DataKeep] Unable to post GlobalUpdate: {err}`, true))
+			return Promise.reject(Log.error(`[DataKeep] Unable to post global update to {self:Identify()}/{key}: {err}`, true))
 		end)
 		:finally(function()
 			States.activeDataStoreJobs -= 1
