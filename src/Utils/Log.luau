@@ -2,6 +2,8 @@
 
 local Config = require(script.Parent.Parent.Config)
 local Enums = require(script.Parent.Parent.Enums)
+local Message = require(script.Parent.Message)
+local Promise = require(script.Parent.Parent.Parent.Promise)
 local Signals = require(script.Parent.Parent.Signals)
 local States = require(script.Parent.Parent.States)
 
@@ -27,49 +29,68 @@ local function emitIssueSignal(message: string)
 end
 
 local function debugPrint(message: string, shouldEmitIssueSignal: boolean?)
+	local logLevels = { Enums.LogLevel.All }
+	local finalMessage = message
+
+	if table.find(logLevels, Config.logLevel) then
+		print("[DataKeep]", finalMessage)
+	end
+
 	if shouldEmitIssueSignal then
-		emitIssueSignal(message)
+		emitIssueSignal(finalMessage)
 	end
 
-	local allowedLogLevels = { Enums.LogLevel.All }
-
-	if table.find(allowedLogLevels, Config.logLevel) then
-		print(message)
-	end
-
-	return message
+	return Message.new(finalMessage)
 end
 
-local function debugWarn(message: string, shouldEmitIssueSignal: boolean?)
+local function debugWarn(message: string, err: string?, shouldEmitIssueSignal: boolean?)
+	local logLevels = { Enums.LogLevel.All, Enums.LogLevel.Warn }
+	local finalMessage = message
+
+	if table.find(logLevels, Config.logLevel) then
+		if err then
+			local isPromiseError = Promise.Error.is(err)
+
+			if not isPromiseError or (isPromiseError and Config.logPromiseTraceback) then
+				finalMessage ..= `\n{err}`
+			end
+		end
+
+		warn("[DataKeep]", finalMessage)
+	end
+
 	if shouldEmitIssueSignal then
-		emitIssueSignal(message)
+		emitIssueSignal(finalMessage)
 	end
 
-	local allowedLogLevels = { Enums.LogLevel.All, Enums.LogLevel.Warn }
-
-	if table.find(allowedLogLevels, Config.logLevel) then
-		warn(message)
-	end
-
-	return message
+	return Message.new(finalMessage)
 end
 
 --[[
-	Note: this function does not error()
+	Note: This function does not `error()`
 ]]
 
-local function debugError(message: string, shouldEmitIssueSignal: boolean?)
+local function debugError(message: string, err: string?, shouldEmitIssueSignal: boolean?)
+	local logLevels = { Enums.LogLevel.All, Enums.LogLevel.Warn, Enums.LogLevel.Error }
+	local finalMessage = message
+
+	if table.find(logLevels, Config.logLevel) then
+		if err then
+			local isPromiseError = Promise.Error.is(err)
+
+			if not isPromiseError or (isPromiseError and Config.logPromiseTraceback) then
+				finalMessage ..= `\n{err}`
+			end
+		end
+
+		warn("[DataKeep]", finalMessage)
+	end
+
 	if shouldEmitIssueSignal then
-		emitIssueSignal(message)
+		emitIssueSignal(finalMessage)
 	end
 
-	local allowedLogLevels = { Enums.LogLevel.All, Enums.LogLevel.Warn, Enums.LogLevel.Error }
-
-	if table.find(allowedLogLevels, Config.logLevel) then
-		warn(message)
-	end
-
-	return message
+	return Message.new(finalMessage)
 end
 
 return table.freeze({

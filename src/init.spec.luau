@@ -3,6 +3,7 @@ return function()
 
 	datakeep.SetConfig({
 		logLevel = datakeep.Enums.LogLevel.All,
+		logPromiseTraceback = true,
 	})
 
 	local dataTemplate = {

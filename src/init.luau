@@ -36,7 +36,7 @@ local DataKeep = {
 Signals.CriticalStateSignal:Connect(function(isCriticalState)
 	DataKeep.IsCriticalState = isCriticalState
 
-	Log.print(`[DataKeep] Is in critical state: {isCriticalState}`)
+	Log.print(`Is in critical state: {isCriticalState}.`)
 end)
 
 --> Types
@@ -122,13 +122,13 @@ local mockStoreCheck = Promise.new(function(resolve)
 
 	task.defer(function()
 		if not RunService:IsStudio() then
-			Log.print("[DataKeep] Live server, using real store")
+			Log.print("Live server, using real store.")
 			resolve(true)
 			return
 		end
 
 		if game.GameId == 0 then
-			Log.warn("[DataKeep] Local file, using mock store")
+			Log.warn("Local file, using mock store.")
 			resolve(false)
 			return
 		end
@@ -138,13 +138,13 @@ local mockStoreCheck = Promise.new(function(resolve)
 		end)
 
 		if success then
-			Log.print("[DataKeep] Datastores are available, using real store")
+			Log.print("Datastores are available, using real store.")
 		else
 			if message then
 				if string.find(message, "ConnectFail", 1, true) then
-					Log.warn("[DataKeep] No internet connection, using mock store")
+					Log.warn("No internet connection, using mock store.")
 				else
-					Log.warn("[DataKeep] Datastores are not available, using mock store")
+					Log.warn("Datastores are not available, using mock store.")
 				end
 			end
 		end
@@ -220,13 +220,14 @@ type config = {
 	maxIssueTime: number?,
 	maxCriticalStateTime: number?,
 	logLevel: string?,
+	logPromiseTraceback: boolean?,
 }
 
 --[=[
 	@function SetConfig
 	@within DataKeep
 
-	@param overwrites { assumeDeadLock: number?, internalKeepCleanupInterval: number?, loadKeepDataStoreFailTimeout: number?, saveInterval: number?, forceLoadMaxAttempts: number?, releaseRetryMaxAttempts: number?, criticalStateThreshold: number?, maxIssueTime: number?, maxCriticalStateTime: number?, logLevel: string? }
+	@param overwrites { assumeDeadLock: number?, internalKeepCleanupInterval: number?, loadKeepDataStoreFailTimeout: number?, saveInterval: number?, forceLoadMaxAttempts: number?, releaseRetryMaxAttempts: number?, criticalStateThreshold: number?, maxIssueTime: number?, maxCriticalStateTime: number?, logLevel: string?, logPromiseTraceback: boolean? }
 
 	Allows to overwrite default config values. Only for experienced developers.
 
@@ -263,7 +264,7 @@ function DataKeep.SetConfig(overwrites: config)
 end
 
 game:BindToClose(function()
-	Log.print("[DataKeep] Server is closing, releasing all loaded keeps")
+	Log.print("Server is closing, releasing all loaded keeps.")
 
 	States.isServiceDone = true
 	States.isUseMockStore = true -- mock any new stores
@@ -283,7 +284,7 @@ game:BindToClose(function()
 		task.wait()
 	end
 
-	Log.print("[DataKeep] Released all loaded keeps")
+	Log.print("Released all loaded keeps.")
 end)
 
 local function runAutoSave(deltaTime: number)
@@ -310,7 +311,7 @@ local function runAutoSave(deltaTime: number)
 		end
 
 		keep:Save():timeout(Config.saveInterval):catch(function()
-			Log.warn(`[DataKeep] Auto save failed for {keep:Identify()}.`)
+			Log.warn(`Auto save failed for {keep:Identify()}.`)
 		end)
 	end
 end
@@ -333,7 +334,7 @@ local function runKeepCleanup(deltaTime: number)
 		end
 
 		RemoveKeepInternally(keep :: any) -- Internal error: Code is too complex to typecheck! Consider adding type annotations around this
-		Log.print(`[DataKeep] Removed {keep:Identify()} internally`)
+		Log.print(`Removed {keep:Identify()} internally.`)
 	end
 end
 
