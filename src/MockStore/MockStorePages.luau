@@ -30,7 +30,7 @@ end
 
 function MockStorePages:AdvanceToNextPageAsync()
 	if self.IsFinished then
-		Log.warn("[DataKeep MockStore] Cannot advance to next page, already finished")
+		Log.warn("[MockStore] Cannot advance to next page, already finished.")
 		return
 	end
 
