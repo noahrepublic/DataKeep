@@ -27,8 +27,8 @@ local DataKeep = {
 
 	Wrapper = Wrapper,
 
-	IssueSignal = Signals.IssueSignal, -- fires when we enter critical state
-	CriticalStateSignal = Signals.CriticalStateSignal, -- fires when we have an issue (issue logging)
+	IssueSignal = Signals.IssueSignal, -- fires when we have an issue (issue logging)
+	CriticalStateSignal = Signals.CriticalStateSignal, -- fires when we enter / exit critical state
 
 	IsCriticalState = States.isCriticalState,
 }
