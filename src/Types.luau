@@ -193,21 +193,21 @@ export type keepBase<T, R> = keepStruct<T> & {
 	_released: boolean,
 	_destroyed: boolean,
 
-	IsActive: (self: keep<T, R>) -> boolean,
-	Identify: (self: keep<T, R>) -> string,
-	GetKeyInfo: (self: keep<T, R>) -> DataStoreKeyInfo,
+	IsActive: (self: keepBase<T, R>) -> boolean,
+	Identify: (self: keepBase<T, R>) -> string,
+	GetKeyInfo: (self: keepBase<T, R>) -> DataStoreKeyInfo,
 
-	Destroy: (self: keep<T, R>) -> (),
+	Destroy: (self: keepBase<T, R>) -> (),
 
-	Reconcile: (self: keep<T, R>) -> (),
-	AddUserId: (self: keep<T, R>, userId: number) -> (),
-	RemoveUserId: (self: keep<T, R>, userId: number) -> (),
+	Reconcile: (self: keepBase<T, R>) -> (),
+	AddUserId: (self: keepBase<T, R>, userId: number) -> (),
+	RemoveUserId: (self: keepBase<T, R>, userId: number) -> (),
 
-	GetVersions: (self: keep<T, R>, minDate: number?, maxDate: number?) -> PromiseTypes.TypedPromise<iterator>,
-	SetVersion: (self: keep<T, R>, version: string, migrateProcessor: ((versionKeep: keep<T, R>) -> keep<T, R>)?) -> PromiseTypes.TypedPromise<keep<T, R>>,
+	GetVersions: (self: keepBase<T, R>, minDate: number?, maxDate: number?) -> PromiseTypes.TypedPromise<iterator>,
+	SetVersion: (self: keepBase<T, R>, version: string, migrateProcessor: ((versionKeep: keepBase<T, R>) -> keepBase<T, R>)?) -> PromiseTypes.TypedPromise<keepBase<T, R>>,
 
-	GetActiveGlobalUpdates: (self: keep<T, R>) -> { globalUpdate },
-	GetLockedGlobalUpdates: (self: keep<T, R>) -> { globalUpdate },
+	GetActiveGlobalUpdates: (self: keepBase<T, R>) -> { globalUpdate },
+	GetLockedGlobalUpdates: (self: keepBase<T, R>) -> { globalUpdate },
 } & R
 
 --[=[
