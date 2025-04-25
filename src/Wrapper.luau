@@ -4,12 +4,10 @@ local function getOrCreateListener(self, dataPath: string)
 	if not self._listeners then
 		self._listeners = {}
 
-		self.Releasing:Connect(function(releaseState)
-			releaseState:andThen(function()
-				for _, signal in self._listeners do
-					signal:Destroy()
-				end
-			end)
+		self.Released:Connect(function()
+			for _, signal in self._listeners do
+				signal:Destroy()
+			end
 		end)
 	end
 

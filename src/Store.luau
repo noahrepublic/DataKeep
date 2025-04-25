@@ -579,7 +579,7 @@ end
 	Removes the ```key``` from the DataStore.
 
 	:::info
-	Calling ```:RemoveKeep()``` on the loaded Keep will release it (.Releasing signal will be fired) before removing.
+	Calling ```:RemoveKeep()``` on the loaded Keep will release it before removing.
 	:::
 
 	:::warning
@@ -596,7 +596,7 @@ function Store.RemoveKeep<T, R>(self: Types.store<T, R>, key: string): PromiseTy
 		local keep = States.loadedKeeps[id]
 
 		if keep then
-			-- no saving, but fire .Releasing signal
+			-- no saving, but fire .Released signal
 			Keep._release(keep :: any, Promise.resolve()):await()
 		end
 

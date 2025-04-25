@@ -211,7 +211,7 @@ export type keepBase<T, R> = keepStruct<T> & {
 } & R
 
 --[=[
-	@type Keep { Data: { [string]: any }, MetaData: MetaData, GlobalUpdates: GlobalUpdates, UserIds: { number }, OnGlobalUpdate: Signal<GlobalUpdateData, number>, Releasing: Signal<Promise<()>>, Saving: Signal<Promise<()>>, Overwritten: Signal<boolean> }
+	@type Keep { Data: { [string]: any }, MetaData: MetaData, GlobalUpdates: GlobalUpdates, UserIds: { number }, OnGlobalUpdate: Signal<GlobalUpdateData, number>, Released: Signal, ReleaseFailed: Signal, Saved: Signal, SaveFailed: Signal, Overwritten: Signal<boolean> }
 	@within Keep
 ]=]
 
@@ -221,8 +221,10 @@ export type keep<T, R> = keepBase<T, R> & {
 	_pending_global_locks: { number },
 	_pending_global_lock_removes: { number },
 
-	Saving: Signal.ScriptSignal<PromiseTypes.TypedPromise<()>>,
-	Releasing: Signal.ScriptSignal<PromiseTypes.TypedPromise<()>>,
+	Released: Signal.ScriptSignal<>,
+	ReleaseFailed: Signal.ScriptSignal<>,
+	Saved: Signal.ScriptSignal<>,
+	SaveFailed: Signal.ScriptSignal<>,
 	Overwritten: Signal.ScriptSignal<boolean>,
 	OnGlobalUpdate: Signal.ScriptSignal<globalUpdateData, number>,
 
