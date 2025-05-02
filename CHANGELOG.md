@@ -1,5 +1,21 @@
 # DataKeep
 
+## [Unreleased](https://github.com/noahrepublic/DataKeep/compare/v5.0.0...HEAD)
+
+- Fixed auto save
+- Live check should only be performed in studio
+- Added docs info about `store:LoadKeep()` and `keep:Release()` retrying
+- Improved logging, added `logPromiseTraceback` to config (default: `false`)
+- Exported `ViewKeep` type
+- Fixed some types
+- Added `keep.SaveFailed` and `keep.ReleaseFailed` signals
+
+### Breaking Changes
+
+- Removed promises from `keep.Saving` and `keep.Releasing` signals
+- `keep.Saving` -> `keep.Saved`
+- `keep.Releasing` -> `keep.Released`
+
 ## [version 5.0.0](https://github.com/noahrepublic/DataKeep/releases/tag/v5.0.0): 12/09/2024
 
 - Add `DataKeep.Enums`
@@ -52,9 +68,9 @@
 
 ## [version 3.1.2](https://github.com/noahrepublic/DataKeep/releases/tag/v3.1.2): 05/28/2024
 
-- [Fix a few things](https://github.com/noahrepublic/DataKeep/pull/20) by @FireBird702
-- Fix for [#22](https://github.com/noahrepublic/DataKeep/pull/23) by @FireBird702
-- [`:SetAsync()` in mock store should deep copy value](https://github.com/noahrepublic/DataKeep/pull/26) by @FireBird702
+- [Fix a few things](https://github.com/noahrepublic/DataKeep/pull/20)
+- Fix for [#22](https://github.com/noahrepublic/DataKeep/pull/23)
+- [`:SetAsync()` in mock store should deep copy value](https://github.com/noahrepublic/DataKeep/pull/26)
 
 ## [version 3.1.1](https://github.com/noahrepublic/DataKeep/releases/tag/v3.1.1): 03/17/2024
 
