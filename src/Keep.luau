@@ -411,7 +411,7 @@ local function save<T, R>(keep: Types.keep<T, R>, isReleasing: boolean): Promise
 		end)
 		:catch(function(err)
 			keep.SaveFailed:Fire()
-			return err
+			return Promise.reject(err)
 		end)
 end
 
@@ -419,7 +419,7 @@ function Keep._isThisSession(session: Types.session)
 	return session.PlaceId == game.PlaceId and session.JobId == game.JobId
 end
 
-function Keep._release<T, R>(self: Types.keep<T, R>, updater: PromiseTypes.TypedPromise<()>): PromiseTypes.TypedPromise<()>
+function Keep._release<T, R>(self: Types.keep<T, R>, updater: PromiseTypes.TypedPromise<any?>): PromiseTypes.TypedPromise<()>
 	if releaseCache[self:Identify()] then -- already releasing
 		return releaseCache[self:Identify()]
 	end
@@ -432,29 +432,32 @@ function Keep._release<T, R>(self: Types.keep<T, R>, updater: PromiseTypes.Typed
 
 	self._releasing = true
 
-	updater
-		:tap(function()
+	local promise = Promise.try(function()
+		local success, resultOrError = updater:await()
+
+		if success then
 			self.Released:Fire()
-		end)
-		:catch(function(err)
+		else
 			self.ReleaseFailed:Fire()
-			return err
-		end)
-		:finally(function()
-			-- mark the keep as released
+		end
 
-			States.cachedKeepPromises[self:Identify()] = nil
-			self._released = true
+		-- mark the keep as released
+		States.cachedKeepPromises[self:Identify()] = nil
+		self._released = true
 
-			releaseCache[self:Identify()] = nil
-			States.activeDataStoreJobs -= 1
-		end)
+		releaseCache[self:Identify()] = nil
+		States.activeDataStoreJobs -= 1
 
-	if updater:getStatus() == Promise.Status.Started then
-		releaseCache[self:Identify()] = updater
+		if not success then
+			return Promise.reject(resultOrError)
+		end
+	end)
+
+	if promise:getStatus() == Promise.Status.Started then
+		releaseCache[self:Identify()] = promise
 	end
 
-	return updater
+	return promise
 end
 
 --> Public Methods
@@ -545,12 +548,7 @@ function Keep.Release<T, R>(self: Types.keep<T, R>): PromiseTypes.TypedPromise<(
 	States.activeDataStoreJobs += 1
 	self._lastSaveAttempt = os.clock() -- reset the auto save timer
 
-	local updater = Keep._release(
-		self,
-		Promise.retry(function()
-			return save(self, true)
-		end, Config.releaseRetryMaxAttempts)
-	)
+	local updater = Keep._release(self, Promise.retry(save, Config.releaseRetryMaxAttempts, self, true))
 		:tap(function()
 			Log.print(`Released {self:Identify()}.`)
 		end)
