@@ -126,15 +126,22 @@ local function onPlayerAdded(player: Player)
 		keep:Reconcile()
 		keep:AddUserId(player.UserId) -- help with GDPR requests
 
-		keep.Released:Connect(function() -- don't have to clean up, it cleans up internally
+		keep.Released:Connect(function()
 			print(`{player.Name}'s Keep has been released!`)
 
-			player:Kick("Session released!")
 			loadedKeeps[player] = nil
+			player:Kick("Session released!")
+		end)
+
+		keep.ReleaseFailed:Connect(function()
+			print(`Failed to release {player.Name}'s Keep!`)
+
+			loadedKeeps[player] = nil
+			player:Kick("Failed to release session!")
 		end)
 
 		if not player:IsDescendantOf(Players) then
-			keep:Release()
+			keep:Release():catch(function() end)
 			return
 		end
 
@@ -164,6 +171,6 @@ Players.PlayerRemoving:Connect(function(player)
 		return
 	end
 
-	keep:Release()
+	keep:Release():catch(function() end)
 end)
 ```
