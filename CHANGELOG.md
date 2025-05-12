@@ -9,6 +9,7 @@
 - Exported `ViewKeep` type
 - Fixed some types
 - Added `keep.SaveFailed` and `keep.ReleaseFailed` signals
+- Fixed `DataKeep.SetConfig()` not accepting `false` values
 
 ### Breaking Changes
 

@@ -245,7 +245,7 @@ type config = {
 
 function DataKeep.SetConfig(overwrites: config)
 	for key, value in overwrites do
-		if not Config[key] then
+		if Config[key] == nil then
 			continue
 		end
 
