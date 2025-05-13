@@ -4,7 +4,7 @@
 
 local process = require("@lune/process")
 
-local installResult = process.spawn("lune", { "run", "lune/install-packages.luau" }, {
+local installResult = process.exec("lune", { "run", "lune/install-packages.luau" }, {
 	cwd = process.cwd,
 	stdio = "inherit",
 })
@@ -13,7 +13,7 @@ if not installResult.ok then
 	process.exit(1)
 end
 
-local buildResult = process.spawn("rojo", { "build", "-o", "unit-tests.rbxl", "test-place.project.json" }, {
+local buildResult = process.exec("rojo", { "build", "-o", "unit-tests.rbxl", "test-place.project.json" }, {
 	stdio = "inherit",
 })
 
@@ -21,7 +21,7 @@ if not buildResult.ok then
 	process.exit(1)
 end
 
-local runResult = process.spawn("run-in-roblox", { "--script", "ci/unit.server.luau", "--place", "unit-tests.rbxl" }, {
+local runResult = process.exec("run-in-roblox", { "--script", "ci/unit.server.luau", "--place", "unit-tests.rbxl" }, {
 	stdio = "forward",
 })
 
