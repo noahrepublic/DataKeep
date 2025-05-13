@@ -1,8 +1,7 @@
 --!strict
 
-local Signal = require(script.Parent.Parent.Signal)
-
 local PromiseTypes = require(script.Parent.PromiseTypes)
+local Signal = require(script.Parent.Parent.Signal)
 
 --[=[
 	@type LoadMethod { ForceLoad: string, Steal: string, Cancel: string }
@@ -112,7 +111,7 @@ type storeBase<T, R> = {
 
 	LoadKeep: (self: storeBase<T, R>, key: string, unreleasedHandler: unreleasedHandler?) -> PromiseTypes.TypedPromise<keep<T, R>>,
 	ViewKeep: (self: storeBase<T, R>, key: string, version: string?) -> PromiseTypes.TypedPromise<viewOnlyKeep<T, R>>,
-	RemoveKeep: (self: storeBase<T, R>, key: string) -> PromiseTypes.TypedPromise<any, DataStoreKeyInfo>,
+	RemoveKeep: (self: storeBase<T, R>, key: string) -> PromiseTypes.TypedPromise<keepStruct<T>, DataStoreKeyInfo>,
 
 	PreLoad: (self: storeBase<T, R>, callback: (data: data<T>) -> data<T>) -> (),
 	PreSave: (self: storeBase<T, R>, callback: (data: data<T>) -> data<T>) -> (),
@@ -151,11 +150,11 @@ export type session = {
 }
 
 --[=[
-	@type MetaData { ActiveSession: Session?, ForceLoad: Session?, LastUpdate: number, Created: number, LoadCount: number }
+	@type Metadata { ActiveSession: Session?, ForceLoad: Session?, LastUpdate: number, Created: number, LoadCount: number }
 	@within Keep
 ]=]
 
-export type metaData = {
+export type metadata = {
 	ActiveSession: session?,
 
 	ForceLoad: session?, -- the session stealing the session lock, if any
@@ -173,9 +172,7 @@ export type data<T> = dataTemplate<T>
 
 export type keepStruct<T> = {
 	Data: data<T>,
-	MetaData: metaData,
 	GlobalUpdates: globalUpdates,
-	UserIds: userIds,
 }
 
 export type keepBase<T, R> = keepStruct<T> & {
@@ -192,6 +189,9 @@ export type keepBase<T, R> = keepStruct<T> & {
 	_releasing: boolean,
 	_released: boolean,
 	_destroyed: boolean,
+
+	Metadata: metadata,
+	UserIds: userIds,
 
 	IsActive: (self: keepBase<T, R>) -> boolean,
 	Identify: (self: keepBase<T, R>) -> string,
@@ -211,7 +211,7 @@ export type keepBase<T, R> = keepStruct<T> & {
 } & R
 
 --[=[
-	@type Keep { Data: { [string]: any }, MetaData: MetaData, GlobalUpdates: GlobalUpdates, UserIds: { number }, OnGlobalUpdate: Signal<GlobalUpdateData, number>, Released: Signal, ReleaseFailed: Signal, Saved: Signal, SaveFailed: Signal, Overwritten: Signal<boolean> }
+	@type Keep { Data: { [string]: any }, Metadata: Metadata, GlobalUpdates: GlobalUpdates, UserIds: { number }, OnGlobalUpdate: Signal<GlobalUpdateData, number>, Released: Signal, ReleaseFailed: Signal, Saved: Signal, SaveFailed: Signal, Overwritten: Signal<boolean> }
 	@within Keep
 ]=]
 

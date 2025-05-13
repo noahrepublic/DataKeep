@@ -21,9 +21,8 @@ local function getOrCreateListener(self, dataPath: string)
 end
 
 return {
-	onDataChange = function(self, dataPath: string, callback)
+	onDataChange = function(self, dataPath: string, callback: (updatedData: any) -> ())
 		local listener = getOrCreateListener(self, dataPath)
-
 		return if listener then listener:Connect(callback) else nil
 	end,
 

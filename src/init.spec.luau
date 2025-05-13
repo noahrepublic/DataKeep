@@ -156,7 +156,7 @@ return function()
 			local thisSession = { PlaceId = game.PlaceId, JobId = game.JobId }
 
 			local keep = store:LoadKeep("Data"):expect()
-			expect(keep.MetaData.ActiveSession == thisSession).to.be.ok()
+			expect(keep.Metadata.ActiveSession == thisSession).to.be.ok()
 		end)
 
 		it("should be active", function()
@@ -214,8 +214,8 @@ return function()
 
 			keep:Release():await()
 
-			local testDataStoreRaw = store._datastore:GetAsync("Data")
-			expect(testDataStoreRaw.MetaData.ActiveSession).to.equal(nil)
+			local _, datastoreKeyInfo = store._datastore:GetAsync("Data")
+			expect(datastoreKeyInfo:GetMetadata().ActiveSession).to.equal(nil)
 		end)
 	end)
 

@@ -2,15 +2,14 @@
 
 --> Includes
 
-local Promise = require(script.Parent.Parent.Promise)
-local Signal = require(script.Parent.Parent.Signal)
-
 local Config = require(script.Parent.Config)
 local DeepCopy = require(script.Parent.Utils.DeepCopy)
 local DefaultData = require(script.Parent.DefaultData)
 local Log = require(script.Parent.Utils.Log)
 local Message = require(script.Parent.Utils.Message)
+local Promise = require(script.Parent.Parent.Promise)
 local PromiseTypes = require(script.Parent.PromiseTypes)
+local Signal = require(script.Parent.Parent.Signal)
 local States = require(script.Parent.States)
 local Types = require(script.Parent.Types)
 local UpdateAsync = require(script.Parent.Utils.UpdateAsync)
@@ -130,12 +129,15 @@ local overwriteCache = {} -- used to cache in progress overwrite promises
 
 --> Constructor
 
-function Keep.new<T, R>(structure: Types.keepStruct<T>, dataTemplate: Types.dataTemplate<T>): Types.keep<T, R>
+function Keep.new<T, R>(structure: Types.keepStruct<T>, datastoreKeyInfo: DataStoreKeyInfo?, dataTemplate: Types.dataTemplate<T>): Types.keep<T, R>
+	local metadata: Types.metadata = if datastoreKeyInfo then datastoreKeyInfo:GetMetadata() else {} :: any
+	local userIds: Types.userIds = if datastoreKeyInfo then datastoreKeyInfo:GetUserIds() else {}
+
 	local self = {
 		Data = structure.Data,
-		MetaData = structure.MetaData,
+		Metadata = metadata,
 		GlobalUpdates = structure.GlobalUpdates,
-		UserIds = structure.UserIds or DeepCopy(DefaultData.UserIds),
+		UserIds = userIds,
 
 		_pending_global_lock_removes = {},
 		_pending_global_locks = {},
@@ -299,13 +301,13 @@ local function save<T, R>(keep: Types.keep<T, R>, isReleasing: boolean): Promise
 
 	return Promise.try(function()
 		return UpdateAsync(keep._key, keep._datastore, {
-			edit = function(latestData)
-				isOverwritten = latestData.MetaData.IsOverwriting == true
-				isReleasingOnOverwrite = latestData.MetaData.ReleaseSessionOnOverwrite == true
+			edit = function(latest)
+				isOverwritten = latest.metadata.IsOverwriting == true
+				isReleasingOnOverwrite = latest.metadata.ReleaseSessionOnOverwrite == true
 
 				local isForceLoadRequested = false
 
-				keep.MetaData.ActiveSession = latestData.MetaData.ActiveSession
+				keep.Metadata.ActiveSession = latest.metadata.ActiveSession
 
 				if not keep:IsActive() then
 					-- session locked on a different server, data will not be saved
@@ -315,7 +317,7 @@ local function save<T, R>(keep: Types.keep<T, R>, isReleasing: boolean): Promise
 					return true -- cancel :UpdateAsync() operation
 				end
 
-				if latestData.MetaData.ForceLoad and not Keep._isThisSession(latestData.MetaData.ForceLoad) then
+				if latest.metadata.ForceLoad and not Keep._isThisSession(latest.metadata.ForceLoad) then
 					-- release session on this server on remote ForceLoad request
 
 					if keep:IsActive() then
@@ -331,20 +333,20 @@ local function save<T, R>(keep: Types.keep<T, R>, isReleasing: boolean): Promise
 
 				-- process global updates only if this server has the session lock and is not releasing
 				if keep:IsActive() and not isReleasing then
-					if typeof(latestData.GlobalUpdates) == "table" then
-						processGlobalUpdates(keep, latestData)
+					if typeof(latest.data.GlobalUpdates) == "table" then
+						processGlobalUpdates(keep, latest.data)
 					end
 				end
 
 				if keep:IsActive() then
-					local isOverwriting = latestData.MetaData.IsOverwriting
-					local shouldReleaseSessionOnOverwrite = latestData.MetaData.ReleaseSessionOnOverwrite
+					local isOverwriting = latest.metadata.IsOverwriting
+					local shouldReleaseSessionOnOverwrite = latest.metadata.ReleaseSessionOnOverwrite
 
 					if not isOverwriting then
 						local valid, validationErr = keep._store.validate(keep.Data) -- validate data before saving
 
 						if valid then
-							latestData.Data = keep.Data
+							latest.data.Data = keep.Data
 
 							if keep._store._preSave then
 								local processedData = keep._store._preSave(DeepCopy(keep.Data))
@@ -353,10 +355,10 @@ local function save<T, R>(keep: Types.keep<T, R>, isReleasing: boolean): Promise
 									error(Message.new(":PreSave() must return a table"))
 								end
 
-								latestData.Data = processedData
+								latest.data.Data = processedData
 							end
 
-							latestData.UserIds = keep.UserIds
+							latest.userIds = keep.UserIds
 						else
 							local errString = `Data has not passed validation`
 
@@ -369,29 +371,29 @@ local function save<T, R>(keep: Types.keep<T, R>, isReleasing: boolean): Promise
 					end
 
 					if isReleasing or (isOverwriting and shouldReleaseSessionOnOverwrite) then
-						latestData.MetaData.ActiveSession = nil -- clear active session on this server
+						latest.metadata.ActiveSession = nil -- clear active session on this server
 
 						if isOverwriting then
-							latestData.MetaData.IsOverwriting = nil
-							latestData.MetaData.ReleaseSessionOnOverwrite = nil
+							latest.metadata.IsOverwriting = nil
+							latest.metadata.ReleaseSessionOnOverwrite = nil
 						end
 
-						if latestData.MetaData.ForceLoad or isOverwriting then
+						if latest.metadata.ForceLoad or isOverwriting then
 							-- mark server as ready for cleanup
 							Keep._release(keep, Promise.resolve())
 						end
 					elseif isOverwriting and not shouldReleaseSessionOnOverwrite then
 						-- keep active session on this server
-						latestData.MetaData.IsOverwriting = nil
-						latestData.MetaData.ReleaseSessionOnOverwrite = nil
+						latest.metadata.IsOverwriting = nil
+						latest.metadata.ReleaseSessionOnOverwrite = nil
 
-						keep.Data = latestData.Data
-						keep.MetaData = latestData.MetaData
-						keep.GlobalUpdates = latestData.GlobalUpdates
-						keep.UserIds = latestData.UserIds
+						keep.Data = latest.data.Data
+						keep.Metadata = latest.metadata
+						keep.GlobalUpdates = latest.data.GlobalUpdates
+						keep.UserIds = latest.userIds
 					end
 
-					latestData.MetaData.LastUpdate = os.time()
+					latest.metadata.LastUpdate = os.time()
 				end
 
 				return false
@@ -470,7 +472,7 @@ end
 
 	Performs a manual save.
 
-	:::warning
+	:::info
 	Calling ```:Save()``` manually will reset the auto save timer on the Keep.
 	:::
 
@@ -592,24 +594,24 @@ function Keep.Overwrite<T, R>(self: Types.keep<T, R>, shouldKeepExistingSession:
 
 	local overwritingState = Promise.try(function()
 		return UpdateAsync(self._key, self._datastore, {
-			onMissing = function(latestData)
-				latestData.Data = DeepCopy(self._dataTemplate)
-				latestData.MetaData = DeepCopy(DefaultData.MetaData)
-				latestData.UserIds = DeepCopy(DefaultData.UserIds)
+			onMissing = function(latest)
+				latest.data.Data = DeepCopy(self._dataTemplate)
+				latest.metadata = DeepCopy(DefaultData.Metadata)
+				latest.userIds = DeepCopy(DefaultData.UserIds)
 
-				latestData.MetaData.ActiveSession = nil
-				latestData.MetaData.Created = os.time()
+				latest.metadata.ActiveSession = nil
+				latest.metadata.Created = os.time()
 
-				self.MetaData.Created = latestData.MetaData.Created
+				self.Metadata.Created = latest.metadata.Created
 
 				return false
 			end,
-			edit = function(latestData)
-				if typeof(latestData.Data) == "table" and typeof(latestData.MetaData) == "table" then -- full profile
+			edit = function(latest)
+				if typeof(latest.data.Data) == "table" and typeof(latest.metadata) == "table" then -- full profile
 					local valid, validationErr = self._store.validate(self.Data) -- validate data before saving
 
 					if valid then
-						latestData.Data = self.Data
+						latest.data.Data = self.Data
 
 						if self._store._preSave then
 							local processedData = self._store._preSave(DeepCopy(self.Data))
@@ -618,10 +620,10 @@ function Keep.Overwrite<T, R>(self: Types.keep<T, R>, shouldKeepExistingSession:
 								error(Message.new(":PreSave() must return a table"))
 							end
 
-							latestData.Data = processedData
+							latest.data.Data = processedData
 						end
 
-						latestData.UserIds = self.UserIds
+						latest.userIds = self.UserIds
 					else
 						local errString = `Data has not passed validation`
 
@@ -633,16 +635,16 @@ function Keep.Overwrite<T, R>(self: Types.keep<T, R>, shouldKeepExistingSession:
 					end
 				end
 
-				if latestData.MetaData.ActiveSession then
-					latestData.MetaData.IsOverwriting = true -- tell the other server to release session
-					latestData.MetaData.ReleaseSessionOnOverwrite = shouldReleaseSession
+				if latest.metadata.ActiveSession then
+					latest.metadata.IsOverwriting = true -- tell the other server to release session
+					latest.metadata.ReleaseSessionOnOverwrite = shouldReleaseSession
 				end
 
-				latestData.MetaData.LoadCount += 1
-				latestData.MetaData.LastUpdate = os.time()
+				latest.metadata.LoadCount += 1
+				latest.metadata.LastUpdate = os.time()
 
-				self.MetaData.LoadCount = latestData.MetaData.LoadCount
-				self.MetaData.LastUpdate = latestData.MetaData.LastUpdate
+				self.Metadata.LoadCount = latest.metadata.LoadCount
+				self.Metadata.LastUpdate = latest.metadata.LastUpdate
 
 				return false
 			end,
@@ -707,8 +709,8 @@ end
 	Returns ```true``` if the Keep is active in the session (not locked by another server).
 ]=]
 
-function Keep.IsActive<T, R>(self: Types.keep<T, R>): boolean
-	local activeSession = self.MetaData.ActiveSession
+function Keep.IsActive<T, R>(self: Types.keep<T, R>)
+	local activeSession = self.Metadata.ActiveSession
 
 	if not activeSession then
 		return false
@@ -726,7 +728,7 @@ end
 	Returns the string identifier for the Keep.
 ]=]
 
-function Keep.Identify<T, R>(self: Types.keep<T, R>): string
+function Keep.Identify<T, R>(self: Types.keep<T, R>)
 	return `{self._store:Identify()}/{self._key}`
 end
 
@@ -739,7 +741,7 @@ end
 	Returns the ```DataStoreKeyInfo``` for the Keep.
 ]=]
 
-function Keep.GetKeyInfo<T, R>(self: Types.keep<T, R>): DataStoreKeyInfo
+function Keep.GetKeyInfo<T, R>(self: Types.keep<T, R>)
 	return self._keyInfo
 end
 
@@ -747,7 +749,7 @@ end
 	@method Reconcile
 	@within Keep
 
-	Fills in any missing data in the Keep using the data template.
+	Fills in any missing data and metadata in the Keep using the data and metadata template.
 ]=]
 
 function Keep.Reconcile<T, R>(self: Types.keep<T, R>)
@@ -768,7 +770,7 @@ function Keep.Reconcile<T, R>(self: Types.keep<T, R>)
 	end
 
 	self.Data = reconcileData(self.Data, DeepCopy(self._dataTemplate))
-	self.MetaData = reconcileData(self.MetaData, DeepCopy(DefaultData.MetaData))
+	self.Metadata = reconcileData(self.Metadata, DeepCopy(DefaultData.Metadata))
 end
 
 --[=[
@@ -1017,7 +1019,7 @@ function Keep.SetVersion<T, R>(self: Types.keep<T, R>, version: string, migrateP
 
 		local oldKeep = {
 			Data = DeepCopy(self.Data),
-			MetaData = DeepCopy(self.MetaData),
+			Metadata = DeepCopy(self.Metadata),
 			GlobalUpdates = DeepCopy(self.GlobalUpdates),
 			UserIds = DeepCopy(self.UserIds),
 		}
@@ -1031,7 +1033,7 @@ function Keep.SetVersion<T, R>(self: Types.keep<T, R>, version: string, migrateP
 		end
 
 		self.Data = DeepCopy(versionKeep.Data)
-		self.MetaData = DeepCopy(versionKeep.MetaData)
+		self.Metadata = DeepCopy(versionKeep.Metadata)
 		self.GlobalUpdates = DeepCopy(versionKeep.GlobalUpdates)
 		self.UserIds = DeepCopy(versionKeep.UserIds)
 

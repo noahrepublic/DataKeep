@@ -7,11 +7,10 @@ local RunService = game:GetService("RunService")
 
 --> Includes
 
-local Promise = require(script.Parent.Promise)
-
 local Config = require(script.Config)
 local Enums = require(script.Enums)
 local Log = require(script.Utils.Log)
+local Promise = require(script.Parent.Promise)
 local PromiseTypes = require(script.PromiseTypes)
 local RemoveKeepInternally = require(script.Utils.RemoveKeepInternally)
 local Signals = require(script.Signals)
