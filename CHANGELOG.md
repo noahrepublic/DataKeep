@@ -1,6 +1,6 @@
 # DataKeep
 
-## [Unreleased](https://github.com/noahrepublic/DataKeep/compare/v5.0.0...HEAD)
+## [version 6.0.0](https://github.com/noahrepublic/DataKeep/releases/tag/v6.0.0): 14/05/2025
 
 - Fixed auto save
 - Live check should only be performed in studio
@@ -10,10 +10,12 @@
 - Fixed some types
 - Added `keep.SaveFailed` and `keep.ReleaseFailed` signals
 - Fixed `DataKeep.SetConfig()` not accepting `false` values
+- `Metadata` and `UserIds` are now stored inside metadata
 
 ### Breaking Changes
 
 - Removed promises from `keep.Saving` and `keep.Releasing` signals
+- `keep.MetaData` -> `keep.Metadata`
 - `keep.Saving` -> `keep.Saved`
 - `keep.Releasing` -> `keep.Released`
 
