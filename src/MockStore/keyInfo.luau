@@ -3,30 +3,30 @@
 local DeepCopy = require(script.Parent.Parent.Utils.DeepCopy)
 local Types = require(script.Parent.Parent.Types)
 
-local datastoreKeyInfo = {}
-datastoreKeyInfo.__index = datastoreKeyInfo
-
-export type datastoreKeyInfo = {
+export type keyInfo = {
 	Version: string,
 	CreatedTime: number,
 	UpdatedTime: number,
 	Deleted: boolean,
 
 	_metadata: Types.metadata,
-	_userIds: { number },
+	_userIds: Types.userIds,
 
-	GetMetadata: (self: datastoreKeyInfo) -> Types.metadata,
-	GetUserIds: (self: datastoreKeyInfo) -> { number },
+	GetMetadata: (self: keyInfo) -> Types.metadata,
+	GetUserIds: (self: keyInfo) -> Types.userIds,
 }
 
 export type dataVersions = {
 	{
-		datastoreKeyInfo: datastoreKeyInfo,
+		keyInfo: keyInfo,
 		data: any,
 	}
 }
 
-function datastoreKeyInfo.new(store, key: string, data: any, userIds: Types.userIds?, metadata: Types.metadata?): datastoreKeyInfo
+local keyInfo = {}
+keyInfo.__index = keyInfo
+
+function keyInfo.new(store, key: string, data: any, userIds: Types.userIds?, metadata: Types.metadata?): keyInfo
 	if store._dataVersions[key] == nil then
 		store._dataVersions[key] = {}
 	end
@@ -44,20 +44,20 @@ function datastoreKeyInfo.new(store, key: string, data: any, userIds: Types.user
 	}
 
 	table.insert(dataVersions, {
-		datastoreKeyInfo = versionData :: any,
+		keyInfo = versionData :: any,
 		data = DeepCopy(data),
 	})
 
 	local self = versionData
-	return setmetatable(self, datastoreKeyInfo) :: any
+	return setmetatable(self, keyInfo) :: any
 end
 
-function datastoreKeyInfo.GetMetadata(self: datastoreKeyInfo)
+function keyInfo.GetMetadata(self: keyInfo)
 	return DeepCopy(self._metadata)
 end
 
-function datastoreKeyInfo.GetUserIds(self: datastoreKeyInfo)
+function keyInfo.GetUserIds(self: keyInfo)
 	return DeepCopy(self._userIds)
 end
 
-return datastoreKeyInfo
+return keyInfo

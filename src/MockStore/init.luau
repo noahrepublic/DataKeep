@@ -40,7 +40,7 @@ end
 
 function MockStore:GetAsync(key: string): (any, DataStoreKeyInfo?)
 	local dataVersions: keyInfo.dataVersions? = if self._dataVersions then self._dataVersions[key] else nil
-	return DeepCopy(self._data[key]), if dataVersions then dataVersions[#dataVersions].datastoreKeyInfo else nil :: any
+	return DeepCopy(self._data[key]), if dataVersions then dataVersions[#dataVersions].keyInfo else nil :: any
 end
 
 function MockStore:SetAsync(key: string, value: any, userIds: Types.userIds?, metadata: Types.metadata?)
@@ -92,13 +92,13 @@ function MockStore:ListVersionsAsync(key: string, sortDirection: Enum.SortDirect
 	local filteredVersions = {}
 
 	for _, versionData in versions do
-		local createdTime = versionData.datastoreKeyInfo.CreatedTime
+		local createdTime = versionData.keyInfo.CreatedTime
 
 		minDate = minDate or 0
 		maxDate = maxDate or math.huge
 
 		if createdTime >= minDate and createdTime <= maxDate then
-			table.insert(filteredVersions, 1, DeepCopy(versionData.datastoreKeyInfo))
+			table.insert(filteredVersions, 1, DeepCopy(versionData.keyInfo))
 		end
 	end
 
@@ -117,7 +117,7 @@ function MockStore:GetVersionAsync(key: string, version: string)
 	end
 
 	for _, versionData in versions do
-		if versionData.datastoreKeyInfo.Version == version then
+		if versionData.keyInfo.Version == version then
 			return DeepCopy(versionData.data)
 		end
 	end
