@@ -1,23 +1,22 @@
 # DataKeep
 
-## [version 6.0.0](https://github.com/noahrepublic/DataKeep/releases/tag/v6.0.0): 14/05/2025
+## [version 6.0.0](https://github.com/noahrepublic/DataKeep/releases/tag/v6.0.0): 17/05/2025
 
-- Fixed auto save
+- Fixed auto save ignoring timer after failed save attempt
 - Live check should only be performed in studio
 - Added docs info about `store:LoadKeep()` and `keep:Release()` retrying
 - Improved logging, added `logPromiseTraceback` to config (default: `false`)
-- Exported `ViewKeep` type
-- Fixed some types
+- Exported `ViewKeep` type, fixed some other types
 - Added `keep.SaveFailed` and `keep.ReleaseFailed` signals
 - Fixed `DataKeep.SetConfig()` not accepting `false` values
-- `Metadata` and `UserIds` are now stored inside metadata
+- `Metadata` and `UserIds` are now stored inside [Metadata](https://create.roblox.com/docs/cloud-services/data-stores#metadata). Existing keeps will be automatically migrated to the new format
 
 ### Breaking Changes
 
-- Removed promises from `keep.Saving` and `keep.Releasing` signals
+- Removed promises from `keep.Saving` and `keep.Releasing` signals due to interferences with saving system
+- `keep.Saving` -> `keep.Saved` and `keep.SaveFailed`
+- `keep.Releasing` -> `keep.Released` and `keep.ReleaseFailed`
 - `keep.MetaData` -> `keep.Metadata`
-- `keep.Saving` -> `keep.Saved`
-- `keep.Releasing` -> `keep.Released`
 
 ## [version 5.0.0](https://github.com/noahrepublic/DataKeep/releases/tag/v5.0.0): 12/09/2024
 
