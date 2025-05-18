@@ -1,7 +1,11 @@
 --!strict
 
+--> Includes
+
 local DeepCopy = require(script.Parent.Parent.Utils.DeepCopy)
 local Types = require(script.Parent.Parent.Types)
+
+--> Types
 
 export type keyInfo = {
 	Version: string,
@@ -23,8 +27,12 @@ export type dataVersions = {
 	}
 }
 
+--> Structure
+
 local keyInfo = {}
 keyInfo.__index = keyInfo
+
+--> Constructor
 
 function keyInfo.new(store, key: string, data: any, userIds: Types.userIds?, metadata: Types.metadata?): keyInfo
 	if store._dataVersions[key] == nil then
@@ -51,6 +59,8 @@ function keyInfo.new(store, key: string, data: any, userIds: Types.userIds?, met
 	local self = versionData
 	return setmetatable(self, keyInfo) :: any
 end
+
+--> Public Methods
 
 function keyInfo.GetMetadata(self: keyInfo)
 	return DeepCopy(self._metadata)

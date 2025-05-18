@@ -23,7 +23,7 @@ local DataKeep = require(path_to_datakeep)
 local DataTemplate = require(path_to_datatemplate)
 
 local devProducts = {
-    [product_id_here] = function(player: Player, keep: DataKeep.Keep<DataTemplate.template, {}>)
+    [product_id_here] = function(player: Player, keep: DataKeep.Keep<DataTemplate.template>)
         keep.Data.Coins += 100
 
 		print(`{player.Name} purchased some coins!`)
@@ -43,7 +43,7 @@ local DevProducts = require(path_to_devproducts)
 
 local purchaseHistoryLimit = 50
 
-local function setProcessReceipt(store: DataKeep.Store<DataTemplate.template, {}>, keyPrefix: string)
+local function setProcessReceipt(store: DataKeep.Store<DataTemplate.template>, keyPrefix: string)
 	local function processReceipt(receiptInfo): Enum.ProductPurchaseDecision
 		local player = Players:GetPlayerByUserId(receiptInfo.PlayerId)
 
@@ -119,7 +119,7 @@ local keyPrefix = "Player_"
 
 local loadedKeeps = {}
 
-local store = DataKeep.GetStore("PlayerData", DataTemplate, {}):expect()
+local store = DataKeep.GetStore("PlayerData", DataTemplate):expect()
 
 local function onPlayerAdded(player: Player)
 	store:LoadKeep(keyPrefix .. player.UserId):andThen(function(keep)

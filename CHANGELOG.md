@@ -10,6 +10,7 @@
 - Added `keep.SaveFailed` and `keep.ReleaseFailed` signals
 - Fixed `DataKeep.SetConfig()` not accepting `false` values
 - `Metadata` and `UserIds` are now stored inside [Metadata](https://create.roblox.com/docs/cloud-services/data-stores#metadata). Existing keeps will be automatically migrated to the new format
+- `wrapper` in `DataKeep.GetStore()` is now optional
 
 ### Breaking Changes
 

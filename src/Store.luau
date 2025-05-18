@@ -41,12 +41,12 @@ Store.__index = Store
 	Same as [Store](Store) but it operates on a fake datastore.
 
 	```lua
-	local store = DataKeep.GetStore("TestStore", {}, {}):expect()
+	local store = DataKeep.GetStore("TestStore", {}):expect()
 
 	local keep = store.Mock:LoadKeep("TestKey"):expect()
 	keep:Release():await()
 
-	-- must be used when done with the keep on live servers
+	-- must be used when done with the keep on live server to prevent memory leaks
 	store.Mock:RemoveKeep("TestKey")
 	```
 ]=]

@@ -126,7 +126,7 @@ type storeBase<T, R> = {
 	MockStores are used to mirror the real store, but doesn't save data.
 ]=]
 
-export type mockStore<T, R> = storeBase<T, R>
+export type mockStore<T, R = {}> = storeBase<T, R>
 
 --[=[
 	@type Store StoreBase & { Mock: MockStore }
@@ -135,7 +135,7 @@ export type mockStore<T, R> = storeBase<T, R>
 	Stores are used to load and save Keeps from a [DataStoreService:GetDataStore()](https://create.roblox.com/docs/reference/engine/classes/DataStoreService#GetDataStore).
 ]=]
 
-export type store<T, R> = storeBase<T, R> & {
+export type store<T, R = {}> = storeBase<T, R> & {
 	Mock: mockStore<T, R>,
 }
 
@@ -215,7 +215,7 @@ export type keepBase<T, R> = keepStruct<T> & {
 	@within Keep
 ]=]
 
-export type keep<T, R> = keepBase<T, R> & {
+export type keep<T, R = {}> = keepBase<T, R> & {
 	_lastSaveAttempt: number,
 
 	_pending_global_locks: { number },
@@ -236,7 +236,7 @@ export type keep<T, R> = keepBase<T, R> & {
 	ClearLockedUpdate: (self: keep<T, R>, id: number) -> PromiseTypes.TypedPromise<()>,
 }
 
-export type viewOnlyKeep<T, R> = keepBase<T, R> & {
+export type viewOnlyKeep<T, R = {}> = keepBase<T, R> & {
 	Overwrite: (self: viewOnlyKeep<T, R>, shouldKeepExistingSession: boolean?) -> PromiseTypes.TypedPromise<()>,
 }
 

@@ -17,13 +17,21 @@ local states = {
 
 	cachedKeepPromises = {},
 
-	loadedKeeps = {} :: { [string]: Types.keep<{}, {}> },
+	--- list of stores that are currently loaded
+	loadedStores = {} :: { [string]: Types.store<{}> },
+
+	--- list of keeps that are currently loaded
+	loadedKeeps = {} :: { [string]: Types.keep<{}> },
 
 	--- queue used for critical state
 	issueQueue = {} :: { number },
 
 	--- os.time() when DataKeep entered critical state
 	criticalStateStartTime = 0,
+
+	autoSaveCycle = 0,
+
+	internalKeepCleanupCycle = 0,
 }
 
 return states

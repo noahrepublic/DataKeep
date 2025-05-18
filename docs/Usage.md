@@ -21,7 +21,7 @@ local dataTemplate = {
 
 local loadedKeeps = {}
 
-local store = DataKeep.GetStore("PlayerData", dataTemplate, {}):expect()
+local store = DataKeep.GetStore("PlayerData", dataTemplate):expect()
 
 local function onPlayerAdded(player: Player)
 	store:LoadKeep(`Player_{player.UserId}`):andThen(function(keep)
@@ -106,7 +106,7 @@ Player.__index = Player
 
 --> Variables
 
-local store = DataKeep.GetStore("PlayerData", DataTemplate, {}):expect()
+local store = DataKeep.GetStore("PlayerData", DataTemplate):expect()
 
 --> Private Functions
 
