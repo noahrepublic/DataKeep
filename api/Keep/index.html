@@ -4,13 +4,13 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.7.0">
 <title data-rh="true">Keep | DataKeep</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://noahrepublic.github.io/DataKeep/api/Keep"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docusaurus_tag" content="default"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docsearch:docusaurus_tag" content="default"><meta data-rh="true" property="og:title" content="Keep | DataKeep"><meta data-rh="true" name="description" content="Keep class holds the data for a specific key in a store, and methods to manipulate data."><meta data-rh="true" property="og:description" content="Keep class holds the data for a specific key in a store, and methods to manipulate data."><link data-rh="true" rel="canonical" href="https://noahrepublic.github.io/DataKeep/api/Keep"><link data-rh="true" rel="alternate" href="https://noahrepublic.github.io/DataKeep/api/Keep" hreflang="en"><link data-rh="true" rel="alternate" href="https://noahrepublic.github.io/DataKeep/api/Keep" hreflang="x-default"><link rel="stylesheet" href="/DataKeep/assets/css/styles.f5b42892.css">
-<script src="/DataKeep/assets/js/runtime~main.ac219466.js" defer="defer"></script>
-<script src="/DataKeep/assets/js/main.059520b0.js" defer="defer"></script>
+<script src="/DataKeep/assets/js/runtime~main.d4f1f2ed.js" defer="defer"></script>
+<script src="/DataKeep/assets/js/main.40d2f056.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <script>!function(){function t(t){document.documentElement.setAttribute("data-theme",t)}var e=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme")}catch(t){}}();null!==e?t(e):window.matchMedia("(prefers-color-scheme: dark)").matches?t("dark"):(window.matchMedia("(prefers-color-scheme: light)").matches,t("light"))}(),function(){try{const c=new URLSearchParams(window.location.search).entries();for(var[t,e]of c)if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id="__docusaurus"><div role="region" aria-label="Skip to main content"><a class="skipToContent_fXgn" href="#__docusaurus_skipToContent_fallback">Skip to main content</a></div><nav aria-label="Main" class="navbar navbar--fixed-top"><div class="navbar__inner"><div class="navbar__items"><button aria-label="Toggle navigation bar" aria-expanded="false" class="navbar__toggle clean-btn" type="button"><svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path stroke="currentColor" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M4 7h22M4 15h22M4 23h22"></path></svg></button><a class="navbar__brand" href="/DataKeep/"><b class="navbar__title text--truncate">DataKeep</b></a><a class="navbar__item navbar__link" href="/DataKeep/docs/intro">Docs</a><a aria-current="page" class="navbar__item navbar__link navbar__link--active" href="/DataKeep/api/">API</a><a class="navbar__item navbar__link" href="/DataKeep/changelog">Changelog</a></div><div class="navbar__items navbar__items--right"><a href="https://github.com/noahrepublic/DataKeep" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width="13.5" height="13.5" aria-hidden="true" viewBox="0 0 24 24" class="iconExternalLink_nPIU"><path fill="currentColor" d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"></path></svg></a><div class="toggle_vylO colorModeToggle_DEke"><button class="clean-btn toggleButton_gllP toggleButtonDisabled_aARS" type="button" disabled="" title="Switch between dark and light mode (currently light mode)" aria-label="Switch between dark and light mode (currently light mode)" aria-live="polite" aria-pressed="false"><svg viewBox="0 0 24 24" width="24" height="24" class="lightToggleIcon_pyhR"><path fill="currentColor" d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"></path></svg><svg viewBox="0 0 24 24" width="24" height="24" class="darkToggleIcon_wfgR"><path fill="currentColor" d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"></path></svg></button></div><div class="navbarSearchContainer_Bca1"><div class="navbar__search"><span aria-label="expand searchbar" role="button" class="search-icon" tabindex="0"></span><input id="search_input_react" type="search" placeholder="Loading..." aria-label="Search" class="navbar__search-input search-bar" disabled=""></div></div></div></div><div role="presentation" class="navbar-sidebar__backdrop"></div></nav><div id="__docusaurus_skipToContent_fallback" class="main-wrapper mainWrapper_z2l0 docPageContainer_wNNk"><div class="docPage_Dpn1"><div class="docSidebarContainer_o_re"><div class="sidebar_njMd"><nav aria-label="Docs sidebar" class="menu thin-scrollbar menu_SIkG"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/DataKeep/api/DataKeep">​Data​Keep</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/DataKeep/api/Store">​Store</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link menu__link--active" aria-current="page" href="/DataKeep/api/Keep">​Keep</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/DataKeep/api/GlobalUpdates">​Global​Updates</a></li></ul></nav></div></div><main class="docMainContainer_HJE1"><div class="container padding-vert--lg"><div class="row"><div class="col docItemCol_MU3C"><div class="docItemContainer_Wv98"><article><div class="member_J0w1 markdown"><div class="tocCollapsible_ETCw theme-doc-toc-mobile tocMobile_oUs_"><button type="button" class="clean-btn tocCollapsibleButton_TO0P">On this page</button></div><header><h1 class="docTitle_mZRt" style="text-decoration:none"><span style="display:inline-block">Keep</span></h1><div class="luaClassTags_EipM"><span class="badge_Ba2I" style="color:#00CC67"><span class="badgeTooltip_cWXP">This item only works when running on the server.</span><span class="badgeToolTipTail_H9D_"><svg fill="#00CC67" xmlns="http://www.w3.org/2000/svg" version="1.1" x="0px" y="0px" viewBox="0 0 90 90" role="img" aria-label="This item only works when running on the server."><polygon points="6.125,72.421 58.544,88.523 58.544,24.372 6.125,8.269 "></polygon><polygon points="79.818,15.77 79.868,15.755 29.615,1.453 10.328,6.318 60.102,21.609 "></polygon><path d="M61.643,78.738l22.232-6.582V17.801l-22.232,6.584V78.738z M73.811,69.257c-1.174,0-2.125-1.19-2.125-2.659  c0-1.468,0.951-2.658,2.125-2.658c1.172,0,2.123,1.19,2.123,2.658C75.934,68.066,74.982,69.257,73.811,69.257z M64.898,32.121  l16.336-4.41v7.117l-16.336,4.409V32.121z M64.898,41.292l16.336-4.41v7.116l-16.336,4.409V41.292z M64.898,50.463l16.336-4.411  v7.116l-16.336,4.411V50.463z"></path><polygon points="83.875,74.893 61.643,81.477 61.643,88.547 83.875,81.963 "></polygon></svg> <!-- -->Server</span></span></div><div>
 <p>Keep class holds the data for a specific key in a store, and methods to manipulate data.</p>
-</div></header><h2 class="anchor anchorWithStickyNavbar_LWe7" id="types">Types<a href="#types" class="hash-link" aria-label="Direct link to Types" title="Direct link to Types">​</a></h2><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="Session"><code style="text-decoration:none">Session</code><a href="#Session" class="hash-link" aria-label="Direct link to Session" title="Direct link to Session">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Types.luau#L147"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code class="purple_ieR2">type</code> <code>Session<!-- --> = </code> <code class="purple_ieR2">{</code><div class="inset_uKQm"><code>PlaceId<!-- -->: </code><code class="blue_P4bS">number</code><code class="purple_ieR2">,</code></div><div class="inset_uKQm"><code>JobId<!-- -->: </code><code class="blue_P4bS">string</code></div><code class="purple_ieR2">}</code></div><div></div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="MetaData"><code style="text-decoration:none">MetaData</code><a href="#MetaData" class="hash-link" aria-label="Direct link to MetaData" title="Direct link to MetaData">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Types.luau#L157"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code class="purple_ieR2">type</code> <code>MetaData<!-- --> = </code> <code class="purple_ieR2">{</code><div class="inset_uKQm"><code>ActiveSession<!-- -->: </code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/DataKeep/api/Keep#Session">Session?</a></code><code class="purple_ieR2">,</code></div><div class="inset_uKQm"><code>ForceLoad<!-- -->: </code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/DataKeep/api/Keep#Session">Session?</a></code><code class="purple_ieR2">,</code></div><div class="inset_uKQm"><code>LastUpdate<!-- -->: </code><code class="blue_P4bS">number</code><code class="purple_ieR2">,</code></div><div class="inset_uKQm"><code>Created<!-- -->: </code><code class="blue_P4bS">number</code><code class="purple_ieR2">,</code></div><div class="inset_uKQm"><code>LoadCount<!-- -->: </code><code class="blue_P4bS">number</code></div><code class="purple_ieR2">}</code></div><div></div><h2 class="anchor anchorWithStickyNavbar_LWe7" id="properties">Properties<a href="#properties" class="hash-link" aria-label="Direct link to Properties" title="Direct link to Properties">​</a></h2><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="GlobalStateProcessor"><code style="text-decoration:none">GlobalStateProcessor</code><a href="#GlobalStateProcessor" class="hash-link" aria-label="Direct link to GlobalStateProcessor" title="Direct link to GlobalStateProcessor">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L48"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->.<!-- -->GlobalStateProcessor<!-- -->:<!-- --> </code> <code class="purple_ieR2">(</code><div class="inset_uKQm"><code>globalUpdateData<!-- -->: </code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/DataKeep/api/GlobalUpdates#GlobalUpdateData">GlobalUpdateData</a></code><code class="purple_ieR2">,</code></div><div class="inset_uKQm"><code>lock<!-- -->: </code><code class="green_DgR4">(</code><code class="green_DgR4">)</code><code class="green_DgR4"> → </code><code class="green_DgR4">(</code><code class="green_DgR4">)</code><code class="purple_ieR2">,</code></div><div class="inset_uKQm"><code>remove<!-- -->: </code><code class="green_DgR4">(</code><code class="green_DgR4">)</code><code class="green_DgR4"> → </code><code class="green_DgR4">(</code><code class="green_DgR4">)</code></div><code class="purple_ieR2">)</code><code class="purple_ieR2"> → </code><code class="purple_ieR2">(</code><code class="purple_ieR2">)</code></div><div>
+</div></header><h2 class="anchor anchorWithStickyNavbar_LWe7" id="types">Types<a href="#types" class="hash-link" aria-label="Direct link to Types" title="Direct link to Types">​</a></h2><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="Session"><code style="text-decoration:none">Session</code><a href="#Session" class="hash-link" aria-label="Direct link to Session" title="Direct link to Session">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Types.luau#L146"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code class="purple_ieR2">type</code> <code>Session<!-- --> = </code> <code class="purple_ieR2">{</code><div class="inset_uKQm"><code>PlaceId<!-- -->: </code><code class="blue_P4bS">number</code><code class="purple_ieR2">,</code></div><div class="inset_uKQm"><code>JobId<!-- -->: </code><code class="blue_P4bS">string</code></div><code class="purple_ieR2">}</code></div><div></div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="Metadata"><code style="text-decoration:none">Metadata</code><a href="#Metadata" class="hash-link" aria-label="Direct link to Metadata" title="Direct link to Metadata">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Types.luau#L156"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code class="purple_ieR2">type</code> <code>Metadata<!-- --> = </code> <code class="purple_ieR2">{</code><div class="inset_uKQm"><code>ActiveSession<!-- -->: </code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/DataKeep/api/Keep#Session">Session?</a></code><code class="purple_ieR2">,</code></div><div class="inset_uKQm"><code>ForceLoad<!-- -->: </code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/DataKeep/api/Keep#Session">Session?</a></code><code class="purple_ieR2">,</code></div><div class="inset_uKQm"><code>LastUpdate<!-- -->: </code><code class="blue_P4bS">number</code><code class="purple_ieR2">,</code></div><div class="inset_uKQm"><code>Created<!-- -->: </code><code class="blue_P4bS">number</code><code class="purple_ieR2">,</code></div><div class="inset_uKQm"><code>LoadCount<!-- -->: </code><code class="blue_P4bS">number</code></div><code class="purple_ieR2">}</code></div><div></div><h2 class="anchor anchorWithStickyNavbar_LWe7" id="properties">Properties<a href="#properties" class="hash-link" aria-label="Direct link to Properties" title="Direct link to Properties">​</a></h2><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="GlobalStateProcessor"><code style="text-decoration:none">GlobalStateProcessor</code><a href="#GlobalStateProcessor" class="hash-link" aria-label="Direct link to GlobalStateProcessor" title="Direct link to GlobalStateProcessor">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L47"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->.<!-- -->GlobalStateProcessor<!-- -->:<!-- --> </code> <code class="purple_ieR2">(</code><div class="inset_uKQm"><code>globalUpdateData<!-- -->: </code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/DataKeep/api/GlobalUpdates#GlobalUpdateData">GlobalUpdateData</a></code><code class="purple_ieR2">,</code></div><div class="inset_uKQm"><code>lock<!-- -->: </code><code class="green_DgR4">(</code><code class="green_DgR4">)</code><code class="green_DgR4"> → </code><code class="green_DgR4">(</code><code class="green_DgR4">)</code><code class="purple_ieR2">,</code></div><div class="inset_uKQm"><code>remove<!-- -->: </code><code class="green_DgR4">(</code><code class="green_DgR4">)</code><code class="green_DgR4"> → </code><code class="green_DgR4">(</code><code class="green_DgR4">)</code></div><code class="purple_ieR2">)</code><code class="purple_ieR2"> → </code><code class="purple_ieR2">(</code><code class="purple_ieR2">)</code></div><div>
 <p>Define how to process global updates, by default just locks the global update (this is only ran if the Keep is online).</p>
 <p>The function reveals the lock and remove global update function through the parameters.</p>
 
@@ -47,7 +47,7 @@
     
   
 
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="OnGlobalUpdate"><code style="text-decoration:none">OnGlobalUpdate</code><a href="#OnGlobalUpdate" class="hash-link" aria-label="Direct link to OnGlobalUpdate" title="Direct link to OnGlobalUpdate">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L59"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->.<!-- -->OnGlobalUpdate<!-- -->:<!-- --> </code> <code class="blue_P4bS">Signal</code><code class="op_lSLc">&lt;</code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/DataKeep/api/GlobalUpdates#GlobalUpdateData">GlobalUpdateData,</a></code><code class="blue_P4bS">number</code><code class="op_lSLc">&gt;</code></div><div>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="OnGlobalUpdate"><code style="text-decoration:none">OnGlobalUpdate</code><a href="#OnGlobalUpdate" class="hash-link" aria-label="Direct link to OnGlobalUpdate" title="Direct link to OnGlobalUpdate">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L58"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->.<!-- -->OnGlobalUpdate<!-- -->:<!-- --> </code> <code class="blue_P4bS">Signal</code><code class="op_lSLc">&lt;</code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/DataKeep/api/GlobalUpdates#GlobalUpdateData">GlobalUpdateData,</a></code><code class="blue_P4bS">number</code><code class="op_lSLc">&gt;</code></div><div>
 <p>Fired when a new global update is locked and ready to be processed, which can happen only during save.</p>
 
   
@@ -66,47 +66,47 @@
     
   
 
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="Releasing"><code style="text-decoration:none">Releasing</code><a href="#Releasing" class="hash-link" aria-label="Direct link to Releasing" title="Direct link to Releasing">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L78"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->.<!-- -->Releasing<!-- -->:<!-- --> </code> <code class="blue_P4bS">Signal</code><code class="op_lSLc">&lt;</code><code class="blue_P4bS">Promise</code><code class="op_lSLc">&lt;</code><code class="purple_ieR2">(</code><code class="purple_ieR2">)</code><code class="op_lSLc">&gt;</code><code class="op_lSLc">&gt;</code></div><div>
-<p>Fired when the Keep is releasing (fires before internally released, but during session release).</p>
-<pre class="language-lua"><code class="language-lua">keep<span class="token punctuation">.</span>Releasing<span class="token punctuation">:</span><span class="token function">Connect</span><span class="token punctuation">(</span><span class="token keyword">function</span><span class="token punctuation">(</span>state<span class="token punctuation">)</span>
-	<span class="token function">print</span><span class="token punctuation">(</span>`<span class="token function">Releasing</span> <span class="token punctuation">{</span>keep<span class="token punctuation">:</span><span class="token function">Identify</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">}</span>`<span class="token punctuation">)</span>
-
-	state<span class="token punctuation">:</span><span class="token function">andThen</span><span class="token punctuation">(</span><span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-		<span class="token function">print</span><span class="token punctuation">(</span>`<span class="token function">Released</span> <span class="token punctuation">{</span>keep<span class="token punctuation">:</span><span class="token function">Identify</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">}</span>`<span class="token punctuation">)</span>
-	<span class="token keyword">end</span><span class="token punctuation">)</span><span class="token punctuation">:</span><span class="token function">catch</span><span class="token punctuation">(</span><span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-		<span class="token function">print</span><span class="token punctuation">(</span>`Failed to <span class="token function">release</span> <span class="token punctuation">{</span>keep<span class="token punctuation">:</span><span class="token function">Identify</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">}</span>`<span class="token punctuation">)</span>
-	<span class="token keyword">end</span><span class="token punctuation">)</span>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="Released"><code style="text-decoration:none">Released</code><a href="#Released" class="hash-link" aria-label="Direct link to Released" title="Direct link to Released">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L71"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->.<!-- -->Released<!-- -->:<!-- --> </code> <code class="blue_P4bS">Signal</code></div><div>
+<p>Fires after the Keep is released.</p>
+<pre class="language-lua"><code class="language-lua">keep<span class="token punctuation">.</span>Released<span class="token punctuation">:</span><span class="token function">Connect</span><span class="token punctuation">(</span><span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token function">print</span><span class="token punctuation">(</span>`<span class="token function">Released</span> <span class="token punctuation">{</span>keep<span class="token punctuation">:</span><span class="token function">Identify</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">}</span>`<span class="token punctuation">)</span>
 <span class="token keyword">end</span><span class="token punctuation">)</span>
 </code></pre>
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="Saving"><code style="text-decoration:none">Saving</code><a href="#Saving" class="hash-link" aria-label="Direct link to Saving" title="Direct link to Saving">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L97"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->.<!-- -->Saving<!-- -->:<!-- --> </code> <code class="blue_P4bS">Signal</code><code class="op_lSLc">&lt;</code><code class="blue_P4bS">Promise</code><code class="op_lSLc">&lt;</code><code class="purple_ieR2">(</code><code class="purple_ieR2">)</code><code class="op_lSLc">&gt;</code><code class="op_lSLc">&gt;</code></div><div>
-<p>Fired when the Keep is saving, resolves on complete.</p>
-<pre class="language-lua"><code class="language-lua">keep<span class="token punctuation">.</span>Saving<span class="token punctuation">:</span><span class="token function">Connect</span><span class="token punctuation">(</span><span class="token keyword">function</span><span class="token punctuation">(</span>state<span class="token punctuation">)</span>
-	<span class="token function">print</span><span class="token punctuation">(</span>`<span class="token function">Saving</span> <span class="token punctuation">{</span>keep<span class="token punctuation">:</span><span class="token function">Identify</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">}</span>`<span class="token punctuation">)</span>
-
-	state<span class="token punctuation">:</span><span class="token function">andThen</span><span class="token punctuation">(</span><span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-		<span class="token function">print</span><span class="token punctuation">(</span>`<span class="token function">Saved</span> <span class="token punctuation">{</span>keep<span class="token punctuation">:</span><span class="token function">Identify</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">}</span>`<span class="token punctuation">)</span>
-	<span class="token keyword">end</span><span class="token punctuation">)</span><span class="token punctuation">:</span><span class="token function">catch</span><span class="token punctuation">(</span><span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-		<span class="token function">print</span><span class="token punctuation">(</span>`Failed to <span class="token function">save</span> <span class="token punctuation">{</span>keep<span class="token punctuation">:</span><span class="token function">Identify</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">}</span>`<span class="token punctuation">)</span>
-	<span class="token keyword">end</span><span class="token punctuation">)</span>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="ReleaseFailed"><code style="text-decoration:none">ReleaseFailed</code><a href="#ReleaseFailed" class="hash-link" aria-label="Direct link to ReleaseFailed" title="Direct link to ReleaseFailed">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L84"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->.<!-- -->ReleaseFailed<!-- -->:<!-- --> </code> <code class="blue_P4bS">Signal</code></div><div>
+<p>Fires after the Keep release attempt fails.</p>
+<pre class="language-lua"><code class="language-lua">keep<span class="token punctuation">.</span>ReleaseFailed<span class="token punctuation">:</span><span class="token function">Connect</span><span class="token punctuation">(</span><span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token function">print</span><span class="token punctuation">(</span>`<span class="token punctuation">{</span>keep<span class="token punctuation">:</span><span class="token function">Identify</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">}</span> failed to release`<span class="token punctuation">)</span>
 <span class="token keyword">end</span><span class="token punctuation">)</span>
 </code></pre>
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="Overwritten"><code style="text-decoration:none">Overwritten</code><a href="#Overwritten" class="hash-link" aria-label="Direct link to Overwritten" title="Direct link to Overwritten">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L110"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->.<!-- -->Overwritten<!-- -->:<!-- --> </code> <code class="blue_P4bS">Signal</code><code class="op_lSLc">&lt;</code><code class="blue_P4bS">boolean</code><code class="op_lSLc">&gt;</code></div><div>
-<p>Fired when the Keep has been overwritten. Keep will be released if <code>isReleasingSession</code> is set to <code>true</code>.</p>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="Saved"><code style="text-decoration:none">Saved</code><a href="#Saved" class="hash-link" aria-label="Direct link to Saved" title="Direct link to Saved">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L97"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->.<!-- -->Saved<!-- -->:<!-- --> </code> <code class="blue_P4bS">Signal</code></div><div>
+<p>Fires after the Keep is saved.</p>
+<pre class="language-lua"><code class="language-lua">keep<span class="token punctuation">.</span>Saved<span class="token punctuation">:</span><span class="token function">Connect</span><span class="token punctuation">(</span><span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token function">print</span><span class="token punctuation">(</span>`<span class="token function">Saved</span> <span class="token punctuation">{</span>keep<span class="token punctuation">:</span><span class="token function">Identify</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">}</span>`<span class="token punctuation">)</span>
+<span class="token keyword">end</span><span class="token punctuation">)</span>
+</code></pre>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="SaveFailed"><code style="text-decoration:none">SaveFailed</code><a href="#SaveFailed" class="hash-link" aria-label="Direct link to SaveFailed" title="Direct link to SaveFailed">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L110"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->.<!-- -->SaveFailed<!-- -->:<!-- --> </code> <code class="blue_P4bS">Signal</code></div><div>
+<p>Fires after the Keep save attempt fails.</p>
+<pre class="language-lua"><code class="language-lua">keep<span class="token punctuation">.</span>SaveFailed<span class="token punctuation">:</span><span class="token function">Connect</span><span class="token punctuation">(</span><span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token function">print</span><span class="token punctuation">(</span>`<span class="token punctuation">{</span>keep<span class="token punctuation">:</span><span class="token function">Identify</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">}</span> failed to save`<span class="token punctuation">)</span>
+<span class="token keyword">end</span><span class="token punctuation">)</span>
+</code></pre>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="Overwritten"><code style="text-decoration:none">Overwritten</code><a href="#Overwritten" class="hash-link" aria-label="Direct link to Overwritten" title="Direct link to Overwritten">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L123"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->.<!-- -->Overwritten<!-- -->:<!-- --> </code> <code class="blue_P4bS">Signal</code><code class="op_lSLc">&lt;</code><code class="blue_P4bS">boolean</code><code class="op_lSLc">&gt;</code></div><div>
+<p>Fires when the Keep has been overwritten. Keep will be released if <code>isReleasingSession</code> is set to <code>true</code>.</p>
 <pre class="language-lua"><code class="language-lua">keep<span class="token punctuation">.</span>Overwritten<span class="token punctuation">:</span><span class="token function">Connect</span><span class="token punctuation">(</span><span class="token keyword">function</span><span class="token punctuation">(</span>isReleasingSession<span class="token punctuation">)</span>
 	<span class="token function">print</span><span class="token punctuation">(</span>`<span class="token punctuation">{</span>keep<span class="token punctuation">:</span><span class="token function">Identify</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">}</span> has been overwritten<span class="token punctuation">.</span> Is releasing session<span class="token punctuation">:</span> <span class="token punctuation">{</span>isReleasingSession<span class="token punctuation">}</span>`<span class="token punctuation">)</span>
 <span class="token keyword">end</span><span class="token punctuation">)</span>
 </code></pre>
-</div><h2 class="anchor anchorWithStickyNavbar_LWe7" id="functions">Functions<a href="#functions" class="hash-link" aria-label="Direct link to Functions" title="Direct link to Functions">​</a></h2><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="Save"><code style="text-decoration:none">Save</code><a href="#Save" class="hash-link" aria-label="Direct link to Save" title="Direct link to Save">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L467"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->:</code><code class="green_DgR4">Save</code><code>(</code><code>) → </code><code class="blue_P4bS">Promise</code><code class="op_lSLc">&lt;</code><code class="purple_ieR2">(</code><code class="purple_ieR2">)</code><code class="op_lSLc">&gt;</code></div><div>
+</div><h2 class="anchor anchorWithStickyNavbar_LWe7" id="functions">Functions<a href="#functions" class="hash-link" aria-label="Direct link to Functions" title="Direct link to Functions">​</a></h2><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="Save"><code style="text-decoration:none">Save</code><a href="#Save" class="hash-link" aria-label="Direct link to Save" title="Direct link to Save">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L483"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->:</code><code class="green_DgR4">Save</code><code>(</code><code>) → </code><code class="blue_P4bS">Promise</code><code class="op_lSLc">&lt;</code><code class="purple_ieR2">(</code><code class="purple_ieR2">)</code><code class="op_lSLc">&gt;</code></div><div>
 <p>Performs a manual save.</p>
 
   
     
     
-      <div class="admonition admonition-warning alert alert--warning">
+      <div class="admonition admonition-info alert alert--info">
         <div class="admonition-heading">
-          <h5><span class="admonition-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
-                <path d="M8.893 1.5c-.183-.31-.52-.5-.887-.5s-.703.19-.886.5L.138 13.499a.98.98 0 0 0 0 1.001c.193.31.53.501.886.501h13.964c.367 0 .704-.19.877-.5a1.03 1.03 0 0 0 .01-1.002L8.893 1.5zm.133 11.497H6.987v-2.003h2.039v2.003zm0-3.004H6.987V5.987h2.039v4.006z"></path>
-              </svg></span><span class="admonition-title">WARNING</span></h5>
+          <h5><span class="admonition-icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="16" viewBox="0 0 14 16">
+                <path d="M7 2.3c3.14 0 5.7 2.56 5.7 5.7s-2.56 5.7-5.7 5.7A5.71 5.71 0 0 1 1.3 8c0-3.14 2.56-5.7 5.7-5.7zM7 1C3.14 1 0 4.14 0 8s3.14 7 7 7 7-3.14 7-7-3.14-7-7-7zm1 3H6v5h2V4zm0 6H6v2h2v-2z"></path>
+              </svg></span><span class="admonition-title">INFO</span></h5>
         </div>
         <div class="admonition-content">
           <p>Calling <code>:Save()</code> manually will reset the auto save timer on the Keep.</p>
@@ -132,7 +132,7 @@
     
   
 
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="Release"><code style="text-decoration:none">Release</code><a href="#Release" class="hash-link" aria-label="Direct link to Release" title="Direct link to Release">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L524"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->:</code><code class="green_DgR4">Release</code><code>(</code><code>) → </code><code class="blue_P4bS">Promise</code><code class="op_lSLc">&lt;</code><code class="purple_ieR2">(</code><code class="purple_ieR2">)</code><code class="op_lSLc">&gt;</code></div><div>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="Release"><code style="text-decoration:none">Release</code><a href="#Release" class="hash-link" aria-label="Direct link to Release" title="Direct link to Release">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L536"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->:</code><code class="green_DgR4">Release</code><code>(</code><code>) → </code><code class="blue_P4bS">Promise</code><code class="op_lSLc">&lt;</code><code class="purple_ieR2">(</code><code class="purple_ieR2">)</code><code class="op_lSLc">&gt;</code></div><div>
 <p>Releases the session lock to allow other servers to access the Keep.</p>
 
   
@@ -168,24 +168,24 @@
     
   
 
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="Overwrite"><code style="text-decoration:none">Overwrite</code><a href="#Overwrite" class="hash-link" aria-label="Direct link to Overwrite" title="Direct link to Overwrite">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L577"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->:</code><code class="green_DgR4">Overwrite</code><code>(</code><code>shouldKeepExistingSession<!-- -->: </code><code class="blue_P4bS">boolean?</code><code>) → </code><code class="blue_P4bS">Promise</code><code class="op_lSLc">&lt;</code><code class="purple_ieR2">(</code><code class="purple_ieR2">)</code><code class="op_lSLc">&gt;</code></div><div>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="Overwrite"><code style="text-decoration:none">Overwrite</code><a href="#Overwrite" class="hash-link" aria-label="Direct link to Overwrite" title="Direct link to Overwrite">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L580"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->:</code><code class="green_DgR4">Overwrite</code><code>(</code><code>shouldKeepExistingSession<!-- -->: </code><code class="blue_P4bS">boolean?</code><code>) → </code><code class="blue_P4bS">Promise</code><code class="op_lSLc">&lt;</code><code class="purple_ieR2">(</code><code class="purple_ieR2">)</code><code class="op_lSLc">&gt;</code></div><div>
 <p>Used to overwrite a view-only Keep.</p>
 <p><code>shouldKeepExistingSession</code> controls the behavior of the server with the active session lock, defaults to <code>false</code>.</p>
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="Destroy"><code style="text-decoration:none">Destroy</code><a href="#Destroy" class="hash-link" aria-label="Direct link to Destroy" title="Direct link to Destroy">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L684"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->:</code><code class="green_DgR4">Destroy</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="Destroy"><code style="text-decoration:none">Destroy</code><a href="#Destroy" class="hash-link" aria-label="Direct link to Destroy" title="Direct link to Destroy">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L687"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->:</code><code class="green_DgR4">Destroy</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
 <p>Destroys the Keep, removing all signals connections. Should be used only for cleaning view-only Keeps.</p>
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="IsActive"><code style="text-decoration:none">IsActive</code><a href="#IsActive" class="hash-link" aria-label="Direct link to IsActive" title="Direct link to IsActive">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L706"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->:</code><code class="green_DgR4">IsActive</code><code>(</code><code>) → </code><code class="blue_P4bS">boolean</code></div><div>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="IsActive"><code style="text-decoration:none">IsActive</code><a href="#IsActive" class="hash-link" aria-label="Direct link to IsActive" title="Direct link to IsActive">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L711"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->:</code><code class="green_DgR4">IsActive</code><code>(</code><code>) → </code><code class="blue_P4bS">boolean</code></div><div>
 <p>Returns <code>true</code> if the Keep is active in the session (not locked by another server).</p>
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="Identify"><code style="text-decoration:none">Identify</code><a href="#Identify" class="hash-link" aria-label="Direct link to Identify" title="Direct link to Identify">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L725"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->:</code><code class="green_DgR4">Identify</code><code>(</code><code>) → </code><code class="blue_P4bS">string</code></div><div>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="Identify"><code style="text-decoration:none">Identify</code><a href="#Identify" class="hash-link" aria-label="Direct link to Identify" title="Direct link to Identify">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L730"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->:</code><code class="green_DgR4">Identify</code><code>(</code><code>) → </code><code class="blue_P4bS">string</code></div><div>
 <p>Returns the string identifier for the Keep.</p>
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="GetKeyInfo"><code style="text-decoration:none">GetKeyInfo</code><a href="#GetKeyInfo" class="hash-link" aria-label="Direct link to GetKeyInfo" title="Direct link to GetKeyInfo">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L738"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->:</code><code class="green_DgR4">GetKeyInfo</code><code>(</code><code>) → </code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="https://developer.roblox.com/en-us/api-reference/class/DataStoreKeyInfo" target="_blank" rel="noopener noreferrer">DataStoreKeyInfo<svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15" class="icon outbound" style="color:gray;vertical-align:middle;margin-left:2px"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg></a></code></div><div>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="GetKeyInfo"><code style="text-decoration:none">GetKeyInfo</code><a href="#GetKeyInfo" class="hash-link" aria-label="Direct link to GetKeyInfo" title="Direct link to GetKeyInfo">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L743"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->:</code><code class="green_DgR4">GetKeyInfo</code><code>(</code><code>) → </code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="https://developer.roblox.com/en-us/api-reference/class/DataStoreKeyInfo" target="_blank" rel="noopener noreferrer">DataStoreKeyInfo<svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15" class="icon outbound" style="color:gray;vertical-align:middle;margin-left:2px"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg></a></code></div><div>
 <p>Returns the <code>DataStoreKeyInfo</code> for the Keep.</p>
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="Reconcile"><code style="text-decoration:none">Reconcile</code><a href="#Reconcile" class="hash-link" aria-label="Direct link to Reconcile" title="Direct link to Reconcile">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L749"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->:</code><code class="green_DgR4">Reconcile</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
-<p>Fills in any missing data in the Keep using the data template.</p>
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="AddUserId"><code style="text-decoration:none">AddUserId</code><a href="#AddUserId" class="hash-link" aria-label="Direct link to AddUserId" title="Direct link to AddUserId">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L779"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->:</code><code class="green_DgR4">AddUserId</code><code>(</code><code>userId<!-- -->: </code><code class="blue_P4bS">number</code><code>) → </code><code>(</code><code>)</code></div><div>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="Reconcile"><code style="text-decoration:none">Reconcile</code><a href="#Reconcile" class="hash-link" aria-label="Direct link to Reconcile" title="Direct link to Reconcile">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L754"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->:</code><code class="green_DgR4">Reconcile</code><code>(</code><code>) → </code><code>(</code><code>)</code></div><div>
+<p>Fills in any missing data and metadata in the Keep using the data and metadata template.</p>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="AddUserId"><code style="text-decoration:none">AddUserId</code><a href="#AddUserId" class="hash-link" aria-label="Direct link to AddUserId" title="Direct link to AddUserId">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L784"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->:</code><code class="green_DgR4">AddUserId</code><code>(</code><code>userId<!-- -->: </code><code class="blue_P4bS">number</code><code>)   → </code><code>(</code><code>)</code></div><div>
 <p>Associates a <code>userId</code> to a datastore to assist with GDPR requests (The right to erasure).</p>
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="RemoveUserId"><code style="text-decoration:none">RemoveUserId</code><a href="#RemoveUserId" class="hash-link" aria-label="Direct link to RemoveUserId" title="Direct link to RemoveUserId">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L796"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->:</code><code class="green_DgR4">RemoveUserId</code><code>(</code><code>userId<!-- -->: </code><code class="blue_P4bS">number</code><code>) → </code><code>(</code><code>)</code></div><div>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="RemoveUserId"><code style="text-decoration:none">RemoveUserId</code><a href="#RemoveUserId" class="hash-link" aria-label="Direct link to RemoveUserId" title="Direct link to RemoveUserId">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L801"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->:</code><code class="green_DgR4">RemoveUserId</code><code>(</code><code>userId<!-- -->: </code><code class="blue_P4bS">number</code><code>) → </code><code>(</code><code>)</code></div><div>
 <p>Unassociates a <code>userId</code> from a datastore.</p>
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="GetVersions"><code style="text-decoration:none">GetVersions</code><a href="#GetVersions" class="hash-link" aria-label="Direct link to GetVersions" title="Direct link to GetVersions">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L858"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->:</code><code class="green_DgR4">GetVersions</code><code>(</code><div class="inset_uKQm"><div><code>minDate<!-- -->: </code><code class="blue_P4bS">number?</code><code>,</code></div><div><code>maxDate<!-- -->: </code><code class="blue_P4bS">number?</code></div></div><code>) → </code><code class="blue_P4bS">Promise</code><code class="op_lSLc">&lt;</code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/DataKeep/api/Keep#Iterator">Iterator</a></code><code class="op_lSLc">&gt;</code></div><h3>Types</h3><h3 class="anchor anchorWithStickyNavbar_LWe7" id="Iterator"><a href="#Iterator" class="hash-link" aria-label="Direct link to Iterator" title="Direct link to Iterator">​</a></h3><div class="memberString_GwaU"><code class="purple_ieR2">interface</code> <code>Iterator<!-- --> <!-- -->{</code><div class="inset_uKQm"><div><code>Current<!-- -->: </code><code class="purple_ieR2">(</code><code class="purple_ieR2">)</code><code class="purple_ieR2"> → </code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="https://developer.roblox.com/en-us/api-reference/class/DataStoreObjectVersionInfo" target="_blank" rel="noopener noreferrer">DataStoreObjectVersionInfo?<svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15" class="icon outbound" style="color:gray;vertical-align:middle;margin-left:2px"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg></a></code><span class="inlineDescription_G7Er">-- <span>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="GetVersions"><code style="text-decoration:none">GetVersions</code><a href="#GetVersions" class="hash-link" aria-label="Direct link to GetVersions" title="Direct link to GetVersions">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L863"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->:</code><code class="green_DgR4">GetVersions</code><code>(</code><div class="inset_uKQm"><div><code>minDate<!-- -->: </code><code class="blue_P4bS">number?</code><code>,</code></div><div><code>maxDate<!-- -->: </code><code class="blue_P4bS">number?</code></div></div><code>) → </code><code class="blue_P4bS">Promise</code><code class="op_lSLc">&lt;</code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/DataKeep/api/Keep#Iterator">Iterator</a></code><code class="op_lSLc">&gt;</code></div><h3>Types</h3><h3 class="anchor anchorWithStickyNavbar_LWe7" id="Iterator"><a href="#Iterator" class="hash-link" aria-label="Direct link to Iterator" title="Direct link to Iterator">​</a></h3><div class="memberString_GwaU"><code class="purple_ieR2">interface</code> <code>Iterator<!-- --> <!-- -->{</code><div class="inset_uKQm"><div><code>Current<!-- -->: </code><code class="purple_ieR2">(</code><code class="purple_ieR2">)</code><code class="purple_ieR2"> → </code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="https://developer.roblox.com/en-us/api-reference/class/DataStoreObjectVersionInfo" target="_blank" rel="noopener noreferrer">DataStoreObjectVersionInfo?<svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15" class="icon outbound" style="color:gray;vertical-align:middle;margin-left:2px"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg></a></code><span class="inlineDescription_G7Er">-- <span>
 <p>Returns the current versionInfo, nil if none.</p>
 </span></span></div><div><code>Next<!-- -->: </code><code class="purple_ieR2">(</code><code class="purple_ieR2">)</code><code class="purple_ieR2"> → </code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="https://developer.roblox.com/en-us/api-reference/class/DataStoreObjectVersionInfo" target="_blank" rel="noopener noreferrer">DataStoreObjectVersionInfo?<svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15" class="icon outbound" style="color:gray;vertical-align:middle;margin-left:2px"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg></a></code><span class="inlineDescription_G7Er">-- <span>
 <p>Returns the next versionInfo, nil if none.</p>
@@ -217,7 +217,7 @@
 	<span class="token keyword">end</span>
 <span class="token keyword">end</span><span class="token punctuation">)</span>
 </code></pre>
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="SetVersion"><code style="text-decoration:none">SetVersion</code><a href="#SetVersion" class="hash-link" aria-label="Direct link to SetVersion" title="Direct link to SetVersion">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L996"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->:</code><code class="green_DgR4">SetVersion</code><code>(</code><div class="inset_uKQm"><div><code>version<!-- -->: </code><code class="blue_P4bS">string</code><code>,</code></div><div><code>migrateProcessor<!-- -->: </code><code class="purple_ieR2">(</code><code class="green_DgR4">(</code><code>versionKeep<!-- -->: </code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/DataKeep/api/Keep#Keep">Keep</a></code><code class="green_DgR4">)</code><code class="green_DgR4"> → </code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/DataKeep/api/Keep#Keep">Keep</a></code><code class="purple_ieR2">)</code><code class="blue_P4bS">?</code></div></div><code>) → </code><code class="blue_P4bS">Promise</code><code class="op_lSLc">&lt;</code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/DataKeep/api/Keep#Keep">Keep</a></code><code class="op_lSLc">&gt;</code></div><h3>Types</h3><h3 class="anchor anchorWithStickyNavbar_LWe7" id="Keep"><a href="#Keep" class="hash-link" aria-label="Direct link to Keep" title="Direct link to Keep">​</a></h3><div class="memberString_GwaU"><code class="purple_ieR2">type</code> <code>Keep<!-- --> = </code> <code class="purple_ieR2">{</code><div class="inset_uKQm"><code>Data<!-- -->: </code><code class="green_DgR4">{</code><span><code>[</code><code class="blue_P4bS">string</code><code>]</code></span><code>: </code><code class="blue_P4bS">any</code><code class="green_DgR4">}</code><code class="purple_ieR2">,</code></div><div class="inset_uKQm"><code>MetaData<!-- -->: </code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/DataKeep/api/Keep#MetaData">MetaData</a></code><code class="purple_ieR2">,</code></div><div class="inset_uKQm"><code>GlobalUpdates<!-- -->: </code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/DataKeep/api/GlobalUpdates#GlobalUpdates">GlobalUpdates</a></code><code class="purple_ieR2">,</code></div><div class="inset_uKQm"><code>UserIds<!-- -->: </code><code class="green_DgR4">{</code><code class="blue_P4bS">number</code><code class="green_DgR4">}</code><code class="purple_ieR2">,</code></div><div class="inset_uKQm"><code>OnGlobalUpdate<!-- -->: </code><code class="blue_P4bS">Signal</code><code class="op_lSLc">&lt;</code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/DataKeep/api/GlobalUpdates#GlobalUpdateData">GlobalUpdateData</a></code><code class="purple_ieR2">,</code></div><div class="inset_uKQm"><code class="blue_P4bS">number</code><code class="op_lSLc">&gt;</code><code class="purple_ieR2">,</code></div><div class="inset_uKQm"><code>Releasing<!-- -->: </code><code class="blue_P4bS">Signal</code><code class="op_lSLc">&lt;</code><code class="blue_P4bS">Promise</code><code class="op_lSLc">&lt;</code><code class="green_DgR4">(</code><code class="green_DgR4">)</code><code class="op_lSLc">&gt;</code><code class="op_lSLc">&gt;</code><code class="purple_ieR2">,</code></div><div class="inset_uKQm"><code>Saving<!-- -->: </code><code class="blue_P4bS">Signal</code><code class="op_lSLc">&lt;</code><code class="blue_P4bS">Promise</code><code class="op_lSLc">&lt;</code><code class="green_DgR4">(</code><code class="green_DgR4">)</code><code class="op_lSLc">&gt;</code><code class="op_lSLc">&gt;</code><code class="purple_ieR2">,</code></div><div class="inset_uKQm"><code>Overwritten<!-- -->: </code><code class="blue_P4bS">Signal</code><code class="op_lSLc">&lt;</code><code class="blue_P4bS">boolean</code><code class="op_lSLc">&gt;</code></div><code class="purple_ieR2">}</code></div><div></div><div>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="SetVersion"><code style="text-decoration:none">SetVersion</code><a href="#SetVersion" class="hash-link" aria-label="Direct link to SetVersion" title="Direct link to SetVersion">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L1001"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->:</code><code class="green_DgR4">SetVersion</code><code>(</code><div class="inset_uKQm"><div><code>version<!-- -->: </code><code class="blue_P4bS">string</code><code>,</code></div><div><code>migrateProcessor<!-- -->: </code><code class="purple_ieR2">(</code><code class="green_DgR4">(</code><code>versionKeep<!-- -->: </code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/DataKeep/api/Keep#Keep">Keep</a></code><code class="green_DgR4">)</code><code class="green_DgR4"> → </code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/DataKeep/api/Keep#Keep">Keep</a></code><code class="purple_ieR2">)</code><code class="blue_P4bS">?</code></div></div><code>) → </code><code class="blue_P4bS">Promise</code><code class="op_lSLc">&lt;</code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/DataKeep/api/Keep#Keep">Keep</a></code><code class="op_lSLc">&gt;</code></div><h3>Types</h3><h3 class="anchor anchorWithStickyNavbar_LWe7" id="Keep"><a href="#Keep" class="hash-link" aria-label="Direct link to Keep" title="Direct link to Keep">​</a></h3><div class="memberString_GwaU"><code class="purple_ieR2">type</code> <code>Keep<!-- --> = </code> <code class="purple_ieR2">{</code><div class="inset_uKQm"><code>Data<!-- -->: </code><code class="green_DgR4">{</code><span><code>[</code><code class="blue_P4bS">string</code><code>]</code></span><code>: </code><code class="blue_P4bS">any</code><code class="green_DgR4">}</code><code class="purple_ieR2">,</code></div><div class="inset_uKQm"><code>Metadata<!-- -->: </code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/DataKeep/api/Keep#Metadata">Metadata</a></code><code class="purple_ieR2">,</code></div><div class="inset_uKQm"><code>GlobalUpdates<!-- -->: </code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/DataKeep/api/GlobalUpdates#GlobalUpdates">GlobalUpdates</a></code><code class="purple_ieR2">,</code></div><div class="inset_uKQm"><code>UserIds<!-- -->: </code><code class="green_DgR4">{</code><code class="blue_P4bS">number</code><code class="green_DgR4">}</code><code class="purple_ieR2">,</code></div><div class="inset_uKQm"><code>OnGlobalUpdate<!-- -->: </code><code class="blue_P4bS">Signal</code><code class="op_lSLc">&lt;</code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/DataKeep/api/GlobalUpdates#GlobalUpdateData">GlobalUpdateData</a></code><code class="purple_ieR2">,</code></div><div class="inset_uKQm"><code class="blue_P4bS">number</code><code class="op_lSLc">&gt;</code><code class="purple_ieR2">,</code></div><div class="inset_uKQm"><code>Released<!-- -->: </code><code class="blue_P4bS">Signal</code><code class="purple_ieR2">,</code></div><div class="inset_uKQm"><code>ReleaseFailed<!-- -->: </code><code class="blue_P4bS">Signal</code><code class="purple_ieR2">,</code></div><div class="inset_uKQm"><code>Saved<!-- -->: </code><code class="blue_P4bS">Signal</code><code class="purple_ieR2">,</code></div><div class="inset_uKQm"><code>SaveFailed<!-- -->: </code><code class="blue_P4bS">Signal</code><code class="purple_ieR2">,</code></div><div class="inset_uKQm"><code>Overwritten<!-- -->: </code><code class="blue_P4bS">Signal</code><code class="op_lSLc">&lt;</code><code class="blue_P4bS">boolean</code><code class="op_lSLc">&gt;</code></div><code class="purple_ieR2">}</code></div><div></div><div>
 <p>Allows for a manual versioning process, where the version is set and the data is migrated to the new version using the optional <code>migrateProcessor</code> function.</p>
 <p>DataKeep provides a version list iterator. See <a href="#GetVersions">:GetVersions()</a>.</p>
 <p>Returns a Promise that resolves to the old Keep (before the migration) This is the <strong>last</strong> time the old Keep's GlobalUpdates will be accessible before <strong>permanently</strong> being removed.</p>
@@ -255,9 +255,9 @@
     
   
 
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="GetActiveGlobalUpdates"><code style="text-decoration:none">GetActiveGlobalUpdates</code><a href="#GetActiveGlobalUpdates" class="hash-link" aria-label="Direct link to GetActiveGlobalUpdates" title="Direct link to GetActiveGlobalUpdates">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L1051"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->:</code><code class="green_DgR4">GetActiveGlobalUpdates</code><code>(</code><code>) → </code><code class="purple_ieR2">{</code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/DataKeep/api/GlobalUpdates#GlobalUpdate">GlobalUpdate</a></code><code class="purple_ieR2">}</code></div><div>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="GetActiveGlobalUpdates"><code style="text-decoration:none">GetActiveGlobalUpdates</code><a href="#GetActiveGlobalUpdates" class="hash-link" aria-label="Direct link to GetActiveGlobalUpdates" title="Direct link to GetActiveGlobalUpdates">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L1056"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->:</code><code class="green_DgR4">GetActiveGlobalUpdates</code><code>(</code><code>) → </code><code class="purple_ieR2">{</code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/DataKeep/api/GlobalUpdates#GlobalUpdate">GlobalUpdate</a></code><code class="purple_ieR2">}</code></div><div>
 <p>Returns an array of active global updates (not locked / processed).</p>
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="GetLockedGlobalUpdates"><code style="text-decoration:none">GetLockedGlobalUpdates</code><a href="#GetLockedGlobalUpdates" class="hash-link" aria-label="Direct link to GetLockedGlobalUpdates" title="Direct link to GetLockedGlobalUpdates">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L1078"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->:</code><code class="green_DgR4">GetLockedGlobalUpdates</code><code>(</code><code>) → </code><code class="purple_ieR2">{</code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/DataKeep/api/GlobalUpdates#GlobalUpdate">GlobalUpdate</a></code><code class="purple_ieR2">}</code></div><div>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="GetLockedGlobalUpdates"><code style="text-decoration:none">GetLockedGlobalUpdates</code><a href="#GetLockedGlobalUpdates" class="hash-link" aria-label="Direct link to GetLockedGlobalUpdates" title="Direct link to GetLockedGlobalUpdates">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L1083"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->:</code><code class="green_DgR4">GetLockedGlobalUpdates</code><code>(</code><code>) → </code><code class="purple_ieR2">{</code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/DataKeep/api/GlobalUpdates#GlobalUpdate">GlobalUpdate</a></code><code class="purple_ieR2">}</code></div><div>
 <p>Returns an array of locked global updates (processed).</p>
 
   
@@ -276,7 +276,7 @@
     
   
 
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="ClearLockedUpdate"><code style="text-decoration:none">ClearLockedUpdate</code><a href="#ClearLockedUpdate" class="hash-link" aria-label="Direct link to ClearLockedUpdate" title="Direct link to ClearLockedUpdate">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L1107"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->:</code><code class="green_DgR4">ClearLockedUpdate</code><code>(</code><code>id<!-- -->: </code><code class="blue_P4bS">number</code><code>) → </code><code class="blue_P4bS">Promise</code><code class="op_lSLc">&lt;</code><code class="purple_ieR2">(</code><code class="purple_ieR2">)</code><code class="op_lSLc">&gt;</code></div><div>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="ClearLockedUpdate"><code style="text-decoration:none">ClearLockedUpdate</code><a href="#ClearLockedUpdate" class="hash-link" aria-label="Direct link to ClearLockedUpdate" title="Direct link to ClearLockedUpdate">​</a></h3><div class="repositoryDetailsContainer_BPdw"><a class="sourceButton_sEho" href="https://github.com/noahrepublic/DataKeep/blob/main/src/Keep.luau#L1112"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Keep<!-- -->:</code><code class="green_DgR4">ClearLockedUpdate</code><code>(</code><code>id<!-- -->: </code><code class="blue_P4bS">number</code><code>) → </code><code class="blue_P4bS">Promise</code><code class="op_lSLc">&lt;</code><code class="purple_ieR2">(</code><code class="purple_ieR2">)</code><code class="op_lSLc">&gt;</code></div><div>
 <p>Clears a locked global update after being used.</p>
 
   
@@ -299,7 +299,7 @@
     &quot;functions&quot;: [
         {
             &quot;name&quot;: &quot;Save&quot;,
-            &quot;desc&quot;: &quot;Performs a manual save.\n\n:::warning\nCalling ```:Save()``` manually will reset the auto save timer on the Keep.\n:::\n\n:::danger\nUsing ```:Save()``` on a **view-only Keep** will error. Use [:Overwrite()](#Overwrite) instead.\n:::&quot;,
+            &quot;desc&quot;: &quot;Performs a manual save.\n\n:::info\nCalling ```:Save()``` manually will reset the auto save timer on the Keep.\n:::\n\n:::danger\nUsing ```:Save()``` on a **view-only Keep** will error. Use [:Overwrite()](#Overwrite) instead.\n:::&quot;,
             &quot;params&quot;: [],
             &quot;returns&quot;: [
                 {
@@ -309,7 +309,7 @@
             ],
             &quot;function_type&quot;: &quot;method&quot;,
             &quot;source&quot;: {
-                &quot;line&quot;: 467,
+                &quot;line&quot;: 483,
                 &quot;path&quot;: &quot;src/Keep.luau&quot;
             }
         },
@@ -325,7 +325,7 @@
             ],
             &quot;function_type&quot;: &quot;method&quot;,
             &quot;source&quot;: {
-                &quot;line&quot;: 524,
+                &quot;line&quot;: 536,
                 &quot;path&quot;: &quot;src/Keep.luau&quot;
             }
         },
@@ -347,7 +347,7 @@
             ],
             &quot;function_type&quot;: &quot;method&quot;,
             &quot;source&quot;: {
-                &quot;line&quot;: 577,
+                &quot;line&quot;: 580,
                 &quot;path&quot;: &quot;src/Keep.luau&quot;
             }
         },
@@ -358,7 +358,7 @@
             &quot;returns&quot;: [],
             &quot;function_type&quot;: &quot;method&quot;,
             &quot;source&quot;: {
-                &quot;line&quot;: 684,
+                &quot;line&quot;: 687,
                 &quot;path&quot;: &quot;src/Keep.luau&quot;
             }
         },
@@ -374,7 +374,7 @@
             ],
             &quot;function_type&quot;: &quot;method&quot;,
             &quot;source&quot;: {
-                &quot;line&quot;: 706,
+                &quot;line&quot;: 711,
                 &quot;path&quot;: &quot;src/Keep.luau&quot;
             }
         },
@@ -390,7 +390,7 @@
             ],
             &quot;function_type&quot;: &quot;method&quot;,
             &quot;source&quot;: {
-                &quot;line&quot;: 725,
+                &quot;line&quot;: 730,
                 &quot;path&quot;: &quot;src/Keep.luau&quot;
             }
         },
@@ -406,18 +406,18 @@
             ],
             &quot;function_type&quot;: &quot;method&quot;,
             &quot;source&quot;: {
-                &quot;line&quot;: 738,
+                &quot;line&quot;: 743,
                 &quot;path&quot;: &quot;src/Keep.luau&quot;
             }
         },
         {
             &quot;name&quot;: &quot;Reconcile&quot;,
-            &quot;desc&quot;: &quot;Fills in any missing data in the Keep using the data template.&quot;,
+            &quot;desc&quot;: &quot;Fills in any missing data and metadata in the Keep using the data and metadata template.&quot;,
             &quot;params&quot;: [],
             &quot;returns&quot;: [],
             &quot;function_type&quot;: &quot;method&quot;,
             &quot;source&quot;: {
-                &quot;line&quot;: 749,
+                &quot;line&quot;: 754,
                 &quot;path&quot;: &quot;src/Keep.luau&quot;
             }
         },
@@ -434,7 +434,7 @@
             &quot;returns&quot;: [],
             &quot;function_type&quot;: &quot;method&quot;,
             &quot;source&quot;: {
-                &quot;line&quot;: 779,
+                &quot;line&quot;: 784,
                 &quot;path&quot;: &quot;src/Keep.luau&quot;
             }
         },
@@ -451,7 +451,7 @@
             &quot;returns&quot;: [],
             &quot;function_type&quot;: &quot;method&quot;,
             &quot;source&quot;: {
-                &quot;line&quot;: 796,
+                &quot;line&quot;: 801,
                 &quot;path&quot;: &quot;src/Keep.luau&quot;
             }
         },
@@ -478,7 +478,7 @@
             ],
             &quot;function_type&quot;: &quot;method&quot;,
             &quot;source&quot;: {
-                &quot;line&quot;: 858,
+                &quot;line&quot;: 863,
                 &quot;path&quot;: &quot;src/Keep.luau&quot;
             }
         },
@@ -505,7 +505,7 @@
             ],
             &quot;function_type&quot;: &quot;method&quot;,
             &quot;source&quot;: {
-                &quot;line&quot;: 996,
+                &quot;line&quot;: 1001,
                 &quot;path&quot;: &quot;src/Keep.luau&quot;
             }
         },
@@ -521,7 +521,7 @@
             ],
             &quot;function_type&quot;: &quot;method&quot;,
             &quot;source&quot;: {
-                &quot;line&quot;: 1051,
+                &quot;line&quot;: 1056,
                 &quot;path&quot;: &quot;src/Keep.luau&quot;
             }
         },
@@ -537,7 +537,7 @@
             ],
             &quot;function_type&quot;: &quot;method&quot;,
             &quot;source&quot;: {
-                &quot;line&quot;: 1078,
+                &quot;line&quot;: 1083,
                 &quot;path&quot;: &quot;src/Keep.luau&quot;
             }
         },
@@ -559,7 +559,7 @@
             ],
             &quot;function_type&quot;: &quot;method&quot;,
             &quot;source&quot;: {
-                &quot;line&quot;: 1107,
+                &quot;line&quot;: 1112,
                 &quot;path&quot;: &quot;src/Keep.luau&quot;
             }
         }
@@ -570,7 +570,7 @@
             &quot;desc&quot;: &quot;Define how to process global updates, by default just locks the global update (this is only ran if the Keep is online).\n\nThe function reveals the lock and remove global update function through the parameters.\n\n:::warning\nUpdates **must** be locked eventually in order for [.OnGlobalUpdate](#OnGlobalUpdate) to get fired.\n:::\n\n:::danger\nThe lock and remove function revealed here are **NOT** the same as the ones in the Keep class, they are only for this function.\n:::&quot;,
             &quot;lua_type&quot;: &quot;(globalUpdateData: GlobalUpdateData, lock: () -&gt; (), remove: () -&gt; ()) -&gt; ()&quot;,
             &quot;source&quot;: {
-                &quot;line&quot;: 48,
+                &quot;line&quot;: 47,
                 &quot;path&quot;: &quot;src/Keep.luau&quot;
             }
         },
@@ -579,39 +579,84 @@
             &quot;desc&quot;: &quot;Fired when a new global update is locked and ready to be processed, which can happen only during save.\n\n:::warning\n**ONLY** locked globals are fired.\n:::&quot;,
             &quot;lua_type&quot;: &quot;Signal&lt;GlobalUpdateData, number&gt;&quot;,
             &quot;source&quot;: {
-                &quot;line&quot;: 59,
+                &quot;line&quot;: 58,
                 &quot;path&quot;: &quot;src/Keep.luau&quot;
             }
         },
         {
-            &quot;name&quot;: &quot;Releasing&quot;,
-            &quot;desc&quot;: &quot;Fired when the Keep is releasing (fires before internally released, but during session release).\n\n```lua\nkeep.Releasing:Connect(function(state)\n\tprint(`Releasing {keep:Identify()}`)\n\n\tstate:andThen(function()\n\t\tprint(`Released {keep:Identify()}`)\n\tend):catch(function()\n\t\tprint(`Failed to release {keep:Identify()}`)\n\tend)\nend)\n```&quot;,
-            &quot;lua_type&quot;: &quot;Signal&lt;Promise&lt;()&gt;&gt;&quot;,
+            &quot;name&quot;: &quot;Released&quot;,
+            &quot;desc&quot;: &quot;Fires after the Keep is released.\n\n```lua\nkeep.Released:Connect(function()\n\tprint(`Released {keep:Identify()}`)\nend)\n```&quot;,
+            &quot;lua_type&quot;: &quot;Signal&quot;,
             &quot;source&quot;: {
-                &quot;line&quot;: 78,
+                &quot;line&quot;: 71,
                 &quot;path&quot;: &quot;src/Keep.luau&quot;
             }
         },
         {
-            &quot;name&quot;: &quot;Saving&quot;,
-            &quot;desc&quot;: &quot;Fired when the Keep is saving, resolves on complete.\n\n```lua\nkeep.Saving:Connect(function(state)\n\tprint(`Saving {keep:Identify()}`)\n\n\tstate:andThen(function()\n\t\tprint(`Saved {keep:Identify()}`)\n\tend):catch(function()\n\t\tprint(`Failed to save {keep:Identify()}`)\n\tend)\nend)\n```&quot;,
-            &quot;lua_type&quot;: &quot;Signal&lt;Promise&lt;()&gt;&gt;&quot;,
+            &quot;name&quot;: &quot;ReleaseFailed&quot;,
+            &quot;desc&quot;: &quot;Fires after the Keep release attempt fails.\n\n```lua\nkeep.ReleaseFailed:Connect(function()\n\tprint(`{keep:Identify()} failed to release`)\nend)\n```&quot;,
+            &quot;lua_type&quot;: &quot;Signal&quot;,
+            &quot;source&quot;: {
+                &quot;line&quot;: 84,
+                &quot;path&quot;: &quot;src/Keep.luau&quot;
+            }
+        },
+        {
+            &quot;name&quot;: &quot;Saved&quot;,
+            &quot;desc&quot;: &quot;Fires after the Keep is saved.\n\n```lua\nkeep.Saved:Connect(function()\n\tprint(`Saved {keep:Identify()}`)\nend)\n```&quot;,
+            &quot;lua_type&quot;: &quot;Signal&quot;,
             &quot;source&quot;: {
                 &quot;line&quot;: 97,
                 &quot;path&quot;: &quot;src/Keep.luau&quot;
             }
         },
         {
-            &quot;name&quot;: &quot;Overwritten&quot;,
-            &quot;desc&quot;: &quot;Fired when the Keep has been overwritten. Keep will be released if ```isReleasingSession``` is set to ```true```.\n\n```lua\nkeep.Overwritten:Connect(function(isReleasingSession)\n\tprint(`{keep:Identify()} has been overwritten. Is releasing session: {isReleasingSession}`)\nend)\n```&quot;,
-            &quot;lua_type&quot;: &quot;Signal&lt;boolean&gt;&quot;,
+            &quot;name&quot;: &quot;SaveFailed&quot;,
+            &quot;desc&quot;: &quot;Fires after the Keep save attempt fails.\n\n```lua\nkeep.SaveFailed:Connect(function()\n\tprint(`{keep:Identify()} failed to save`)\nend)\n```&quot;,
+            &quot;lua_type&quot;: &quot;Signal&quot;,
             &quot;source&quot;: {
                 &quot;line&quot;: 110,
+                &quot;path&quot;: &quot;src/Keep.luau&quot;
+            }
+        },
+        {
+            &quot;name&quot;: &quot;Overwritten&quot;,
+            &quot;desc&quot;: &quot;Fires when the Keep has been overwritten. Keep will be released if ```isReleasingSession``` is set to ```true```.\n\n```lua\nkeep.Overwritten:Connect(function(isReleasingSession)\n\tprint(`{keep:Identify()} has been overwritten. Is releasing session: {isReleasingSession}`)\nend)\n```&quot;,
+            &quot;lua_type&quot;: &quot;Signal&lt;boolean&gt;&quot;,
+            &quot;source&quot;: {
+                &quot;line&quot;: 123,
                 &quot;path&quot;: &quot;src/Keep.luau&quot;
             }
         }
     ],
     &quot;types&quot;: [
+        {
+            &quot;name&quot;: &quot;Session&quot;,
+            &quot;desc&quot;: &quot;&quot;,
+            &quot;lua_type&quot;: &quot;{ PlaceId: number, JobId: string }&quot;,
+            &quot;source&quot;: {
+                &quot;line&quot;: 146,
+                &quot;path&quot;: &quot;src/Types.luau&quot;
+            }
+        },
+        {
+            &quot;name&quot;: &quot;Metadata&quot;,
+            &quot;desc&quot;: &quot;&quot;,
+            &quot;lua_type&quot;: &quot;{ ActiveSession: Session?, ForceLoad: Session?, LastUpdate: number, Created: number, LoadCount: number }&quot;,
+            &quot;source&quot;: {
+                &quot;line&quot;: 156,
+                &quot;path&quot;: &quot;src/Types.luau&quot;
+            }
+        },
+        {
+            &quot;name&quot;: &quot;Keep&quot;,
+            &quot;desc&quot;: &quot;&quot;,
+            &quot;lua_type&quot;: &quot;{ Data: { [string]: any }, Metadata: Metadata, GlobalUpdates: GlobalUpdates, UserIds: { number }, OnGlobalUpdate: Signal&lt;GlobalUpdateData, number&gt;, Released: Signal, ReleaseFailed: Signal, Saved: Signal, SaveFailed: Signal, Overwritten: Signal&lt;boolean&gt; }&quot;,
+            &quot;source&quot;: {
+                &quot;line&quot;: 217,
+                &quot;path&quot;: &quot;src/Types.luau&quot;
+            }
+        },
         {
             &quot;name&quot;: &quot;Iterator&quot;,
             &quot;desc&quot;: &quot;&quot;,
@@ -653,35 +698,8 @@
                 }
             ],
             &quot;source&quot;: {
-                &quot;line&quot;: 827,
+                &quot;line&quot;: 832,
                 &quot;path&quot;: &quot;src/Keep.luau&quot;
-            }
-        },
-        {
-            &quot;name&quot;: &quot;Session&quot;,
-            &quot;desc&quot;: &quot;&quot;,
-            &quot;lua_type&quot;: &quot;{ PlaceId: number, JobId: string }&quot;,
-            &quot;source&quot;: {
-                &quot;line&quot;: 147,
-                &quot;path&quot;: &quot;src/Types.luau&quot;
-            }
-        },
-        {
-            &quot;name&quot;: &quot;MetaData&quot;,
-            &quot;desc&quot;: &quot;&quot;,
-            &quot;lua_type&quot;: &quot;{ ActiveSession: Session?, ForceLoad: Session?, LastUpdate: number, Created: number, LoadCount: number }&quot;,
-            &quot;source&quot;: {
-                &quot;line&quot;: 157,
-                &quot;path&quot;: &quot;src/Types.luau&quot;
-            }
-        },
-        {
-            &quot;name&quot;: &quot;Keep&quot;,
-            &quot;desc&quot;: &quot;&quot;,
-            &quot;lua_type&quot;: &quot;{ Data: { [string]: any }, MetaData: MetaData, GlobalUpdates: GlobalUpdates, UserIds: { number }, OnGlobalUpdate: Signal&lt;GlobalUpdateData, number&gt;, Releasing: Signal&lt;Promise&lt;()&gt;&gt;, Saving: Signal&lt;Promise&lt;()&gt;&gt;, Overwritten: Signal&lt;boolean&gt; }&quot;,
-            &quot;source&quot;: {
-                &quot;line&quot;: 217,
-                &quot;path&quot;: &quot;src/Types.luau&quot;
             }
         }
     ],
@@ -691,9 +709,9 @@
         &quot;Server&quot;
     ],
     &quot;source&quot;: {
-        &quot;line&quot;: 31,
+        &quot;line&quot;: 30,
         &quot;path&quot;: &quot;src/Keep.luau&quot;
     }
-}</pre></details></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#types" class="table-of-contents__link toc-highlight">Types</a><ul><li><a href="#Iterator" class="table-of-contents__link toc-highlight">Iterator</a></li><li><a href="#Keep" class="table-of-contents__link toc-highlight">Keep</a></li><li><a href="#MetaData" class="table-of-contents__link toc-highlight">MetaData</a></li><li><a href="#Session" class="table-of-contents__link toc-highlight">Session</a></li></ul></li><li><a href="#properties" class="table-of-contents__link toc-highlight">Properties</a><ul><li><a href="#GlobalStateProcessor" class="table-of-contents__link toc-highlight">GlobalStateProcessor</a></li><li><a href="#OnGlobalUpdate" class="table-of-contents__link toc-highlight">OnGlobalUpdate</a></li><li><a href="#Overwritten" class="table-of-contents__link toc-highlight">Overwritten</a></li><li><a href="#Releasing" class="table-of-contents__link toc-highlight">Releasing</a></li><li><a href="#Saving" class="table-of-contents__link toc-highlight">Saving</a></li></ul></li><li><a href="#functions" class="table-of-contents__link toc-highlight">Functions</a><ul><li><a href="#AddUserId" class="table-of-contents__link toc-highlight">:AddUserId</a></li><li><a href="#ClearLockedUpdate" class="table-of-contents__link toc-highlight">:ClearLockedUpdate</a></li><li><a href="#Destroy" class="table-of-contents__link toc-highlight">:Destroy</a></li><li><a href="#GetActiveGlobalUpdates" class="table-of-contents__link toc-highlight">:GetActiveGlobalUpdates</a></li><li><a href="#GetKeyInfo" class="table-of-contents__link toc-highlight">:GetKeyInfo</a></li><li><a href="#GetLockedGlobalUpdates" class="table-of-contents__link toc-highlight">:GetLockedGlobalUpdates</a></li><li><a href="#GetVersions" class="table-of-contents__link toc-highlight">:GetVersions</a></li><li><a href="#Identify" class="table-of-contents__link toc-highlight">:Identify</a></li><li><a href="#IsActive" class="table-of-contents__link toc-highlight">:IsActive</a></li><li><a href="#Overwrite" class="table-of-contents__link toc-highlight">:Overwrite</a></li><li><a href="#Reconcile" class="table-of-contents__link toc-highlight">:Reconcile</a></li><li><a href="#Release" class="table-of-contents__link toc-highlight">:Release</a></li><li><a href="#RemoveUserId" class="table-of-contents__link toc-highlight">:RemoveUserId</a></li><li><a href="#Save" class="table-of-contents__link toc-highlight">:Save</a></li><li><a href="#SetVersion" class="table-of-contents__link toc-highlight">:SetVersion</a></li></ul></li></ul></div></div></div></div></main></div></div><footer class="footer footer--dark"><div class="container container-fluid"><div class="footer__bottom text--center"><div class="footer__copyright">Copyright © 2025 noahrepublic. Built with Moonwave and Docusaurus.</div></div></div></footer></div>
+}</pre></details></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#types" class="table-of-contents__link toc-highlight">Types</a><ul><li><a href="#Iterator" class="table-of-contents__link toc-highlight">Iterator</a></li><li><a href="#Keep" class="table-of-contents__link toc-highlight">Keep</a></li><li><a href="#Metadata" class="table-of-contents__link toc-highlight">Metadata</a></li><li><a href="#Session" class="table-of-contents__link toc-highlight">Session</a></li></ul></li><li><a href="#properties" class="table-of-contents__link toc-highlight">Properties</a><ul><li><a href="#GlobalStateProcessor" class="table-of-contents__link toc-highlight">GlobalStateProcessor</a></li><li><a href="#OnGlobalUpdate" class="table-of-contents__link toc-highlight">OnGlobalUpdate</a></li><li><a href="#Overwritten" class="table-of-contents__link toc-highlight">Overwritten</a></li><li><a href="#Released" class="table-of-contents__link toc-highlight">Released</a></li><li><a href="#ReleaseFailed" class="table-of-contents__link toc-highlight">ReleaseFailed</a></li><li><a href="#Saved" class="table-of-contents__link toc-highlight">Saved</a></li><li><a href="#SaveFailed" class="table-of-contents__link toc-highlight">SaveFailed</a></li></ul></li><li><a href="#functions" class="table-of-contents__link toc-highlight">Functions</a><ul><li><a href="#AddUserId" class="table-of-contents__link toc-highlight">:AddUserId</a></li><li><a href="#ClearLockedUpdate" class="table-of-contents__link toc-highlight">:ClearLockedUpdate</a></li><li><a href="#Destroy" class="table-of-contents__link toc-highlight">:Destroy</a></li><li><a href="#GetActiveGlobalUpdates" class="table-of-contents__link toc-highlight">:GetActiveGlobalUpdates</a></li><li><a href="#GetKeyInfo" class="table-of-contents__link toc-highlight">:GetKeyInfo</a></li><li><a href="#GetLockedGlobalUpdates" class="table-of-contents__link toc-highlight">:GetLockedGlobalUpdates</a></li><li><a href="#GetVersions" class="table-of-contents__link toc-highlight">:GetVersions</a></li><li><a href="#Identify" class="table-of-contents__link toc-highlight">:Identify</a></li><li><a href="#IsActive" class="table-of-contents__link toc-highlight">:IsActive</a></li><li><a href="#Overwrite" class="table-of-contents__link toc-highlight">:Overwrite</a></li><li><a href="#Reconcile" class="table-of-contents__link toc-highlight">:Reconcile</a></li><li><a href="#Release" class="table-of-contents__link toc-highlight">:Release</a></li><li><a href="#RemoveUserId" class="table-of-contents__link toc-highlight">:RemoveUserId</a></li><li><a href="#Save" class="table-of-contents__link toc-highlight">:Save</a></li><li><a href="#SetVersion" class="table-of-contents__link toc-highlight">:SetVersion</a></li></ul></li></ul></div></div></div></div></main></div></div><footer class="footer footer--dark"><div class="container container-fluid"><div class="footer__bottom text--center"><div class="footer__copyright">Copyright © 2025 noahrepublic. Built with Moonwave and Docusaurus.</div></div></div></footer></div>
 </body>
 </html>
