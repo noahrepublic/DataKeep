@@ -6,8 +6,6 @@ local DataStoreService = game:GetService("DataStoreService")
 
 --> Includes
 
-local Promise = require(script.Parent.Parent.Promise)
-
 local Config = require(script.Parent.Config)
 local DeepCopy = require(script.Parent.Utils.DeepCopy)
 local DefaultData = require(script.Parent.DefaultData)
@@ -17,6 +15,7 @@ local Keep = require(script.Parent.Keep)
 local Log = require(script.Parent.Utils.Log)
 local Message = require(script.Parent.Utils.Message)
 local MockStore = require(script.Parent.MockStore)
+local Promise = require(script.Parent.Parent.Promise)
 local PromiseTypes = require(script.Parent.PromiseTypes)
 local RemoveKeepInternally = require(script.Parent.Utils.RemoveKeepInternally)
 local States = require(script.Parent.States)
@@ -42,12 +41,12 @@ Store.__index = Store
 	Same as [Store](Store) but it operates on a fake datastore.
 
 	```lua
-	local store = DataKeep.GetStore("TestStore", {}, {}):expect()
+	local store = DataKeep.GetStore("TestStore", {}):expect()
 
 	local keep = store.Mock:LoadKeep("TestKey"):expect()
 	keep:Release():await()
 
-	-- must be used when done with the keep on live servers
+	-- must be used when done with the keep on live server to prevent memory leaks
 	store.Mock:RemoveKeep("TestKey")
 	```
 ]=]
@@ -202,7 +201,7 @@ function Store.LoadKeep<T, R>(self: Types.store<T, R>, key: string, unreleasedHa
 			until States.loadedKeeps[id] == nil or timer < 0
 
 			if States.loadedKeeps[id] then
-				RemoveKeepInternally(States.loadedKeeps[id] :: any) -- additional cleanup to prevent memory leaks
+				RemoveKeepInternally(States.loadedKeeps[id]) -- additional cleanup to prevent memory leaks
 			end
 		elseif States.cachedKeepPromises[id] then
 			local promiseStatus = States.cachedKeepPromises[id]:getStatus()
@@ -238,7 +237,7 @@ function Store.LoadKeep<T, R>(self: Types.store<T, R>, key: string, unreleasedHa
 			local shouldStealSessionOnForceLoad = false -- used only with ForceLoad
 			local shouldStealSession = false -- unreleasedHandler() == Enums.LoadMethod.Steal
 
-			return Promise.try(function(): { loadedData: any, datastoreKeyInfo: DataStoreKeyInfo }?
+			return Promise.try(function(): { loadedData: Types.keepStruct<T>, datastoreKeyInfo: DataStoreKeyInfo }?
 				local forceLoadAttempts = 0
 				local forceLoadWaitTime = 1
 
@@ -247,21 +246,21 @@ function Store.LoadKeep<T, R>(self: Types.store<T, R>, key: string, unreleasedHa
 				local startTime = os.clock()
 
 				while true do
-					local success, loadedData, datastoreKeyInfo = Promise.try(function()
+					local success: boolean, loadedData: Types.keepStruct<T>?, datastoreKeyInfo: DataStoreKeyInfo? = Promise.try(function()
 						return UpdateAsync(key, self._datastore, {
 							onCheck = function()
 								return States.isServiceDone
 							end,
-							onExisting = function(latestData)
-								local activeSession = latestData.MetaData.ActiveSession
-								local forceLoadSession = latestData.MetaData.ForceLoad
+							onExisting = function(latest)
+								local activeSession = latest.metadata.ActiveSession
+								local forceLoadSession = latest.metadata.ForceLoad
 
 								if activeSession == nil then
-									latestData.MetaData.ActiveSession = DeepCopy(DefaultData.MetaData.ActiveSession)
-									latestData.MetaData.ForceLoad = nil
+									latest.metadata.ActiveSession = DeepCopy(DefaultData.Metadata.ActiveSession)
+									latest.metadata.ForceLoad = nil
 								elseif typeof(activeSession) == "table" then
 									if not Keep._isThisSession(activeSession) then
-										local lastUpdate = latestData.MetaData.LastUpdate
+										local lastUpdate = latest.metadata.LastUpdate
 
 										if lastUpdate ~= nil then
 											if os.time() - lastUpdate > Config.assumeDeadLock then
@@ -277,42 +276,42 @@ function Store.LoadKeep<T, R>(self: Types.store<T, R>, key: string, unreleasedHa
 											end
 
 											if not forceLoadInterrupted or shouldStealSession then
-												latestData.MetaData.ActiveSession = DeepCopy(DefaultData.MetaData.ActiveSession)
-												latestData.MetaData.ForceLoad = nil
+												latest.metadata.ActiveSession = DeepCopy(DefaultData.Metadata.ActiveSession)
+												latest.metadata.ForceLoad = nil
 											end
 										elseif requestForceLoad then
-											latestData.MetaData.ForceLoad = DeepCopy(DefaultData.MetaData.ActiveSession)
+											latest.metadata.ForceLoad = DeepCopy(DefaultData.Metadata.ActiveSession)
 										end
 									else
-										latestData.MetaData.ForceLoad = nil
+										latest.metadata.ForceLoad = nil
 									end
 								end
 
 								return false
 							end,
-							onMissing = function(latestData)
-								latestData.Data = DeepCopy(self._dataTemplate)
-								latestData.MetaData = DeepCopy(DefaultData.MetaData)
-								latestData.MetaData.Created = os.time()
-								latestData.UserIds = DeepCopy(DefaultData.UserIds)
+							onMissing = function(latest)
+								latest.data.Data = DeepCopy(self._dataTemplate)
+								latest.metadata = DeepCopy(DefaultData.Metadata)
+								latest.metadata.Created = os.time()
+								latest.userIds = DeepCopy(DefaultData.UserIds)
 
 								return false
 							end,
-							edit = function(latestData)
-								local activeSession = latestData.MetaData.ActiveSession
+							edit = function(latest)
+								local activeSession = latest.metadata.ActiveSession
 
 								if activeSession ~= nil and Keep._isThisSession(activeSession) then
-									latestData.MetaData.LoadCount += 1
-									latestData.MetaData.LastUpdate = os.time()
+									latest.metadata.LoadCount += 1
+									latest.metadata.LastUpdate = os.time()
 
 									if self._preLoad then
-										local processedData = self._preLoad(DeepCopy(latestData.Data))
+										local processedData = self._preLoad(DeepCopy(latest.data.Data))
 
 										if not processedData then
 											error(Message.new(":PreLoad() must return a table"))
 										end
 
-										latestData.Data = processedData
+										latest.data.Data = processedData
 									end
 								end
 
@@ -345,7 +344,8 @@ function Store.LoadKeep<T, R>(self: Types.store<T, R>, key: string, unreleasedHa
 						error(Message.new(":UpdateAsync() was canceled"))
 					end
 
-					local activeSession = loadedData.MetaData.ActiveSession
+					local metadata = datastoreKeyInfo:GetMetadata()
+					local activeSession = metadata.ActiveSession
 
 					if not (typeof(activeSession) == "table") then
 						-- probably because of States.isServiceDone
@@ -360,7 +360,7 @@ function Store.LoadKeep<T, R>(self: Types.store<T, R>, key: string, unreleasedHa
 					end
 
 					if shouldForceLoad then
-						local forceLoadSession = loadedData.MetaData.ForceLoad
+						local forceLoadSession = metadata.ForceLoad
 						local forceLoadInterrupted = false
 
 						if forceLoadSession ~= nil then
@@ -408,7 +408,7 @@ function Store.LoadKeep<T, R>(self: Types.store<T, R>, key: string, unreleasedHa
 					end
 				end
 			end)
-				:andThen(function(data: { loadedData: any, datastoreKeyInfo: DataStoreKeyInfo }?)
+				:andThen(function(data: { loadedData: Types.keepStruct<T>, datastoreKeyInfo: DataStoreKeyInfo }?)
 					States.cachedKeepPromises[id] = nil
 
 					if not data then
@@ -418,7 +418,7 @@ function Store.LoadKeep<T, R>(self: Types.store<T, R>, key: string, unreleasedHa
 					local loadedData = data.loadedData
 					local datastoreKeyInfo = data.datastoreKeyInfo
 
-					local keepClass = Keep.new(loadedData, self._dataTemplate)
+					local keepClass = Keep.new(loadedData, datastoreKeyInfo, self._dataTemplate)
 
 					if datastoreKeyInfo then
 						keepClass._keyInfo = datastoreKeyInfo
@@ -426,7 +426,7 @@ function Store.LoadKeep<T, R>(self: Types.store<T, R>, key: string, unreleasedHa
 
 					keepClass._key = key
 					keepClass._datastore = self._datastore -- mock datastore or real datastore
-					keepClass._store = self :: any -- TypeError: Internal error: Code is too complex to typecheck! Consider adding type annotations around this area
+					keepClass._store = self :: any -- TypeError: Internal error: Code is too complex to typecheck!
 
 					if typeof(self._wrapper) == "table" then
 						for functionName, func in self._wrapper do -- attach wrapper functions
@@ -501,25 +501,25 @@ function Store.ViewKeep<T, R>(self: Types.store<T, R>, key: string, version: str
 		-- uses :GetAsync()
 
 		local loadedData, datastoreKeyInfo = UpdateAsync(key, self._datastore, {
-			onMissing = function(latestData)
-				latestData.Data = DeepCopy(self._dataTemplate)
-				latestData.MetaData = DeepCopy(DefaultData.MetaData)
-				latestData.MetaData.Created = os.time()
-				latestData.UserIds = DeepCopy(DefaultData.UserIds)
+			onMissing = function(latest)
+				latest.data.Data = DeepCopy(self._dataTemplate)
+				latest.metadata = DeepCopy(DefaultData.Metadata)
+				latest.metadata.Created = os.time()
+				latest.userIds = DeepCopy(DefaultData.UserIds)
 
-				latestData.MetaData.ActiveSession = nil
+				latest.metadata.ActiveSession = nil
 
 				return false
 			end,
-			edit = function(latestData)
+			edit = function(latest)
 				if self._preLoad then
-					local processedData = self._preLoad(DeepCopy(latestData.Data))
+					local processedData = self._preLoad(DeepCopy(latest.data.Data))
 
 					if not processedData then
 						error(Message.new(":PreLoad() must return a table"))
 					end
 
-					latestData.Data = processedData
+					latest.data.Data = processedData
 				end
 
 				return false
@@ -533,7 +533,7 @@ function Store.ViewKeep<T, R>(self: Types.store<T, R>, key: string, version: str
 			error(Message.new("Operation was canceled"))
 		end
 
-		local keepClass = Keep.new(loadedData, self._dataTemplate)
+		local keepClass = Keep.new(loadedData, datastoreKeyInfo, self._dataTemplate)
 
 		if datastoreKeyInfo then
 			keepClass._keyInfo = datastoreKeyInfo
@@ -545,7 +545,7 @@ function Store.ViewKeep<T, R>(self: Types.store<T, R>, key: string, version: str
 
 		keepClass._key = key
 		keepClass._datastore = self._datastore -- mock datastore or real datastore
-		keepClass._store = self :: any -- TypeError: Internal error: Code is too complex to typecheck! Consider adding type annotations around this area
+		keepClass._store = self :: any -- TypeError: Internal error: Code is too complex to typecheck!
 
 		if typeof(self._wrapper) == "table" then
 			for functionName, func in self._wrapper do -- attach wrapper functions
@@ -579,7 +579,11 @@ end
 	Removes the ```key``` from the DataStore.
 
 	:::info
-	Calling ```:RemoveKeep()``` on the loaded Keep will release it (.Releasing signal will be fired) before removing.
+	Calling ```:RemoveKeep()``` on the loaded Keep will release it before removing.
+	:::
+
+	:::info
+	If the previous values were already deleted, the function will return ```nil```, ```nil```.
 	:::
 
 	:::warning
@@ -587,7 +591,7 @@ end
 	:::
 ]=]
 
-function Store.RemoveKeep<T, R>(self: Types.store<T, R>, key: string): PromiseTypes.TypedPromise<any, DataStoreKeyInfo>
+function Store.RemoveKeep<T, R>(self: Types.store<T, R>, key: string): PromiseTypes.TypedPromise<Types.keepStruct<T>, DataStoreKeyInfo>
 	local id = `{self:Identify()}/{key}`
 
 	States.activeDataStoreJobs += 1
@@ -596,8 +600,8 @@ function Store.RemoveKeep<T, R>(self: Types.store<T, R>, key: string): PromiseTy
 		local keep = States.loadedKeeps[id]
 
 		if keep then
-			-- no saving, but fire .Releasing signal
-			Keep._release(keep :: any, Promise.resolve()):await()
+			-- no saving, but fire .Released signal
+			Keep._release(keep, Promise.resolve()):await()
 		end
 
 		return self._datastore:RemoveAsync(key)
@@ -732,9 +736,9 @@ function Store.PostGlobalUpdate<T, R>(self: Types.store<T, R>, key: string, upda
 
 	return Promise.try(function()
 		return UpdateAsync(key, self._datastore, {
-			edit = function(latestData)
+			edit = function(latest)
 				local globalUpdateObject = {
-					_updates = latestData.GlobalUpdates,
+					_updates = latest.data.GlobalUpdates,
 				}
 
 				setmetatable(globalUpdateObject, GlobalUpdates)

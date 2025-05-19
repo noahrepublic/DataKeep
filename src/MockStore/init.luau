@@ -5,6 +5,8 @@
 local DeepCopy = require(script.Parent.Utils.DeepCopy)
 local Message = require(script.Parent.Utils.Message)
 local MockStorePages = require(script.MockStorePages)
+local Types = require(script.Parent.Types)
+local keyInfo = require(script.keyInfo)
 
 --> Structure
 
@@ -24,48 +26,34 @@ end
 
 local function didyield(f, ...)
 	local finished = false
-	local data
+	local data, userIds, metadata
 
 	coroutine.wrap(function(...)
-		data = f(...)
+		data, userIds, metadata = f(...)
 		finished = true
 	end)(...)
 
-	return not finished, data
-end
-
-local function createNewVersion(self, key, data: any)
-	if self._dataVersions[key] == nil then
-		self._dataVersions[key] = {}
-	end
-
-	local versionData = {
-		Version = #self._dataVersions[key] + 1,
-		CreatedTime = os.time(),
-		UpdatedTime = os.time(),
-		Deleted = false,
-	}
-
-	table.insert(self._dataVersions[key], { versionData, DeepCopy(data) })
-
-	return versionData
+	return not finished, data, userIds, metadata
 end
 
 --> Public Methods
 
-function MockStore:GetAsync(key: string)
-	return DeepCopy(self._data[key])
+function MockStore:GetAsync(key: string): (any, DataStoreKeyInfo?)
+	local dataVersions: keyInfo.dataVersions? = if self._dataVersions then self._dataVersions[key] else nil
+	return DeepCopy(self._data[key]), if dataVersions then dataVersions[#dataVersions].keyInfo else nil :: any
 end
 
-function MockStore:SetAsync(key: string, value: any)
+function MockStore:SetAsync(key: string, value: any, userIds: Types.userIds?, metadata: Types.metadata?)
 	self._data[key] = DeepCopy(value)
 
-	return createNewVersion(self, key, value)
+	local versionInfo = keyInfo.new(self, key, value, userIds, metadata)
+	return versionInfo.Version, versionInfo
 end
 
-function MockStore:UpdateAsync(key: string, callback: (any) -> any)
-	local value = self:GetAsync(key)
-	local yielded, newValue = didyield(callback, value)
+function MockStore:UpdateAsync(key: string, callback: (any, DataStoreKeyInfo?) -> (any, Types.userIds, Types.metadata)): (any?, DataStoreKeyInfo?)
+	local value, datastoreKeyInfo: DataStoreKeyInfo? = self:GetAsync(key)
+
+	local yielded, newValue, userIds, metadata = didyield(callback, value, datastoreKeyInfo)
 
 	if yielded then
 		error(Message.new("UpdateAsync yielded!"))
@@ -75,24 +63,27 @@ function MockStore:UpdateAsync(key: string, callback: (any) -> any)
 		return nil
 	end
 
-	local newVersion = self:SetAsync(key, newValue)
-	return self:GetAsync(key), newVersion
+	self:SetAsync(key, newValue, userIds, metadata)
+	return self:GetAsync(key)
 end
 
-function MockStore:RemoveAsync(key: string)
-	local oldData = self:GetAsync(key)
+function MockStore:RemoveAsync(key: string): (any, DataStoreKeyInfo)
+	local oldData, oldDataStoreKeyInfo: DataStoreKeyInfo? = self:GetAsync(key)
 	self._data[key] = nil
 
-	local versionData = createNewVersion(self, key, nil)
-	versionData.Deleted = true
+	local oldMetadata = if oldDataStoreKeyInfo then oldDataStoreKeyInfo:GetMetadata() else nil
+	local oldUserIds = if oldDataStoreKeyInfo then oldDataStoreKeyInfo:GetUserIds() else nil
 
-	return oldData, versionData
+	local datastoreKeyInfo = keyInfo.new(self, key, nil, oldUserIds, oldMetadata)
+	datastoreKeyInfo.Deleted = true
+
+	return oldData, datastoreKeyInfo :: any
 end
 
 function MockStore:ListVersionsAsync(key: string, sortDirection: Enum.SortDirection, minDate: number, maxDate: number, limit: number)
 	limit = limit or 1
 
-	local versions = self._dataVersions[key]
+	local versions: keyInfo.dataVersions = self._dataVersions[key]
 
 	if not versions then
 		return MockStorePages({}, sortDirection == Enum.SortDirection.Ascending, limit)
@@ -101,13 +92,13 @@ function MockStore:ListVersionsAsync(key: string, sortDirection: Enum.SortDirect
 	local filteredVersions = {}
 
 	for _, versionData in versions do
-		local createdTime = versionData[1].CreatedTime
+		local createdTime = versionData.keyInfo.CreatedTime
 
 		minDate = minDate or 0
 		maxDate = maxDate or math.huge
 
 		if createdTime >= minDate and createdTime <= maxDate then
-			table.insert(filteredVersions, 1, DeepCopy(versionData[1]))
+			table.insert(filteredVersions, 1, DeepCopy(versionData.keyInfo))
 		end
 	end
 
@@ -118,16 +109,16 @@ function MockStore:ListVersionsAsync(key: string, sortDirection: Enum.SortDirect
 	return MockStorePages(filteredVersions, sortDirection == Enum.SortDirection.Ascending, limit)
 end
 
-function MockStore:GetVersionAsync(key: string, version)
-	local versions = self._dataVersions[key]
+function MockStore:GetVersionAsync(key: string, version: string)
+	local versions: keyInfo.dataVersions = self._dataVersions[key]
 
 	if not versions then
 		return
 	end
 
 	for _, versionData in versions do
-		if versionData[1].Version == version then
-			return DeepCopy(versionData[2])
+		if versionData.keyInfo.Version == version then
+			return DeepCopy(versionData.data)
 		end
 	end
 

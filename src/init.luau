@@ -7,11 +7,10 @@ local RunService = game:GetService("RunService")
 
 --> Includes
 
-local Promise = require(script.Parent.Promise)
-
 local Config = require(script.Config)
 local Enums = require(script.Enums)
 local Log = require(script.Utils.Log)
+local Promise = require(script.Parent.Promise)
 local PromiseTypes = require(script.PromiseTypes)
 local RemoveKeepInternally = require(script.Utils.RemoveKeepInternally)
 local Signals = require(script.Signals)
@@ -27,8 +26,8 @@ local DataKeep = {
 
 	Wrapper = Wrapper,
 
-	IssueSignal = Signals.IssueSignal, -- fires when we enter critical state
-	CriticalStateSignal = Signals.CriticalStateSignal, -- fires when we have an issue (issue logging)
+	IssueSignal = Signals.IssueSignal, -- fires when we have an issue (issue logging)
+	CriticalStateSignal = Signals.CriticalStateSignal, -- fires when we enter / exit critical state
 
 	IsCriticalState = States.isCriticalState,
 }
@@ -41,10 +40,10 @@ end)
 
 --> Types
 
-export type Store<T, R> = Types.store<T, R>
-export type MockStore<T, R> = Types.mockStore<T, R>
-export type Keep<T, R> = Types.keep<T, R>
-export type ViewKeep<T, R> = Types.viewOnlyKeep<T, R>
+export type Store<T, R = {}> = Types.store<T, R>
+export type MockStore<T, R = {}> = Types.mockStore<T, R>
+export type Keep<T, R = {}> = Types.keep<T, R>
+export type ViewKeep<T, R = {}> = Types.viewOnlyKeep<T, R>
 
 export type Promise = PromiseTypes.Promise
 export type TypedPromise<T...> = PromiseTypes.TypedPromise<T...>
@@ -113,10 +112,6 @@ export type Status = PromiseTypes.Status
 
 --> Private Variables
 
-local autoSaveCycle = 0
-local internalKeepCleanupCycle = 0
-local loadedStores = {} -- list of stores that are currently loaded
-
 local mockStoreCheck = Promise.new(function(resolve)
 	-- defer in case .SetConfig() was called
 
@@ -174,7 +169,7 @@ end)
 		Test = "Hello World!",
 	}
 
-	local store = DataKeep.GetStore("TestStore", dataTemplate, {}):expect()
+	local store = DataKeep.GetStore("TestStore", dataTemplate):expect()
 	```
 
 	:::info
@@ -182,7 +177,7 @@ end)
 	:::
 ]=]
 
-function DataKeep.GetStore<T, R>(storeInfo: Types.storeInfo | string, dataTemplate: Types.dataTemplate<T>, wrapper: R): PromiseTypes.TypedPromise<Store<T, R>>
+function DataKeep.GetStore<T, R>(storeInfo: Types.storeInfo | string, dataTemplate: Types.dataTemplate<T>, wrapper: R?): PromiseTypes.TypedPromise<Store<T, R>>
 	local info
 
 	if typeof(storeInfo) == "string" then
@@ -196,14 +191,14 @@ function DataKeep.GetStore<T, R>(storeInfo: Types.storeInfo | string, dataTempla
 
 	local id = `{info.Name}/{info.Scope or ""}`
 
-	if loadedStores[id] then
-		return Promise.resolve(loadedStores[id])
+	if States.loadedStores[id] then
+		return Promise.resolve(States.loadedStores[id])
 	end
 
 	return mockStoreCheck:andThen(function()
-		local self = Store.new(info, dataTemplate, wrapper)
+		local self = Store.new(info, dataTemplate, wrapper or {})
 
-		loadedStores[id] = self
+		States.loadedStores[id] = self :: any -- TypeError: Internal error: Code is too complex to typecheck!
 
 		return Promise.resolve(self)
 	end)
@@ -245,7 +240,7 @@ type config = {
 
 function DataKeep.SetConfig(overwrites: config)
 	for key, value in overwrites do
-		if not Config[key] then
+		if Config[key] == nil then
 			continue
 		end
 
@@ -292,13 +287,13 @@ local function runAutoSave(deltaTime: number)
 		return
 	end
 
-	autoSaveCycle += deltaTime
+	States.autoSaveCycle += deltaTime
 
-	if autoSaveCycle < 1 then -- I'm not sure if there will be any performance impact, keeps are still saved within the Config.saveInterval
+	if States.autoSaveCycle < 1 then -- I'm not sure if there will be any performance impact, keeps are still saved within the Config.saveInterval
 		return
 	end
 
-	autoSaveCycle = 0 -- reset awaiting cycle
+	States.autoSaveCycle = 0 -- reset awaiting cycle
 
 	local clock = os.clock()
 
@@ -320,20 +315,20 @@ local function runKeepCleanup(deltaTime: number)
 	-- view-only Keeps are not saved in the States.loadedKeeps table!
 	-- dev needs to cleanup them manually by calling keep:Destroy()
 
-	internalKeepCleanupCycle += deltaTime
+	States.internalKeepCleanupCycle += deltaTime
 
-	if internalKeepCleanupCycle < Config.internalKeepCleanupInterval then
+	if States.internalKeepCleanupCycle < Config.internalKeepCleanupInterval then
 		return
 	end
 
-	internalKeepCleanupCycle = 0 -- reset awaiting cycle
+	States.internalKeepCleanupCycle = 0 -- reset awaiting cycle
 
 	for _, keep in States.loadedKeeps do
 		if not keep._released then
 			continue
 		end
 
-		RemoveKeepInternally(keep :: any) -- Internal error: Code is too complex to typecheck! Consider adding type annotations around this
+		RemoveKeepInternally(keep :: any) -- Internal error: Code is too complex to typecheck!
 		Log.print(`Removed {keep:Identify()} internally.`)
 	end
 end

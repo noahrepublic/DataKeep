@@ -1,8 +1,7 @@
 --!strict
 
-local Signal = require(script.Parent.Parent.Signal)
-
 local PromiseTypes = require(script.Parent.PromiseTypes)
+local Signal = require(script.Parent.Parent.Signal)
 
 --[=[
 	@type LoadMethod { ForceLoad: string, Steal: string, Cancel: string }
@@ -112,7 +111,7 @@ type storeBase<T, R> = {
 
 	LoadKeep: (self: storeBase<T, R>, key: string, unreleasedHandler: unreleasedHandler?) -> PromiseTypes.TypedPromise<keep<T, R>>,
 	ViewKeep: (self: storeBase<T, R>, key: string, version: string?) -> PromiseTypes.TypedPromise<viewOnlyKeep<T, R>>,
-	RemoveKeep: (self: storeBase<T, R>, key: string) -> PromiseTypes.TypedPromise<any, DataStoreKeyInfo>,
+	RemoveKeep: (self: storeBase<T, R>, key: string) -> PromiseTypes.TypedPromise<keepStruct<T>, DataStoreKeyInfo>,
 
 	PreLoad: (self: storeBase<T, R>, callback: (data: data<T>) -> data<T>) -> (),
 	PreSave: (self: storeBase<T, R>, callback: (data: data<T>) -> data<T>) -> (),
@@ -127,7 +126,7 @@ type storeBase<T, R> = {
 	MockStores are used to mirror the real store, but doesn't save data.
 ]=]
 
-export type mockStore<T, R> = storeBase<T, R>
+export type mockStore<T, R = {}> = storeBase<T, R>
 
 --[=[
 	@type Store StoreBase & { Mock: MockStore }
@@ -136,7 +135,7 @@ export type mockStore<T, R> = storeBase<T, R>
 	Stores are used to load and save Keeps from a [DataStoreService:GetDataStore()](https://create.roblox.com/docs/reference/engine/classes/DataStoreService#GetDataStore).
 ]=]
 
-export type store<T, R> = storeBase<T, R> & {
+export type store<T, R = {}> = storeBase<T, R> & {
 	Mock: mockStore<T, R>,
 }
 
@@ -151,11 +150,11 @@ export type session = {
 }
 
 --[=[
-	@type MetaData { ActiveSession: Session?, ForceLoad: Session?, LastUpdate: number, Created: number, LoadCount: number }
+	@type Metadata { ActiveSession: Session?, ForceLoad: Session?, LastUpdate: number, Created: number, LoadCount: number }
 	@within Keep
 ]=]
 
-export type metaData = {
+export type metadata = {
 	ActiveSession: session?,
 
 	ForceLoad: session?, -- the session stealing the session lock, if any
@@ -173,9 +172,7 @@ export type data<T> = dataTemplate<T>
 
 export type keepStruct<T> = {
 	Data: data<T>,
-	MetaData: metaData,
 	GlobalUpdates: globalUpdates,
-	UserIds: userIds,
 }
 
 export type keepBase<T, R> = keepStruct<T> & {
@@ -193,36 +190,41 @@ export type keepBase<T, R> = keepStruct<T> & {
 	_released: boolean,
 	_destroyed: boolean,
 
-	IsActive: (self: keep<T, R>) -> boolean,
-	Identify: (self: keep<T, R>) -> string,
-	GetKeyInfo: (self: keep<T, R>) -> DataStoreKeyInfo,
+	Metadata: metadata,
+	UserIds: userIds,
 
-	Destroy: (self: keep<T, R>) -> (),
+	IsActive: (self: keepBase<T, R>) -> boolean,
+	Identify: (self: keepBase<T, R>) -> string,
+	GetKeyInfo: (self: keepBase<T, R>) -> DataStoreKeyInfo,
 
-	Reconcile: (self: keep<T, R>) -> (),
-	AddUserId: (self: keep<T, R>, userId: number) -> (),
-	RemoveUserId: (self: keep<T, R>, userId: number) -> (),
+	Destroy: (self: keepBase<T, R>) -> (),
 
-	GetVersions: (self: keep<T, R>, minDate: number?, maxDate: number?) -> PromiseTypes.TypedPromise<iterator>,
-	SetVersion: (self: keep<T, R>, version: string, migrateProcessor: ((versionKeep: keep<T, R>) -> keep<T, R>)?) -> PromiseTypes.TypedPromise<keep<T, R>>,
+	Reconcile: (self: keepBase<T, R>) -> (),
+	AddUserId: (self: keepBase<T, R>, userId: number) -> (),
+	RemoveUserId: (self: keepBase<T, R>, userId: number) -> (),
 
-	GetActiveGlobalUpdates: (self: keep<T, R>) -> { globalUpdate },
-	GetLockedGlobalUpdates: (self: keep<T, R>) -> { globalUpdate },
+	GetVersions: (self: keepBase<T, R>, minDate: number?, maxDate: number?) -> PromiseTypes.TypedPromise<iterator>,
+	SetVersion: (self: keepBase<T, R>, version: string, migrateProcessor: ((versionKeep: keepBase<T, R>) -> keepBase<T, R>)?) -> PromiseTypes.TypedPromise<keepBase<T, R>>,
+
+	GetActiveGlobalUpdates: (self: keepBase<T, R>) -> { globalUpdate },
+	GetLockedGlobalUpdates: (self: keepBase<T, R>) -> { globalUpdate },
 } & R
 
 --[=[
-	@type Keep { Data: { [string]: any }, MetaData: MetaData, GlobalUpdates: GlobalUpdates, UserIds: { number }, OnGlobalUpdate: Signal<GlobalUpdateData, number>, Releasing: Signal<Promise<()>>, Saving: Signal<Promise<()>>, Overwritten: Signal<boolean> }
+	@type Keep { Data: { [string]: any }, Metadata: Metadata, GlobalUpdates: GlobalUpdates, UserIds: { number }, OnGlobalUpdate: Signal<GlobalUpdateData, number>, Released: Signal, ReleaseFailed: Signal, Saved: Signal, SaveFailed: Signal, Overwritten: Signal<boolean> }
 	@within Keep
 ]=]
 
-export type keep<T, R> = keepBase<T, R> & {
+export type keep<T, R = {}> = keepBase<T, R> & {
 	_lastSaveAttempt: number,
 
 	_pending_global_locks: { number },
 	_pending_global_lock_removes: { number },
 
-	Saving: Signal.ScriptSignal<PromiseTypes.TypedPromise<()>>,
-	Releasing: Signal.ScriptSignal<PromiseTypes.TypedPromise<()>>,
+	Released: Signal.ScriptSignal<>,
+	ReleaseFailed: Signal.ScriptSignal<>,
+	Saved: Signal.ScriptSignal<>,
+	SaveFailed: Signal.ScriptSignal<>,
 	Overwritten: Signal.ScriptSignal<boolean>,
 	OnGlobalUpdate: Signal.ScriptSignal<globalUpdateData, number>,
 
@@ -234,7 +236,7 @@ export type keep<T, R> = keepBase<T, R> & {
 	ClearLockedUpdate: (self: keep<T, R>, id: number) -> PromiseTypes.TypedPromise<()>,
 }
 
-export type viewOnlyKeep<T, R> = keepBase<T, R> & {
+export type viewOnlyKeep<T, R = {}> = keepBase<T, R> & {
 	Overwrite: (self: viewOnlyKeep<T, R>, shouldKeepExistingSession: boolean?) -> PromiseTypes.TypedPromise<()>,
 }
 

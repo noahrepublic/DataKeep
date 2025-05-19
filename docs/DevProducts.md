@@ -23,7 +23,7 @@ local DataKeep = require(path_to_datakeep)
 local DataTemplate = require(path_to_datatemplate)
 
 local devProducts = {
-    [product_id_here] = function(player: Player, keep: DataKeep.Keep<DataTemplate.template, {}>)
+    [product_id_here] = function(player: Player, keep: DataKeep.Keep<DataTemplate.template>)
         keep.Data.Coins += 100
 
 		print(`{player.Name} purchased some coins!`)
@@ -43,7 +43,7 @@ local DevProducts = require(path_to_devproducts)
 
 local purchaseHistoryLimit = 50
 
-local function setProcessReceipt(store: DataKeep.Store<DataTemplate.template, {}>, keyPrefix: string)
+local function setProcessReceipt(store: DataKeep.Store<DataTemplate.template>, keyPrefix: string)
 	local function processReceipt(receiptInfo): Enum.ProductPurchaseDecision
 		local player = Players:GetPlayerByUserId(receiptInfo.PlayerId)
 
@@ -119,26 +119,29 @@ local keyPrefix = "Player_"
 
 local loadedKeeps = {}
 
-local store = DataKeep.GetStore("PlayerData", DataTemplate, {}):expect()
+local store = DataKeep.GetStore("PlayerData", DataTemplate):expect()
 
 local function onPlayerAdded(player: Player)
 	store:LoadKeep(keyPrefix .. player.UserId):andThen(function(keep)
 		keep:Reconcile()
 		keep:AddUserId(player.UserId) -- help with GDPR requests
 
-		keep.Releasing:Connect(function(state) -- don't have to clean up, it cleans up internally
-			state:andThen(function()
-				print(`{player.Name}'s Keep has been released!`)
+		keep.Released:Connect(function()
+			print(`{player.Name}'s Keep has been released!`)
 
-				player:Kick("Session released!")
-				loadedKeeps[player] = nil
-			end):catch(function(err)
-				warn(`{player.Name}'s Keep failed to release!`, err)
-			end)
+			loadedKeeps[player] = nil
+			player:Kick("Session released!")
+		end)
+
+		keep.ReleaseFailed:Connect(function()
+			print(`Failed to release {player.Name}'s Keep!`)
+
+			loadedKeeps[player] = nil
+			player:Kick("Failed to release session!")
 		end)
 
 		if not player:IsDescendantOf(Players) then
-			keep:Release()
+			keep:Release():catch(function() end)
 			return
 		end
 
@@ -168,6 +171,6 @@ Players.PlayerRemoving:Connect(function(player)
 		return
 	end
 
-	keep:Release()
+	keep:Release():catch(function() end)
 end)
 ```

@@ -20,20 +20,26 @@ local function reconcileGlobalUpdates(newGlobalUpdates: Types.globalUpdates)
 	return finalGlobals
 end
 
+type latest<T> = {
+	data: Types.keepStruct<T>,
+	metadata: Types.metadata,
+	userIds: Types.userIds,
+}
+
 local function updateAsync<T>(
 	key: string,
 	store: DataStore,
 	updateSettings: {
 		onCheck: (() -> boolean)?,
-		onExisting: ((latestData: Types.keepStruct<T>) -> boolean)?,
-		onMissing: ((latestData: Types.keepStruct<T>) -> boolean)?,
-		edit: ((latestData: Types.keepStruct<T>) -> boolean)?,
+		onExisting: ((latest: latest<T>) -> boolean)?,
+		onMissing: ((latest: latest<T>) -> boolean)?,
+		edit: ((latest: latest<T>) -> boolean)?,
 	},
 	options: {
 		useGet: { version: string? }?,
 	}
-)
-	local function transformUpdate(latestData: Types.keepStruct<T>): (Types.keepStruct<T>?, Types.userIds?)
+): (Types.keepStruct<T>?, DataStoreKeyInfo?)
+	local function transformUpdate(latestData: Types.keepStruct<T>, datastoreKeyInfo: DataStoreKeyInfo?): (Types.keepStruct<T>?, Types.userIds?, Types.metadata?)
 		local onCheck = if typeof(updateSettings.onCheck) == "function" then updateSettings.onCheck else nil
 
 		if onCheck then
@@ -44,31 +50,54 @@ local function updateAsync<T>(
 			end
 		end
 
+		local globalUpdates = DeepCopy(DefaultData.GlobalUpdates)
+		local metadata: Types.metadata = if datastoreKeyInfo then datastoreKeyInfo:GetMetadata() :: any else {}
+		local userIds: Types.userIds = if datastoreKeyInfo then datastoreKeyInfo:GetUserIds() else {}
+
+		local latest = {
+			data = latestData,
+			metadata = metadata,
+			userIds = userIds,
+		}
+
+		if typeof(latest.data) == "table" and next(metadata) == nil then -- migrate from older versions (pre v6.0.0)
+			local data: any = latest.data
+			local oldMetadata: Types.metadata = data.MetaData
+
+			if oldMetadata then
+				metadata.Created = oldMetadata.Created or os.time()
+				metadata.LastUpdate = oldMetadata.LastUpdate or os.time()
+				metadata.LoadCount = oldMetadata.LoadCount or 1
+
+				data.MetaData = nil
+			end
+
+			data.UserIds = nil
+		end
+
 		local isEmpty = false
 
-		local globalUpdates = DeepCopy(DefaultData.GlobalUpdates)
-
-		if typeof(latestData) == "table" then
-			if typeof(latestData.Data) == "table" and typeof(latestData.MetaData) == "table" and typeof(latestData.GlobalUpdates) == "table" then
+		if typeof(latest.data) == "table" then
+			if typeof(latest.data.Data) == "table" and typeof(latest.data.GlobalUpdates) == "table" then
 				-- keep was loaded before
 
-				globalUpdates = reconcileGlobalUpdates(latestData.GlobalUpdates)
-				latestData.GlobalUpdates = globalUpdates
+				globalUpdates = reconcileGlobalUpdates(latest.data.GlobalUpdates)
+				latest.data.GlobalUpdates = globalUpdates
 
 				local onExisting = if typeof(updateSettings.onExisting) == "function" then updateSettings.onExisting else nil
 
 				if onExisting then
-					local shouldCancelOperation = onExisting(latestData) == true
+					local shouldCancelOperation = onExisting(latest) == true
 
 					if shouldCancelOperation then
 						return nil
 					end
 				end
-			elseif latestData.Data == nil and latestData.MetaData == nil and typeof(latestData.GlobalUpdates) == "table" then
+			elseif latest.data.Data == nil and typeof(latest.data.GlobalUpdates) == "table" then
 				-- keep was not loaded before but GlobalUpdate data exists
 
-				-- latestData.GlobalUpdates will get updated inside if isEmpty then block
-				globalUpdates = reconcileGlobalUpdates(latestData.GlobalUpdates)
+				-- latest.data.GlobalUpdates will get updated inside if isEmpty then block
+				globalUpdates = reconcileGlobalUpdates(latest.data.GlobalUpdates)
 
 				isEmpty = true
 			else
@@ -79,14 +108,14 @@ local function updateAsync<T>(
 		end
 
 		if isEmpty then
-			latestData = {
+			latest.data = {
 				GlobalUpdates = globalUpdates,
 			} :: any
 
 			local onMissing = if typeof(updateSettings.onMissing) == "function" then updateSettings.onMissing else nil
 
 			if onMissing then
-				local shouldCancelOperation = onMissing(latestData) == true
+				local shouldCancelOperation = onMissing(latest) == true
 
 				if shouldCancelOperation then
 					return nil
@@ -97,14 +126,14 @@ local function updateAsync<T>(
 		local edit = if typeof(updateSettings.edit) == "function" then updateSettings.edit else nil
 
 		if edit then
-			local shouldCancelOperation = edit(latestData) == true
+			local shouldCancelOperation = edit(latest) == true
 
 			if shouldCancelOperation then
 				return nil
 			end
 		end
 
-		return latestData, latestData.UserIds
+		return latest.data, latest.userIds, latest.metadata
 	end
 
 	if options.useGet then
@@ -119,7 +148,7 @@ local function updateAsync<T>(
 			latestData, dataStoreKeyInfo = store:GetAsync(key, datastoreGetOptions)
 		end
 
-		latestData = transformUpdate(latestData)
+		latestData = transformUpdate(latestData, dataStoreKeyInfo)
 		return latestData, dataStoreKeyInfo
 	else
 		return store:UpdateAsync(key, transformUpdate)

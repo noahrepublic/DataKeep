@@ -21,28 +21,29 @@ local dataTemplate = {
 
 local loadedKeeps = {}
 
-local store = DataKeep.GetStore("PlayerData", dataTemplate, {}):expect()
+local store = DataKeep.GetStore("PlayerData", dataTemplate):expect()
 
 local function onPlayerAdded(player: Player)
 	store:LoadKeep(`Player_{player.UserId}`):andThen(function(keep)
 		keep:Reconcile()
 		keep:AddUserId(player.UserId) -- help with GDPR requests
 
-		keep.Releasing:Connect(function(state) -- don't have to clean up, it cleans up internally
-			print(`{player.Name}'s Keep is releasing!`)
+		keep.Released:Connect(function()
+			print(`{player.Name}'s Keep has been released!`)
 
-			state:andThen(function()
-				print(`{player.Name}'s Keep has been released!`)
+			loadedKeeps[player] = nil
+			player:Kick("Session released!")
+		end)
 
-				player:Kick("Session released!")
-				loadedKeeps[player] = nil
-			end):catch(function(err)
-				warn(`{player.Name}'s Keep failed to release!`, err)
-			end)
+		keep.ReleaseFailed:Connect(function()
+			print(`Failed to release {player.Name}'s Keep!`)
+
+			loadedKeeps[player] = nil
+			player:Kick("Failed to release session!")
 		end)
 
 		if not player:IsDescendantOf(Players) then
-			keep:Release()
+			keep:Release():catch(function() end)
 			return
 		end
 
@@ -78,7 +79,7 @@ Players.PlayerRemoving:Connect(function(player)
 		return
 	end
 
-	keep:Release()
+	keep:Release():catch(function() end)
 end)
 ```
 
@@ -105,7 +106,7 @@ Player.__index = Player
 
 --> Variables
 
-local store = DataKeep.GetStore("PlayerData", DataTemplate, {}):expect()
+local store = DataKeep.GetStore("PlayerData", DataTemplate):expect()
 
 --> Private Functions
 
@@ -165,13 +166,18 @@ local function loadKeep(playerClass)
 		keep:Reconcile()
 		keep:AddUserId(player.UserId) -- help with GDPR requests
 
-		keep.Releasing:Connect(function(state) -- don't have to clean up, it cleans up internally
-			state:andThen(function()
-				player:Kick("Session released!")
-				playerClass:Destroy()
-			end):catch(function(err)
-				warn(err)
-			end)
+		keep.Released:Connect(function()
+			print(`{player.Name}'s Keep has been released!`)
+
+			playerClass:Destroy()
+			player:Kick("Session released!")
+		end)
+
+		keep.ReleaseFailed:Connect(function()
+			print(`Failed to release {player.Name}'s Keep!`)
+
+			playerClass:Destroy()
+			player:Kick("Failed to release session!")
 		end)
 
 		if not player:IsDescendantOf(Players) then
@@ -225,7 +231,7 @@ function Player:Destroy()
 
 	if self.Keep then
 		local keep = self.Keep:expect()
-		keep:Release()
+		keep:Release():catch(function() end)
 	end
 end
 

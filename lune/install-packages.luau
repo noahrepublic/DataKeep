@@ -4,7 +4,7 @@
 
 local process = require("@lune/process")
 
-local installResult = process.spawn("wally", { "install" }, {
+local installResult = process.exec("wally", { "install" }, {
 	cwd = process.cwd,
 })
 
@@ -13,7 +13,7 @@ if not installResult.ok then
 	process.exit(1)
 end
 
-local sourcemapResult = process.spawn("rojo", { "sourcemap", "test-place.project.json", "--output", "sourcemap.json" }, {
+local sourcemapResult = process.exec("rojo", { "sourcemap", "test-place.project.json", "--output", "sourcemap.json" }, {
 	cwd = process.cwd,
 })
 
@@ -22,11 +22,11 @@ if not sourcemapResult.ok then
 	process.exit(1)
 end
 
-process.spawn("wally-package-types", { "--sourcemap", "sourcemap.json", "Packages/" }, {
+process.exec("wally-package-types", { "--sourcemap", "sourcemap.json", "Packages/" }, {
 	cwd = process.cwd,
 })
 
-process.spawn("wally-package-types", { "--sourcemap", "sourcemap.json", "DevPackages/" }, {
+process.exec("wally-package-types", { "--sourcemap", "sourcemap.json", "DevPackages/" }, {
 	cwd = process.cwd,
 })
 

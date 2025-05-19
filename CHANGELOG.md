@@ -1,5 +1,24 @@
 # DataKeep
 
+## [version 6.0.0](https://github.com/noahrepublic/DataKeep/releases/tag/v6.0.0): 17/05/2025
+
+- Fixed auto save ignoring timer after failed save attempt
+- Live check should only be performed in studio
+- Added docs info about `store:LoadKeep()` and `keep:Release()` retrying
+- Improved logging, added `logPromiseTraceback` to config (default: `false`)
+- Exported `ViewKeep` type, fixed some other types
+- Added `keep.SaveFailed` and `keep.ReleaseFailed` signals
+- Fixed `DataKeep.SetConfig()` not accepting `false` values
+- `Metadata` and `UserIds` are now stored inside [Metadata](https://create.roblox.com/docs/cloud-services/data-stores#metadata). Existing keeps will be automatically migrated to the new format
+- `wrapper` in `DataKeep.GetStore()` is now optional
+
+### Breaking Changes
+
+- Removed promises from `keep.Saving` and `keep.Releasing` signals due to interferences with saving system
+- `keep.Saving` -> `keep.Saved` and `keep.SaveFailed`
+- `keep.Releasing` -> `keep.Released` and `keep.ReleaseFailed`
+- `keep.MetaData` -> `keep.Metadata`
+
 ## [version 5.0.0](https://github.com/noahrepublic/DataKeep/releases/tag/v5.0.0): 12/09/2024
 
 - Add `DataKeep.Enums`
@@ -52,9 +71,9 @@
 
 ## [version 3.1.2](https://github.com/noahrepublic/DataKeep/releases/tag/v3.1.2): 05/28/2024
 
-- [Fix a few things](https://github.com/noahrepublic/DataKeep/pull/20) by @FireBird702
-- Fix for [#22](https://github.com/noahrepublic/DataKeep/pull/23) by @FireBird702
-- [`:SetAsync()` in mock store should deep copy value](https://github.com/noahrepublic/DataKeep/pull/26) by @FireBird702
+- [Fix a few things](https://github.com/noahrepublic/DataKeep/pull/20)
+- Fix for [#22](https://github.com/noahrepublic/DataKeep/pull/23)
+- [`:SetAsync()` in mock store should deep copy value](https://github.com/noahrepublic/DataKeep/pull/26)
 
 ## [version 3.1.1](https://github.com/noahrepublic/DataKeep/releases/tag/v3.1.1): 03/17/2024
 

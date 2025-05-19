@@ -1,8 +1,8 @@
 return function()
-	local datakeep = require(script.Parent)
+	local DataKeep = require(script.Parent)
 
-	datakeep.SetConfig({
-		logLevel = datakeep.Enums.LogLevel.All,
+	DataKeep.SetConfig({
+		logLevel = DataKeep.Enums.LogLevel.All,
 		logPromiseTraceback = true,
 	})
 
@@ -10,7 +10,7 @@ return function()
 		Coins = 0,
 	}
 
-	local store = datakeep.GetStore("Test", dataTemplate, datakeep.Wrapper):expect()
+	local store = DataKeep.GetStore("Test", dataTemplate, DataKeep.Wrapper):expect()
 
 	describe("datakeep", function()
 		it("should only allow existing config values", function()
@@ -18,7 +18,7 @@ return function()
 
 			local defaultAssumeDeadLock = config.assumeDeadLock
 
-			datakeep.SetConfig({
+			DataKeep.SetConfig({
 				someRandomValue = "someRandomValue",
 				assumeDeadLock = defaultAssumeDeadLock - 1,
 			})
@@ -27,7 +27,7 @@ return function()
 			expect(config.assumeDeadLock).never.to.equal(defaultAssumeDeadLock)
 
 			-- return back to defaults
-			datakeep.SetConfig({
+			DataKeep.SetConfig({
 				assumeDeadLock = defaultAssumeDeadLock,
 			})
 		end)
@@ -156,7 +156,7 @@ return function()
 			local thisSession = { PlaceId = game.PlaceId, JobId = game.JobId }
 
 			local keep = store:LoadKeep("Data"):expect()
-			expect(keep.MetaData.ActiveSession == thisSession).to.be.ok()
+			expect(keep.Metadata.ActiveSession == thisSession).to.be.ok()
 		end)
 
 		it("should be active", function()
@@ -214,8 +214,8 @@ return function()
 
 			keep:Release():await()
 
-			local testDataStoreRaw = store._datastore:GetAsync("Data")
-			expect(testDataStoreRaw.MetaData.ActiveSession).to.equal(nil)
+			local _, datastoreKeyInfo = store._datastore:GetAsync("Data")
+			expect(datastoreKeyInfo:GetMetadata().ActiveSession).to.equal(nil)
 		end)
 	end)
 

@@ -1,8 +1,7 @@
 --!strict
 
-local Promise = require(script.Parent.Parent.Promise)
-
 local Message = require(script.Parent.Utils.Message)
+local Promise = require(script.Parent.Parent.Promise)
 local PromiseTypes = require(script.Parent.PromiseTypes)
 local Types = require(script.Parent.Types)
 
