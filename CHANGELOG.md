@@ -1,6 +1,6 @@
 # DataKeep
 
-## [version 6.0.0](https://github.com/noahrepublic/DataKeep/releases/tag/v6.0.0): 17/05/2025
+## [version 6.0.0](https://github.com/noahrepublic/DataKeep/releases/tag/v6.0.0): 19/05/2025
 
 - Fixed auto save ignoring timer after failed save attempt
 - Live check should only be performed in studio
